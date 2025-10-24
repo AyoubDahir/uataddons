@@ -222,7 +222,7 @@ class SalesReceipt(models.Model):
                                 else "partial_paid"
                             ),
                             "customer_opening_balance_id": record.customer_opening_balance_id.id,
-                            "trx_date": fields.Datetime.now(),
+                            "trx_date": record.receipt_date,
                             "amount": record.paid_amount,
                         }
                     )
@@ -246,7 +246,7 @@ class SalesReceipt(models.Model):
                             "account_number": record.payment_account.id,
                             "dr_amount": record.amount_paying,
                             "cr_amount": 0,
-                            "transaction_date": fields.Datetime.now(),
+                            "transaction_date": record.receipt_date,
                             "description": f"Receipt for {order_name}",
                             "customer_opening_balance_id": record.customer_opening_balance_id.id,
                         }
@@ -260,7 +260,7 @@ class SalesReceipt(models.Model):
                             "account_number": ar_account_id.id,
                             "dr_amount": 0,
                             "cr_amount": record.amount_paying,
-                            "transaction_date": fields.Datetime.now(),
+                            "transaction_date": record.receipt_date,
                             "description": f"Receipt for {order_name}",
                             "customer_opening_balance_id": record.customer_opening_balance_id.id,
                         }
@@ -275,7 +275,7 @@ class SalesReceipt(models.Model):
                                 for line in transaction_booking.booking_lines
                             ],
                             "payment_account": record.payment_account.id,
-                            "payment_date": fields.Datetime.now(),
+                            "payment_date": record.receipt_date,
                             "paid_amount": record.amount_paying,
                         }
                     )
@@ -285,7 +285,7 @@ class SalesReceipt(models.Model):
                         self.env["idil.salesperson.transaction"].create(
                             {
                                 "sales_person_id": record.sales_order_id.sales_person_id.id,
-                                "date": fields.Date.today(),
+                                "date": record.receipt_date,
                                 "sales_payment_id": payment.id,
                                 "order_id": record.sales_order_id.id,
                                 "transaction_type": "in",
@@ -297,7 +297,7 @@ class SalesReceipt(models.Model):
                         self.env["idil.salesperson.transaction"].create(
                             {
                                 "sales_person_id": record.salesperson_id.id,
-                                "date": fields.Date.today(),
+                                "date": record.receipt_date,
                                 "sales_payment_id": payment.id,
                                 "order_id": False,  # No order_id for opening balance
                                 "transaction_type": "in",
@@ -318,6 +318,7 @@ class SalesReceipt(models.Model):
                                 "payment_method": "cash",  # or use dynamic logic to determine the method
                                 "account_id": record.payment_account.id,
                                 "amount": record.amount_paying,
+                                "date": record.receipt_date,
                             }
                         )
 
@@ -332,6 +333,7 @@ class SalesReceipt(models.Model):
                                 "payment_method": "cash",  # or use dynamic logic to determine the method
                                 "account_id": record.payment_account.id,
                                 "amount": record.amount_paying,
+                                "date": record.receipt_date,
                             }
                         )
 

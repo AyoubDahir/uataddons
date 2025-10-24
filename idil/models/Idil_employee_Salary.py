@@ -347,10 +347,46 @@ class IdilEmployeeSalary(models.Model):
 
         return record
 
+    def _ensure_salary_posting_configuration(self, credit_account):
+        """Validate all required configs are present for salary posting."""
+        missing = []
+
+        if not credit_account:
+            missing.append("- Payout/Credit account (field: account_id) is empty.")
+
+        salary_expense_account = self.env["idil.chart.account"].search(
+            [("name", "=", "Salary Expense")], limit=1
+        )
+        if not salary_expense_account:
+            missing.append("- Chart of Account named 'Salary Expense' is missing.")
+
+        trx_source = self.env["idil.transaction.source"].search(
+            [("name", "=", "Salary Expense")], limit=1
+        )
+        if not trx_source:
+            missing.append("- Transaction Source 'Salary Expense' is missing.")
+
+        # Optional: ensure account currency matches company/report currency expectations
+        # (comment out if you don't need strict currency matching)
+        # if credit_account and credit_account.currency_id and credit_account.currency_id != self.currency_id:
+        #     missing.append(f"- Credit account currency ({credit_account.currency_id.name}) "
+        #                    f"does not match document currency ({self.currency_id.name}).")
+
+        if missing:
+            raise ValidationError(
+                "Salary posting configuration is incomplete:\n" + "\n".join(missing)
+            )
+
+        return salary_expense_account, trx_source
+
     def _book_transaction(self, record):
         """Books a transaction and validates account balances."""
         # Ensure account_id is a valid Many2one field
         credit_account = record.account_id
+
+        salary_expense_account, salary_expense_trx_source = (
+            self._ensure_salary_posting_configuration(credit_account)
+        )
 
         if not credit_account:
             raise ValidationError("Please choose a valid account.")

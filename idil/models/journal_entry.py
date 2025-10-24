@@ -462,6 +462,7 @@ class JournalEntry(models.Model):
                         or _("New"),
                         "reffno": entry.name,
                         "trx_date": entry.date,
+                        "rate": entry.rate,
                         "amount": entry.total_debit,  # Assuming total_debit equals the total amount of the transaction
                         "debit_total": entry.total_debit,
                         "credit_total": entry.total_credit,

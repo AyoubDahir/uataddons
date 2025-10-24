@@ -23,7 +23,7 @@ class ReceiptBulkPayment(models.Model):
         string="Total Amount to Pay", required=True, store=True
     )
 
-    date = fields.Date(default=fields.Date.context_today, string="Date")
+    date = fields.Date(default=fields.Date.context_today, string="Date", required=True)
     line_ids = fields.One2many(
         "idil.receipt.bulk.payment.line",
         "bulk_payment_id",
@@ -304,7 +304,7 @@ class ReceiptBulkPayment(models.Model):
                                     "paid" if to_pay >= due_balance else "partial_paid"
                                 ),
                                 "customer_opening_balance_id": receipt.customer_opening_balance_id.id,
-                                "trx_date": fields.Datetime.now(),
+                                "trx_date": self.date,
                                 "amount": to_pay,
                             }
                         )
@@ -317,7 +317,7 @@ class ReceiptBulkPayment(models.Model):
                                 "account_number": payment_account.id,
                                 "dr_amount": to_pay,
                                 "cr_amount": 0.0,
-                                "transaction_date": fields.Datetime.now(),
+                                "transaction_date": self.date,
                                 "description": f"Bulk Receipt - {self.name}",
                                 "customer_opening_balance_id": receipt.customer_opening_balance_id.id,
                             }
@@ -330,7 +330,7 @@ class ReceiptBulkPayment(models.Model):
                                 "account_number": ar_account.id,
                                 "dr_amount": 0.0,
                                 "cr_amount": to_pay,
-                                "transaction_date": fields.Datetime.now(),
+                                "transaction_date": self.date,
                                 "description": f"Bulk Receipt - {self.name}",
                                 "customer_opening_balance_id": receipt.customer_opening_balance_id.id,
                             }
@@ -349,6 +349,7 @@ class ReceiptBulkPayment(models.Model):
                                 "payment_account": payment_account.id,
                                 "payment_date": fields.Datetime.now(),
                                 "paid_amount": to_pay,
+                                "date": self.date,
                             }
                         )
                         method.write(
@@ -370,7 +371,7 @@ class ReceiptBulkPayment(models.Model):
                             self.env["idil.salesperson.transaction"].create(
                                 {
                                     "sales_person_id": receipt.salesperson_id.id,
-                                    "date": fields.Date.today(),
+                                    "date": self.date,
                                     "sales_payment_id": payment.id,
                                     "sales_receipt_id": receipt.id,
                                     "order_id": (
@@ -397,6 +398,7 @@ class ReceiptBulkPayment(models.Model):
                                     "sales_receipt_id": receipt.id,
                                     "account_id": payment_account.id,
                                     "amount": to_pay,
+                                    "date": self.date,
                                 }
                             )
 
@@ -449,68 +451,139 @@ class ReceiptBulkPayment(models.Model):
                     )
         return super().write(vals)
 
+    # def unlink(self):
+    #     try:
+    #         with self.env.cr.savepoint():
+    #             for rec in self:
+    #                 if rec.state == "confirmed":
+    #                     for line in rec.line_ids:
+    #                         receipt = line.receipt_id
+
+    #                         # ✅ Revert paid amount
+    #                         # receipt.paid_amount -= line.paid_now
+    #                         # receipt.remaining_amount = receipt.remaining_amount + line.paid_now
+    #                         # receipt.payment_status = (
+    #                         #     "pending" if receipt.remaining_amount > 0 else "paid"
+    #                         # )
+
+    #                         # ✅ Delete Sales Payment
+    #                         payments = self.env["idil.sales.payment"].search(
+    #                             [("sales_receipt_id", "=", receipt.id)]
+    #                         )
+    #                         for payment in payments:
+    #                             # Detach transactions
+    #                             trx_bookings = payment.transaction_booking_ids
+    #                             trx_lines = payment.transaction_bookingline_ids
+
+    #                             # Delete booking lines
+    #                             trx_lines.unlink()
+
+    #                             # Delete booking
+    #                             trx_bookings.unlink()
+
+    #                             # Delete customer/salesperson transaction
+    #                             self.env["idil.salesperson.transaction"].search(
+    #                                 [("sales_payment_id", "=", payment.id)]
+    #                             ).unlink()
+
+    #                             self.env["idil.customer.sale.payment"].search(
+    #                                 [
+    #                                     (
+    #                                         "order_id",
+    #                                         "=",
+    #                                         (
+    #                                             receipt.cusotmer_sale_order_id.id
+    #                                             if receipt.cusotmer_sale_order_id
+    #                                             else False
+    #                                         ),
+    #                                     ),
+    #                                     ("amount", "=", payment.paid_amount),
+    #                                 ]
+    #                             ).unlink()
+
+    #                             # Delete payment
+    #                             payment.unlink()
+
+    #                         # ✅ Recompute order totals if needed
+    #                         if receipt.cusotmer_sale_order_id:
+    #                             receipt.cusotmer_sale_order_id._compute_total_paid()
+    #                             receipt.cusotmer_sale_order_id._compute_balance_due()
+
+    #                     # ✅ Remove bulk payment lines & payment methods
+    #                     rec.line_ids.unlink()
+    #                     rec.payment_method_ids.unlink()
+
+    #                 super(ReceiptBulkPayment, rec).unlink()
+    #             return True
+    #     except Exception as e:
+    #         logger.error(f"transaction failed: {str(e)}")
+    #         raise ValidationError(f"Transaction failed: {str(e)}")
+
     def unlink(self):
         try:
             with self.env.cr.savepoint():
                 for rec in self:
+                    # Gather JUST the payments created by this bulk
+                    # Prefer backlink if you added it; else fall back to methods' links.
+                    payments = self.env["idil.sales.payment"]
+                    if "bulk_payment_id" in self.env["idil.sales.payment"]._fields:
+                        payments = self.env["idil.sales.payment"].search(
+                            [("bulk_payment_id", "=", rec.id)]
+                        )
+                    else:
+                        payments = rec.payment_method_ids.mapped(
+                            "sales_payment_id"
+                        ).filtered(lambda p: p)
+
                     if rec.state == "confirmed":
-                        for line in rec.line_ids:
-                            receipt = line.receipt_id
+                        # Reverse impacts per payment
+                        for payment in payments:
+                            receipt = payment.sales_receipt_id
+                            paid_amt = payment.paid_amount or 0.0
 
-                            # ✅ Revert paid amount
-                            # receipt.paid_amount -= line.paid_now
-                            # receipt.remaining_amount = receipt.remaining_amount + line.paid_now
-                            # receipt.payment_status = (
-                            #     "pending" if receipt.remaining_amount > 0 else "paid"
-                            # )
+                            # 1) Restore receipt running totals (we incremented them in confirm)
+                            if receipt:
+                                new_paid = max(
+                                    0.0, (receipt.paid_amount or 0.0) - paid_amt
+                                )
+                                receipt.paid_amount = new_paid
+                                receipt.remaining_amount = (
+                                    receipt.due_amount or 0.0
+                                ) - new_paid
+                                receipt.payment_status = (
+                                    "paid"
+                                    if (receipt.remaining_amount or 0.0) <= 0
+                                    else "pending"
+                                )
 
-                            # ✅ Delete Sales Payment
-                            payments = self.env["idil.sales.payment"].search(
-                                [("sales_receipt_id", "=", receipt.id)]
-                            )
-                            for payment in payments:
-                                # Detach transactions
-                                trx_bookings = payment.transaction_booking_ids
-                                trx_lines = payment.transaction_bookingline_ids
+                            # 2) Remove dependent transactions linked to this payment
+                            self.env["idil.salesperson.transaction"].search(
+                                [("sales_payment_id", "=", payment.id)]
+                            ).unlink()
 
-                                # Delete booking lines
-                                trx_lines.unlink()
+                            self.env["idil.customer.sale.payment"].search(
+                                [("sales_payment_id", "=", payment.id)]
+                            ).unlink()
 
-                                # Delete booking
-                                trx_bookings.unlink()
+                            # 3) Remove booking lines and bookings referenced by this payment
+                            payment.transaction_bookingline_ids.unlink()
+                            payment.transaction_booking_ids.unlink()
 
-                                # Delete customer/salesperson transaction
-                                self.env["idil.salesperson.transaction"].search(
-                                    [("sales_payment_id", "=", payment.id)]
-                                ).unlink()
+                            # 4) Delete the sales payment itself
+                            payment.unlink()
 
-                                self.env["idil.customer.sale.payment"].search(
-                                    [
-                                        (
-                                            "order_id",
-                                            "=",
-                                            (
-                                                receipt.cusotmer_sale_order_id.id
-                                                if receipt.cusotmer_sale_order_id
-                                                else False
-                                            ),
-                                        ),
-                                        ("amount", "=", payment.paid_amount),
-                                    ]
-                                ).unlink()
+                        # Recompute affected orders once
+                        affected_receipts = rec.line_ids.mapped("receipt_id")
+                        for r in affected_receipts:
+                            if r.cusotmer_sale_order_id:
+                                r.cusotmer_sale_order_id._compute_total_paid()
+                                r.cusotmer_sale_order_id._compute_balance_due()
 
-                                # Delete payment
-                                payment.unlink()
-
-                            # ✅ Recompute order totals if needed
-                            if receipt.cusotmer_sale_order_id:
-                                receipt.cusotmer_sale_order_id._compute_total_paid()
-                                receipt.cusotmer_sale_order_id._compute_balance_due()
-
-                        # ✅ Remove bulk payment lines & payment methods
+                        # Cleanup lines & methods for this bulk
                         rec.line_ids.unlink()
                         rec.payment_method_ids.unlink()
 
+                    # Finally delete the bulk record
                     super(ReceiptBulkPayment, rec).unlink()
                 return True
         except Exception as e:

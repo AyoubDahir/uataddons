@@ -368,7 +368,7 @@ class CustomerSaleOrder(models.Model):
                             "payment_method": "bank_transfer",  # Assuming default payment method; adjust as needed
                             "payment_status": "pending",  # Assuming initial payment status; adjust as needed
                             "rate": order.rate,
-                            "trx_date": fields.Date.context_today(self),
+                            "trx_date": order.order_date,
                             "amount": order.order_total,
                             # Include other necessary fields
                         }
@@ -378,6 +378,7 @@ class CustomerSaleOrder(models.Model):
                         self.env["idil.sales.receipt"].create(
                             {
                                 "cusotmer_sale_order_id": order.id,
+                                "receipt_date": order.order_date,
                                 "due_amount": order.order_total,
                                 "paid_amount": 0,
                                 "remaining_amount": order.order_total,
@@ -390,6 +391,7 @@ class CustomerSaleOrder(models.Model):
                             {
                                 "order_id": order.id,
                                 "customer_id": order.customer_id.id,
+                                "date": order.order_date,
                                 "payment_method": "cash",  # or use dynamic logic to determine the method
                                 "account_id": order.account_number.id,
                                 "amount": order.order_total,
@@ -954,3 +956,4 @@ class CustomerSalePayment(models.Model):
 
     account_id = fields.Many2one("idil.chart.account", string="Account", required=True)
     amount = fields.Float(string="Amount", required=True)
+    date = fields.Date(string="Date", required=True)
