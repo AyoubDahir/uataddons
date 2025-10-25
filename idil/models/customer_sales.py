@@ -787,6 +787,21 @@ class CustomerSaleOrder(models.Model):
                     if booking:
                         booking.unlink()
 
+                    # Release linked place orders BEFORE deleting the SOs
+                    place_orders = self.env["idil.customer.place.order"]
+                    for so in self:
+                        po = so.customer_place_order_id
+                        if not po:
+                            # fallback in case only the reverse link exists
+                            po = self.env["idil.customer.place.order"].search(
+                                [("sale_order_id", "=", so.id)], limit=1
+                            )
+                        if po:
+                            place_orders |= po
+
+                    if place_orders:
+                        place_orders.write({"state": "draft", "sale_order_id": False})
+
                     res = super(CustomerSaleOrder, self).unlink()
 
                     # 4. Delete sales receipt

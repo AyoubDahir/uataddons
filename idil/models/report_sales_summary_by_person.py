@@ -149,7 +149,7 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
             WHERE spo.state = 'confirmed'
             AND sp.id = %s
             AND DATE(so.order_date) BETWEEN %s AND %s
-            ORDER BY DATE(so.order_date),spo.id;
+            ORDER BY spo.id;
         """,
             (self.salesperson_id.id, self.start_date, self.end_date),
         )

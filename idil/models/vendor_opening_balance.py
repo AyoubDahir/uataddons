@@ -391,6 +391,7 @@ class VendorOpeningBalance(models.Model):
                                     "payment_method": "opening_balance",
                                     "amount": line.amount,
                                     "amount_paid": 0.0,
+                                    "rate": record.rate,
                                     "remaining_amount": line.amount,
                                     "trx_source_id": trx_source_id.id,
                                     "vendor_id": line.vendor_id.id,

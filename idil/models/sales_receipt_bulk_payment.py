@@ -349,7 +349,6 @@ class ReceiptBulkPayment(models.Model):
                                 "payment_account": payment_account.id,
                                 "payment_date": fields.Datetime.now(),
                                 "paid_amount": to_pay,
-                                "date": self.date,
                             }
                         )
                         method.write(
@@ -450,74 +449,6 @@ class ReceiptBulkPayment(models.Model):
                         "Only 'amount_to_pay' can be adjusted automatically when a sales payment is deleted."
                     )
         return super().write(vals)
-
-    # def unlink(self):
-    #     try:
-    #         with self.env.cr.savepoint():
-    #             for rec in self:
-    #                 if rec.state == "confirmed":
-    #                     for line in rec.line_ids:
-    #                         receipt = line.receipt_id
-
-    #                         # ✅ Revert paid amount
-    #                         # receipt.paid_amount -= line.paid_now
-    #                         # receipt.remaining_amount = receipt.remaining_amount + line.paid_now
-    #                         # receipt.payment_status = (
-    #                         #     "pending" if receipt.remaining_amount > 0 else "paid"
-    #                         # )
-
-    #                         # ✅ Delete Sales Payment
-    #                         payments = self.env["idil.sales.payment"].search(
-    #                             [("sales_receipt_id", "=", receipt.id)]
-    #                         )
-    #                         for payment in payments:
-    #                             # Detach transactions
-    #                             trx_bookings = payment.transaction_booking_ids
-    #                             trx_lines = payment.transaction_bookingline_ids
-
-    #                             # Delete booking lines
-    #                             trx_lines.unlink()
-
-    #                             # Delete booking
-    #                             trx_bookings.unlink()
-
-    #                             # Delete customer/salesperson transaction
-    #                             self.env["idil.salesperson.transaction"].search(
-    #                                 [("sales_payment_id", "=", payment.id)]
-    #                             ).unlink()
-
-    #                             self.env["idil.customer.sale.payment"].search(
-    #                                 [
-    #                                     (
-    #                                         "order_id",
-    #                                         "=",
-    #                                         (
-    #                                             receipt.cusotmer_sale_order_id.id
-    #                                             if receipt.cusotmer_sale_order_id
-    #                                             else False
-    #                                         ),
-    #                                     ),
-    #                                     ("amount", "=", payment.paid_amount),
-    #                                 ]
-    #                             ).unlink()
-
-    #                             # Delete payment
-    #                             payment.unlink()
-
-    #                         # ✅ Recompute order totals if needed
-    #                         if receipt.cusotmer_sale_order_id:
-    #                             receipt.cusotmer_sale_order_id._compute_total_paid()
-    #                             receipt.cusotmer_sale_order_id._compute_balance_due()
-
-    #                     # ✅ Remove bulk payment lines & payment methods
-    #                     rec.line_ids.unlink()
-    #                     rec.payment_method_ids.unlink()
-
-    #                 super(ReceiptBulkPayment, rec).unlink()
-    #             return True
-    #     except Exception as e:
-    #         logger.error(f"transaction failed: {str(e)}")
-    #         raise ValidationError(f"Transaction failed: {str(e)}")
 
     def unlink(self):
         try:
@@ -656,7 +587,6 @@ class ReceiptBulkPaymentMethod(models.Model):
         store=True,
         tracking=True,
     )
-    payment_date = fields.Datetime(string="Payment Date", default=fields.Datetime.now)
 
     # USD mirror field (editable)
     usd_amount = fields.Float(string="USD Amount")
@@ -668,6 +598,19 @@ class ReceiptBulkPaymentMethod(models.Model):
         string="Linked Sales Payment",
         ondelete="cascade",  # This makes it auto-delete if sales payment is deleted
     )
+    payment_date = fields.Datetime(
+        string="Payment Date",
+        compute="_compute_payment_datetime",
+    )
+
+    @api.depends("bulk_payment_id.date")
+    def _compute_payment_datetime(self):
+        for rec in self:
+            rec.payment_date = (
+                fields.Datetime.to_datetime(rec.bulk_payment_id.date)
+                if rec.bulk_payment_id and rec.bulk_payment_id.date
+                else False
+            )
 
     @api.depends("currency_id", "payment_date", "company_id")
     def _compute_exchange_rate(self):
