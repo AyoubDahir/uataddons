@@ -111,4 +111,3 @@ idil.access_idil_customer_place_order,access_idil_customer_place_order,idil.mode
 idil.access_idil_customer_place_order_line,access_idil_customer_place_order_line,idil.model_idil_customer_place_order_line,base.group_user,1,1,1,1
 idil.access_idil_customer_order_summary,access_idil_customer_order_summary,idil.model_idil_customer_order_summary,base.group_user,1,1,1,1
 idil.access_idil_customer_sales_report,access_idil_customer_sales_report,idil.model_idil_customer_sales_report,base.group_user,1,1,1,1
-idil.access_model_export_wizard,access_model_export_wizard,idil.model_model_export_wizard,base.group_user,1,1,1,1
