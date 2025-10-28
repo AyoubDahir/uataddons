@@ -1,10 +1,10 @@
 {
-    "name": "Bakery System",
+    "name": "Bakery",
     "version": "1.0.0",
     "category": "Bakery Management System",
     "license": "LGPL-3",
     "summary": "Bakery Management System",
-    "description": "Mohamed",
+    "description": "Bakery",
     "depends": ["mail", "point_of_sale", "web"],
     "application": True,
     "sequence": -100,
