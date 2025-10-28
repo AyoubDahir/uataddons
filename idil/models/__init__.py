@@ -47,7 +47,8 @@ from . import idil_employee_hrm_report
 from . import idil_employee_hrm_report_department
 from . import EmployeePayrollListwithSalaryAdvance
 from . import item_opening_balance
-from . import customer_dashboard
+
+# from . import customer_dashboard
 from . import purchase_return
 from . import vendor_paymen_bulk
 from . import CustomerSaleReturn
@@ -65,5 +66,6 @@ from . import product_opening_balance
 from . import product_purchase_return
 from . import system_clearing
 from . import report_customer_sales
-from . import model_export_wizard
-from . import report_production_summary
+
+# from . import model_export_wizard
+# from . import report_production_summary
