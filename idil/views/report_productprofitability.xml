@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <!-- Action -->
+  <record id="action_product_profitability_report_wizard" model="ir.actions.act_window">
+    <field name="name">Product Profitability Report</field>
+    <field name="res_model">idil.manufacturing.report</field>
+    <field name="view_mode">form</field>
+    <field name="target">new</field>
+  </record>
+
+  <!-- Form View -->
+  <record id="view_report_productprofitability_form" model="ir.ui.view">
+    <field name="name">idil.manufacturing.report.form</field>
+    <field name="model">idil.manufacturing.report</field>
+    <field name="arch" type="xml">
+      <form string="Product Profitability Report">
+        <group>
+          <field name="company_id"/>
+          <field name="start_date"/>
+          <field name="end_date"/>
+        </group>
+        <footer>
+          <button name="generate_pdf_report"
+                  string="Generate Report"
+                  type="object"
+                  class="btn-primary"/>
+          <button string="Cancel" class="btn-secondary" special="cancel"/>
+        </footer>
+      </form>
+    </field>
+  </record>
+
+  <!-- Menu Item -->
+
+</odoo>
