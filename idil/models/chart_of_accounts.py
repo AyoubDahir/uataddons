@@ -1,4 +1,5 @@
-from odoo import models, fields, api
+from odoo import models, fields, api, _
+
 from odoo.exceptions import ValidationError, UserError
 import logging
 
@@ -458,26 +459,29 @@ class Account(models.Model):
     )
 
     _sql_constraints = [
+        # Code unique per company, regardless of currency
         (
             "uniq_account_code_company",
             "unique(company_id, code)",
             "Account Code must be unique per company.",
         ),
+        # Name unique per company+currency
         (
-            "uniq_account_name_company",
-            "unique(company_id, name)",
-            "Account Name must be unique per company.",
+            "uniq_account_name_company_currency",
+            "unique(company_id, name, currency_id)",
+            "Account Name must be unique per company and currency.",
         ),
     ]
 
-    @api.constrains("code", "name", "company_id")
+    @api.constrains("code", "name", "company_id", "currency_id")
     def _check_account_uniqueness_verbose(self):
         for rec in self:
             if not rec.company_id:
                 continue
-            # code duplicate?
+
+            # --- CODE: unique per company (ignore currency) ---
             if rec.code:
-                other = self.search(
+                other_code = self.search(
                     [
                         ("id", "!=", rec.id),
                         ("company_id", "=", rec.company_id.id),
@@ -485,31 +489,53 @@ class Account(models.Model):
                     ],
                     limit=1,
                 )
-                if other:
+                if other_code:
                     raise ValidationError(
-                        f"Duplicate Account Code in company '{rec.company_id.name}'.\n"
-                        f"Your record: Code='{rec.code}', Name='{rec.name}', "
-                        f"Subheader='{rec.subheader_id.name}' ({rec.subheader_id.sub_header_code}).\n"
-                        f"Existing: Code='{other.code}', Name='{other.name}', "
-                        f"Subheader='{other.subheader_id.name}' ({other.subheader_id.sub_header_code}) (ID {other.id})."
+                        _(
+                            "Duplicate Account Code in company '%(company)s'.\n"
+                            "Your record: Code='%(code)s', Name='%(name)s', Currency='%(curr)s'.\n"
+                            "Existing: Code='%(ecode)s', Name='%(ename)s', Currency='%(ecurr)s' (ID %(eid)s)."
+                        )
+                        % {
+                            "company": rec.company_id.name,
+                            "code": rec.code,
+                            "name": rec.name,
+                            "curr": rec.currency_id.name,
+                            "ecode": other_code.code,
+                            "ename": other_code.name,
+                            "ecurr": other_code.currency_id.name,
+                            "eid": other_code.id,
+                        }
                     )
-            # name duplicate?
-            if rec.name:
-                other = self.search(
+
+            # --- NAME: unique per company+currency ---
+            if rec.name and rec.currency_id:
+                other_name = self.search(
                     [
                         ("id", "!=", rec.id),
                         ("company_id", "=", rec.company_id.id),
                         ("name", "=", rec.name),
+                        ("currency_id", "=", rec.currency_id.id),
                     ],
                     limit=1,
                 )
-                if other:
+                if other_name:
                     raise ValidationError(
-                        f"Duplicate Account Name in company '{rec.company_id.name}'.\n"
-                        f"Your record: Name='{rec.name}', Code='{rec.code}', "
-                        f"Subheader='{rec.subheader_id.name}' ({rec.subheader_id.sub_header_code}).\n"
-                        f"Existing: Name='{other.name}', Code='{other.code}', "
-                        f"Subheader='{other.subheader_id.name}' ({other.subheader_id.sub_header_code}) (ID {other.id})."
+                        _(
+                            "Duplicate Account Name for the same currency in company '%(company)s'.\n"
+                            "Your record: Name='%(name)s', Currency='%(curr)s', Code='%(code)s'.\n"
+                            "Existing: Name='%(ename)s', Currency='%(ecurr)s', Code='%(ecode)s' (ID %(eid)s)."
+                        )
+                        % {
+                            "company": rec.company_id.name,
+                            "name": rec.name,
+                            "curr": rec.currency_id.name,
+                            "code": rec.code,
+                            "ename": other_name.name,
+                            "ecurr": other_name.currency_id.name,
+                            "ecode": other_name.code,
+                            "eid": other_name.id,
+                        }
                     )
 
     @api.depends(
