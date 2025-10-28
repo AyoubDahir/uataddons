@@ -114,7 +114,7 @@
         "views/product_purchase_return.xml",
         "views/customer_place_order.xml",
         "views/system_clearing_wizard_view.xml",
-        # "views/report_productprofitability.xml",
+        "views/report_productprofitability.xml",
         "views/customer_sales_report_views.xml",
         # "views/model_export_wizard.xml",
         "views/menu_hr.xml",
