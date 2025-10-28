@@ -1,20 +1,21 @@
 {
-    "name": "idil",
+    "name": "Bakery System",
     "version": "1.0.0",
-    "category": "Idil",
+    "category": "Bakery Management System",
     "license": "LGPL-3",
-    "summary": "Idil Management System",
+    "summary": "Bakery Management System",
     "description": "Mohamed",
     "depends": ["mail", "point_of_sale", "web"],
     "application": True,
     "sequence": -100,
-    "author": "again",
+    "author": "ayoub",
     "assets": {
         "web.assets_common": [
             # 'idil/static/src/scss/primary_variables.scss',
         ],
         "point_of_sale.assets": [
             "idil/static/src/js/pos_customer_modification.js",
+            "idil/static/src/components/idil_dashboard.js",
         ],
         "web.assets_backend": [
             "idil/static/src/css/kanban.css",
@@ -92,6 +93,7 @@
         "views/sale_return.xml",
         "views/stock_adjustment_views.xml",
         "views/balance_sheet.xml",
+        "views/dashboard_view.xml",
         "views/customer_sales_view.xml",
         "views/report_account_statements.xml",
         "views/product_adjustment_views.xml",
@@ -112,7 +114,9 @@
         "views/product_purchase_return.xml",
         "views/customer_place_order.xml",
         "views/system_clearing_wizard_view.xml",
+        "views/report_productprofitability.xml",
         "views/customer_sales_report_views.xml",
+        "views/model_export_wizard.xml",
         "views/menu_hr.xml",
         "views/menu.xml",
     ],
