@@ -1,14 +1,14 @@
 {
-    "name": "Bakery",
+    "name": "BizCore",
     "version": "1.0.0",
-    "category": "Bakery Management System",
+    "category": "Core Business Platform",
     "license": "LGPL-3",
-    "summary": "Bakery Management System",
-    "description": "Bakery",
+    "summary": " Core Business Platform",
+    "description": "Core Business Platform",
     "depends": ["mail", "point_of_sale", "web"],
     "application": True,
     "sequence": -100,
-        "author": "shaheen",
+    "author": "shaheen",
     "assets": {
         "web.assets_common": [
             # 'idil/static/src/scss/primary_variables.scss',
