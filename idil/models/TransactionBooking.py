@@ -238,6 +238,9 @@ class TransactionBooking(models.Model):
         help="Select the exchange rate for the transaction.",
         tracking=True,
     )
+    bulk_payment_id = fields.Many2one(
+        "idil.receipt.bulk.payment", index=True, ondelete="cascade"
+    )
 
     @api.constrains("trx_date")
     def _check_trx_date_not_future(self):
@@ -576,6 +579,10 @@ class TransactionBookingline(models.Model):
         help="Same rate as on the parent booking.",
     )
 
+    bulk_payment_id = fields.Many2one(
+        "idil.receipt.bulk.payment", index=True, ondelete="cascade"
+    )
+
     @api.constrains("transaction_date")
     def _check_transaction_date_not_future(self):
         for rec in self:
@@ -830,7 +837,6 @@ class TransactionBookingline(models.Model):
         balances = {}  # {account_id: {'dr': x, 'cr': y}}
         for r in rows:
             acc_id = r["account_number"]
-            tdate = r["tdate"]
             src_cur = Currency.browse(r["currency_id"])
             dr_src = r["dr_amount"] or 0.0
             cr_src = r["cr_amount"] or 0.0

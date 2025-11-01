@@ -218,6 +218,8 @@ class ReceiptBulkPayment(models.Model):
     def action_confirm_payment(self):
         try:
             with self.env.cr.savepoint():
+                ChartAccount = self.env["idil.chart.account"]
+
                 if self.state != "draft":
                     return
 
@@ -239,18 +241,44 @@ class ReceiptBulkPayment(models.Model):
                 remaining_receipts = self.line_ids.filtered(
                     lambda l: l.receipt_id.due_amount > l.receipt_id.paid_amount
                 )
-
                 if not remaining_receipts:
                     raise UserError("No valid receipts with remaining due amount.")
+
+                # Helper: convert between USD and SL based on self.rate (SL per 1 USD)
+                # Adjust if you later support more pairs.
+                def _convert(amount, from_cur, to_cur, rate):
+                    if from_cur.id == to_cur.id:
+                        return amount
+                    from_name = (from_cur.name or "").upper()
+                    to_name = (to_cur.name or "").upper()
+                    # Common aliases for Somali Shilling
+                    is_sl = lambda n: n in (
+                        "SL",
+                        "SOS",
+                        "SLSH",
+                        "SO SHILLING",
+                        "SOMALI SHILLING",
+                    )
+                    if from_name == "USD" and is_sl(to_name):
+                        return amount * rate  # USD -> SL
+                    if is_sl(from_name) and to_name == "USD":
+                        return amount / rate  # SL -> USD
+                    raise UserError(
+                        f"Unsupported currency pair: {from_cur.name} -> {to_cur.name}"
+                    )
 
                 for method in self.payment_method_ids:
                     payment_account = method.payment_account_id
                     if not payment_account:
-                        raise UserError(f"Missing payment account.")
+                        raise UserError("Missing payment account.")
 
-                    remaining_amount = method.payment_amount
+                    remaining_amount = (
+                        method.payment_amount
+                    )  # in receipt/AR currency (e.g., SL)
                     if remaining_amount <= 0:
                         continue
+
+                    pay_cur = payment_account.currency_id
 
                     for line in remaining_receipts:
                         receipt = line.receipt_id
@@ -259,26 +287,45 @@ class ReceiptBulkPayment(models.Model):
                         if due_balance <= 0 or remaining_amount <= 0:
                             continue
 
+                        # Amount to settle on this receipt (in AR currency)
                         to_pay = min(due_balance, remaining_amount)
 
+                        # Determine AR account (and AR currency)
                         if self.partner_type == "salesperson":
                             ar_account = receipt.salesperson_id.account_receivable_id
-                            entity_name = receipt.salesperson_id.name
                             is_salesperson = True
                         elif self.partner_type == "customer":
                             ar_account = receipt.customer_id.account_receivable_id
-                            entity_name = receipt.customer_id.name
                             is_salesperson = False
                         else:
                             raise UserError("Invalid partner type.")
 
-                        if ar_account.currency_id.id != payment_account.currency_id.id:
-                            raise UserError(
-                                f"Currency mismatch between payment account ({payment_account.currency_id.name}) "
-                                f"and receivable account ({ar_account.currency_id.name}) for {entity_name}."
+                        ar_cur = ar_account.currency_id
+                        rate = self.rate
+
+                        # Find FX clearing accounts per currency
+                        # Source clearing = payment currency
+                        # Target clearing = AR currency
+                        source_clearing_account = ChartAccount.search(
+                            [
+                                ("name", "=", "Exchange Clearing Account"),
+                                ("currency_id", "=", pay_cur.id),
+                            ],
+                            limit=1,
+                        )
+                        target_clearing_account = ChartAccount.search(
+                            [
+                                ("name", "=", "Exchange Clearing Account"),
+                                ("currency_id", "=", ar_cur.id),
+                            ],
+                            limit=1,
+                        )
+                        if not source_clearing_account or not target_clearing_account:
+                            raise ValidationError(
+                                "Exchange Clearing Accounts must exist for BOTH the payment currency and the receivable (AR) currency."
                             )
 
-                        # Create Transaction Booking
+                        # ----- Create transaction booking -----
                         trx_booking = self.env["idil.transaction_booking"].create(
                             {
                                 "order_number": (
@@ -294,7 +341,7 @@ class ReceiptBulkPayment(models.Model):
                                     else False
                                 ),
                                 "reffno": self.name,
-                                "rate": self.rate,
+                                "rate": rate,
                                 "sale_order_id": (
                                     receipt.sales_order_id.id
                                     if receipt.sales_order_id
@@ -305,71 +352,138 @@ class ReceiptBulkPayment(models.Model):
                                 ),
                                 "customer_opening_balance_id": receipt.customer_opening_balance_id.id,
                                 "trx_date": self.date,
-                                "amount": to_pay,
+                                "amount": to_pay,  # base amounts are in AR currency
                             }
                         )
 
-                        # Booking lines (DR from method account, CR to AR)
-                        dr_line = self.env["idil.transaction_bookingline"].create(
-                            {
-                                "transaction_booking_id": trx_booking.id,
-                                "transaction_type": "dr",
-                                "account_number": payment_account.id,
-                                "dr_amount": to_pay,
-                                "cr_amount": 0.0,
-                                "transaction_date": self.date,
-                                "description": f"Bulk Receipt - {self.name}",
-                                "customer_opening_balance_id": receipt.customer_opening_balance_id.id,
-                            }
-                        )
+                        booking_lines_to_link = []
 
-                        cr_line = self.env["idil.transaction_bookingline"].create(
-                            {
-                                "transaction_booking_id": trx_booking.id,
-                                "transaction_type": "cr",
-                                "account_number": ar_account.id,
-                                "dr_amount": 0.0,
-                                "cr_amount": to_pay,
-                                "transaction_date": self.date,
-                                "description": f"Bulk Receipt - {self.name}",
-                                "customer_opening_balance_id": receipt.customer_opening_balance_id.id,
-                            }
-                        )
+                        if pay_cur.id == ar_cur.id:
+                            # Same currency: DR Bank, CR AR
+                            dr_line = self.env["idil.transaction_bookingline"].create(
+                                {
+                                    "transaction_booking_id": trx_booking.id,
+                                    "bulk_payment_id": self.id,
+                                    "transaction_type": "dr",
+                                    "account_number": payment_account.id,
+                                    "dr_amount": to_pay,
+                                    "cr_amount": 0.0,
+                                    "transaction_date": self.date,
+                                    "description": f"Bulk Receipt - {self.name}",
+                                    "customer_opening_balance_id": receipt.customer_opening_balance_id.id,
+                                }
+                            )
+                            cr_line = self.env["idil.transaction_bookingline"].create(
+                                {
+                                    "transaction_booking_id": trx_booking.id,
+                                    "bulk_payment_id": self.id,
+                                    "transaction_type": "cr",
+                                    "account_number": ar_account.id,
+                                    "dr_amount": 0.0,
+                                    "cr_amount": to_pay,
+                                    "transaction_date": self.date,
+                                    "description": f"Bulk Receipt - {self.name}",
+                                    "customer_opening_balance_id": receipt.customer_opening_balance_id.id,
+                                }
+                            )
+                            booking_lines_to_link += [dr_line.id, cr_line.id]
 
-                        # Sales Payment record (per method)
+                        else:
+                            # Cross currency: 4 lines (Bank & Source clearing in payment currency; Target clearing & AR in AR currency)
+                            pay_amt_src = _convert(
+                                to_pay, ar_cur, pay_cur, rate
+                            )  # AR -> payment currency
+
+                            # DR Bank (payment currency)
+                            dr_bank = self.env["idil.transaction_bookingline"].create(
+                                {
+                                    "transaction_booking_id": trx_booking.id,
+                                    "bulk_payment_id": self.id,
+                                    "transaction_type": "dr",
+                                    "account_number": payment_account.id,
+                                    "dr_amount": pay_amt_src,
+                                    "cr_amount": 0.0,
+                                    "transaction_date": self.date,
+                                    "description": f"Bulk Receipt FX - {self.name} (Bank)",
+                                    "customer_opening_balance_id": receipt.customer_opening_balance_id.id,
+                                }
+                            )
+                            # CR Source FX Clearing (payment currency)
+                            cr_src_clear = self.env[
+                                "idil.transaction_bookingline"
+                            ].create(
+                                {
+                                    "transaction_booking_id": trx_booking.id,
+                                    "bulk_payment_id": self.id,
+                                    "transaction_type": "cr",
+                                    "account_number": source_clearing_account.id,
+                                    "dr_amount": 0.0,
+                                    "cr_amount": pay_amt_src,
+                                    "transaction_date": self.date,
+                                    "description": f"Bulk Receipt FX - {self.name} (Source Clearing)",
+                                    "customer_opening_balance_id": receipt.customer_opening_balance_id.id,
+                                }
+                            )
+                            # DR Target FX Clearing (AR currency)
+                            dr_tgt_clear = self.env[
+                                "idil.transaction_bookingline"
+                            ].create(
+                                {
+                                    "transaction_booking_id": trx_booking.id,
+                                    "bulk_payment_id": self.id,
+                                    "transaction_type": "dr",
+                                    "account_number": target_clearing_account.id,
+                                    "dr_amount": to_pay,
+                                    "cr_amount": 0.0,
+                                    "transaction_date": self.date,
+                                    "description": f"Bulk Receipt FX - {self.name} (Target Clearing)",
+                                    "customer_opening_balance_id": receipt.customer_opening_balance_id.id,
+                                }
+                            )
+                            # CR Accounts Receivable (AR currency)
+                            cr_ar = self.env["idil.transaction_bookingline"].create(
+                                {
+                                    "transaction_booking_id": trx_booking.id,
+                                    "bulk_payment_id": self.id,
+                                    "transaction_type": "cr",
+                                    "account_number": ar_account.id,
+                                    "dr_amount": 0.0,
+                                    "cr_amount": to_pay,
+                                    "transaction_date": self.date,
+                                    "description": f"Bulk Receipt - {self.name}",
+                                    "customer_opening_balance_id": receipt.customer_opening_balance_id.id,
+                                }
+                            )
+                            booking_lines_to_link += [
+                                dr_bank.id,
+                                cr_src_clear.id,
+                                dr_tgt_clear.id,
+                                cr_ar.id,
+                            ]
+                        # ----- Sales Payment record -----
                         payment = self.env["idil.sales.payment"].create(
                             {
                                 "sales_receipt_id": receipt.id,
+                                "bulk_payment_id": self.id,
                                 "payment_method_ids": [(4, method.id)],
                                 "transaction_booking_ids": [(4, trx_booking.id)],
+                                # Link detailed booking lines too (optional if your model uses it)
                                 "transaction_bookingline_ids": [
-                                    (4, dr_line.id),
-                                    (4, cr_line.id),
+                                    (4, bl_id) for bl_id in booking_lines_to_link
                                 ],
                                 "payment_account": payment_account.id,
                                 "payment_date": fields.Datetime.now(),
-                                "paid_amount": to_pay,
+                                "paid_amount": to_pay,  # AR currency
                             }
                         )
-                        method.write(
-                            {"sales_payment_id": payment.id}
-                        )  # If assigning after create
-
-                        # Update receipt
-                        receipt.paid_amount += to_pay
-                        receipt.remaining_amount = (
-                            receipt.due_amount - receipt.paid_amount
-                        )
-                        receipt.payment_status = (
-                            "paid" if receipt.remaining_amount <= 0 else "pending"
-                        )
+                        method.write({"sales_payment_id": payment.id})
                         line.paid_now += to_pay
-
-                        # Transaction: salesperson or customer
+                        # ----- Ledger side-effects -----
                         if is_salesperson:
                             self.env["idil.salesperson.transaction"].create(
                                 {
                                     "sales_person_id": receipt.salesperson_id.id,
+                                    "bulk_payment_id": self.id,
                                     "date": self.date,
                                     "sales_payment_id": payment.id,
                                     "sales_receipt_id": receipt.id,
@@ -392,6 +506,7 @@ class ReceiptBulkPayment(models.Model):
                                         else False
                                     ),
                                     "customer_id": receipt.customer_id.id,
+                                    "bulk_payment_id": self.id,
                                     "payment_method": "cash",
                                     "sales_payment_id": payment.id,
                                     "sales_receipt_id": receipt.id,
@@ -401,12 +516,11 @@ class ReceiptBulkPayment(models.Model):
                                 }
                             )
 
-                        # Recompute order
                         if receipt.cusotmer_sale_order_id:
                             receipt.cusotmer_sale_order_id._compute_total_paid()
                             receipt.cusotmer_sale_order_id._compute_balance_due()
 
-                        # Deduct from method amount
+                        # Deduct from method allocation (in AR currency)
                         remaining_amount -= to_pay
 
                     if remaining_amount > 0:
@@ -415,6 +529,7 @@ class ReceiptBulkPayment(models.Model):
                         )
 
                 self.state = "confirmed"
+
         except Exception as e:
             logger.error(f"transaction failed: {str(e)}")
             raise ValidationError(f"Transaction failed: {str(e)}")
@@ -427,14 +542,6 @@ class ReceiptBulkPayment(models.Model):
                 or "BRP/0001"
             )
         return super().create(vals)
-
-    # def write(self, vals):
-    #     for rec in self:
-    #         if rec.state == "confirmed":
-    #             raise ValidationError(
-    #                 "This record is confirmed and cannot be modified.\nIf changes are required, please delete and create a new bulk payment."
-    #             )
-    #     return super().write(vals)
 
     def write(self, vals):
         for rec in self:
@@ -450,71 +557,60 @@ class ReceiptBulkPayment(models.Model):
                     )
         return super().write(vals)
 
+    #
     def unlink(self):
+        """Full rollback of action_confirm_payment, then delete the bulk.
+        - Restores receipt paid/remaining/status
+        - Deletes salesperson/customer side-ledger rows
+        - Deletes booking lines and booking headers
+        - Unlinks/clears sales_payment_id on methods, deletes sales payments
+        - Resets line.paid_now and recomputes affected sales orders
+        - Removes lines & methods, then the bulk itself
+        """
         try:
             with self.env.cr.savepoint():
                 for rec in self:
-                    # Gather JUST the payments created by this bulk
-                    # Prefer backlink if you added it; else fall back to methods' links.
-                    payments = self.env["idil.sales.payment"]
-                    if "bulk_payment_id" in self.env["idil.sales.payment"]._fields:
-                        payments = self.env["idil.sales.payment"].search(
-                            [("bulk_payment_id", "=", rec.id)]
-                        )
-                    else:
-                        payments = rec.payment_method_ids.mapped(
-                            "sales_payment_id"
-                        ).filtered(lambda p: p)
-
+                    # Gather only payments created by/linked to this bulk
+                    payments = self.env["idil.sales.payment"].search(
+                        [("bulk_payment_id", "=", rec.id)]
+                    )
                     if rec.state == "confirmed":
-                        # Reverse impacts per payment
-                        for payment in payments:
-                            receipt = payment.sales_receipt_id
-                            paid_amt = payment.paid_amount or 0.0
-
-                            # 1) Restore receipt running totals (we incremented them in confirm)
-                            if receipt:
-                                new_paid = max(
-                                    0.0, (receipt.paid_amount or 0.0) - paid_amt
-                                )
-                                receipt.paid_amount = new_paid
-                                receipt.remaining_amount = (
-                                    receipt.due_amount or 0.0
-                                ) - new_paid
-                                receipt.payment_status = (
-                                    "paid"
-                                    if (receipt.remaining_amount or 0.0) <= 0
-                                    else "pending"
-                                )
-
-                            # 2) Remove dependent transactions linked to this payment
+                        # 1) Reverse per-payment effects in the exact opposite order
+                        for pmt in payments:
+                            # b) Remove side-ledger rows tied to this payment
                             self.env["idil.salesperson.transaction"].search(
-                                [("sales_payment_id", "=", payment.id)]
+                                [("sales_payment_id", "=", pmt.id)]
                             ).unlink()
-
                             self.env["idil.customer.sale.payment"].search(
-                                [("sales_payment_id", "=", payment.id)]
+                                [("sales_payment_id", "=", pmt.id)]
                             ).unlink()
+                            # c) Remove booking lines and booking headers created during confirm
+                            #    (they were linked to the sales payment via many2manys)
+                            pmt.transaction_bookingline_ids.unlink()
+                            pmt.transaction_booking_ids.unlink()
 
-                            # 3) Remove booking lines and bookings referenced by this payment
-                            payment.transaction_bookingline_ids.unlink()
-                            payment.transaction_booking_ids.unlink()
+                            # d) Detach method link (if any) for cleanliness, then delete payment
+                            rec.payment_method_ids.filtered(
+                                lambda m: m.sales_payment_id
+                                and m.sales_payment_id.id == pmt.id
+                            ).write({"sales_payment_id": False})
+                            pmt.unlink()
 
-                            # 4) Delete the sales payment itself
-                            payment.unlink()
+                        # 2) Reset each line's 'paid_now' that we incremented during confirm
+                        rec.line_ids.write({"paid_now": 0.0})
 
-                        # Recompute affected orders once
+                        # 3) Recompute affected orders once receipts are restored
                         affected_receipts = rec.line_ids.mapped("receipt_id")
                         for r in affected_receipts:
                             if r.cusotmer_sale_order_id:
                                 r.cusotmer_sale_order_id._compute_total_paid()
                                 r.cusotmer_sale_order_id._compute_balance_due()
 
-                        # Cleanup lines & methods for this bulk
-                        rec.line_ids.unlink()
+                        # 4) Cleanup lines & methods used by this bulk
                         rec.payment_method_ids.unlink()
+                        rec.line_ids.unlink()
 
-                    # Finally delete the bulk record
+                    # 5) Finally delete the bulk record itself
                     super(ReceiptBulkPayment, rec).unlink()
                 return True
         except Exception as e:
@@ -575,17 +671,31 @@ class ReceiptBulkPaymentMethod(models.Model):
         domain=[("account_type", "in", ["cash", "bank_transfer", "sales_expense"])],
     )
 
-    currency_id = fields.Many2one(
+    account_currency_id = fields.Many2one(
         related="payment_account_id.currency_id",
         store=True,
         readonly=True,
+        string="Account Currency",
     )
-    # Editable rate per line (defaults from parent)
+    # Currency fields
+    currency_id = fields.Many2one(
+        "res.currency",
+        string="Exchange Currency",
+        required=True,
+        default=lambda self: self.env["res.currency"].search(
+            [("name", "=", "SL")], limit=1
+        ),
+        readonly=True,
+        tracking=True,
+    )
+
+    # Allow per-line edits & persistence
     rate = fields.Float(
         string="Exchange Rate",
         compute="_compute_exchange_rate",
         store=True,
         tracking=True,
+        help="Exchange rate for this payment line. Defaults from the parent, but can be overridden here.",
     )
 
     # USD mirror field (editable)

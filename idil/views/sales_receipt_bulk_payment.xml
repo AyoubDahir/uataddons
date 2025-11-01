@@ -73,6 +73,7 @@
                             
                                 <field name="payment_date"/>
                                 <field name="payment_account_id"/>
+                                <field name="account_currency_id"/>
                                 <field name="currency_id"/>
                                 <field name="usd_amount"/>
                                 <field name="rate"/>
@@ -83,6 +84,7 @@
                                 <group>
                                     <field name="payment_date"/>
                                     <field name="payment_account_id"/>
+                                    <field name="account_currency_id"/>
                                     <field name="currency_id"/>
                                     <field name="usd_amount"/>
                                     <field name="rate"/>

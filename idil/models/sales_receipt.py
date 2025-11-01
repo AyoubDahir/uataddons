@@ -34,11 +34,31 @@ class SalesReceipt(models.Model):
         string="Receipt Date", default=fields.Datetime.now, required=True
     )
     due_amount = fields.Float(string="Due Amount", required=True)
-    payment_status = fields.Selection(
-        [("pending", "Pending"), ("paid", "Paid")], default="pending", required=True
+    # payment_status = fields.Selection(
+    #     [("pending", "Pending"), ("paid", "Paid")], default="pending", required=True
+    # )
+    # Change these 3 fields to be computed & stored
+    paid_amount = fields.Float(
+        string="Paid Amount",
+        compute="_compute_payment_totals",
+        store=True,
     )
-    paid_amount = fields.Float(string="Paid Amount", default=0.0, store=True)
-    remaining_amount = fields.Float(string="Due Amount", store=True)
+    remaining_amount = fields.Float(
+        string="Due Amount",
+        compute="_compute_payment_totals",
+        store=True,
+    )
+    payment_status = fields.Selection(
+        [("pending", "Pending"), ("paid", "Paid")],
+        compute="_compute_payment_totals",
+        store=True,
+        required=True,
+        string="Payment Status",
+        default="pending",
+    )
+
+    # paid_amount = fields.Float(string="Paid Amount", default=0.0, store=True)
+    # remaining_amount = fields.Float(string="Due Amount", store=True)
     amount_paying = fields.Float(string="Amount Paying", store=True)
     payment_ids = fields.One2many(
         "idil.sales.payment", "sales_receipt_id", string="Payments"
@@ -85,6 +105,22 @@ class SalesReceipt(models.Model):
         tracking=True,
     )
 
+    @api.depends("due_amount", "payment_ids.paid_amount")
+    def _compute_payment_totals(self):
+        """
+        Always derive totals from child payments:
+          paid_amount      = sum(payment.paid_amount)
+          remaining_amount = due_amount - paid_amount
+          payment_status   = 'paid' if remaining_amount <= 0 else 'pending'
+        """
+        for rec in self:
+            total_paid = sum((p.paid_amount or 0.0) for p in rec.payment_ids)
+            rec.paid_amount = total_paid
+            rec.remaining_amount = (rec.due_amount or 0.0) - total_paid
+            rec.payment_status = (
+                "paid" if (rec.remaining_amount or 0.0) <= 0.0 else "pending"
+            )
+
     @api.depends("currency_id", "receipt_date", "company_id")
     def _compute_exchange_rate(self):
         Rate = self.env["res.currency.rate"].sudo()
@@ -111,15 +147,15 @@ class SalesReceipt(models.Model):
 
             order.rate = rate_rec.rate or 0.0
 
-    def _compute_remaining_amount(self):
-        for record in self:
-            if record.amount_paying > record.due_amount - record.paid_amount:
-                raise UserError(
-                    "The amount paying cannot exceed the remaining due amount."
-                )
-            record.remaining_amount = (
-                record.due_amount - record.paid_amount - record.amount_paying
-            )
+    # def _compute_remaining_amount(self):
+    #     for record in self:
+    #         if record.amount_paying > record.due_amount - record.paid_amount:
+    #             raise UserError(
+    #                 "The amount paying cannot exceed the remaining due amount."
+    #             )
+    #         record.remaining_amount = (
+    #             record.due_amount - record.paid_amount - record.amount_paying
+    #         )
 
     def action_process_receipt(self):
         try:
@@ -171,8 +207,8 @@ class SalesReceipt(models.Model):
                             f"The payment currency does not match the receivable account currency for {entity}."
                         )
 
-                    record.paid_amount += record.amount_paying
-                    record.remaining_amount -= record.amount_paying
+                    # record.paid_amount += record.amount_paying
+                    # record.remaining_amount -= record.amount_paying
 
                     # Determine the correct A/R account based on the type of order or opening balance
                     if record.sales_order_id:
@@ -209,6 +245,7 @@ class SalesReceipt(models.Model):
                     transaction_booking = self.env["idil.transaction_booking"].create(
                         {
                             "order_number": record.sales_order_id.name,
+                            "bulk_payment_id ": record.id,
                             "trx_source_id": trx_source.id,
                             "customer_id": record.customer_id.id,
                             "reffno": order_name,  # Use the Sale Order name as reference
@@ -343,10 +380,10 @@ class SalesReceipt(models.Model):
 
                     record.amount_paying = 0.0  # Reset the amount paying
 
-                    if record.remaining_amount <= 0:
-                        record.payment_status = "paid"
-                    else:
-                        record.payment_status = "pending"
+                    # if record.remaining_amount <= 0:
+                    #     record.payment_status = "paid"
+                    # else:
+                    #     record.payment_status = "pending"
         except Exception as e:
             logger.error(f"transaction failed: {str(e)}")
             raise ValidationError(f"Transaction failed: {str(e)}")
@@ -413,6 +450,10 @@ class IdilSalesPayment(models.Model):
     _order = "id desc"
 
     sales_receipt_id = fields.Many2one("idil.sales.receipt", string="Sales Receipt")
+    # idil.sales.payment
+    bulk_payment_id = fields.Many2one(
+        "idil.receipt.bulk.payment", index=True, ondelete="set null"
+    )
     payment_account = fields.Many2one("idil.chart.account", string="Payment Account")
     payment_date = fields.Datetime(string="Payment Date", default=fields.Datetime.now)
     paid_amount = fields.Float(string="Paid Amount")

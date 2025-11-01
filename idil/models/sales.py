@@ -99,6 +99,7 @@ class SaleOrder(models.Model):
         store=False,
         readonly=True,
     )
+
     total_cost_price = fields.Float(
         string="Total Cost Price",
         compute="_compute_total_cost_price",
@@ -505,7 +506,7 @@ class SaleOrder(models.Model):
 
                     self.env[
                         "idil.salesperson.order.summary"
-                    ].create_summary_from_order(order)
+                    ].update_summary_from_order(order)
 
                     for line in order.order_lines:
                         product = line.product_id

@@ -136,12 +136,7 @@ class SalespersonOrderSummary(models.Model):
     @api.model
     def update_summary_from_order(self, order):
         # Delete existing summary entries for this order
-        self.search(
-            [
-                ("order_date", "=", order.order_date),
-                ("salesperson_name", "=", order.salesperson_id.name),
-            ]
-        ).unlink()
+        self.search([("sale_order_id", "=", order.id)]).unlink()
         # Recreate summary entries based on updated order
         self.create_summary_from_order(order)
 
@@ -149,6 +144,4 @@ class SalespersonOrderSummary(models.Model):
     def delete_summary_from_order(self, order):
         # Logic to delete summary entries corresponding to the order
         # Remove related summary lines
-        self.env["idil.salesperson.order.summary"].search(
-            [("sale_order_id", "=", order.id)]
-        ).unlink()
+        self.search([("sale_order_id", "=", order.id)]).unlink()

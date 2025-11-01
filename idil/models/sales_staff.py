@@ -238,6 +238,9 @@ class SalespersonTransaction(models.Model):
         string="Sales Return",
         ondelete="cascade",
     )
+    bulk_payment_id = fields.Many2one(
+        "idil.receipt.bulk.payment", index=True, ondelete="cascade"
+    )
 
     @api.depends("sales_person_id", "amount", "transaction_type")
     def _compute_running_balance(self):
