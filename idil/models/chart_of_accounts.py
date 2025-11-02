@@ -16,9 +16,6 @@ class AccountHeader(models.Model):
     )
     code = fields.Char(string="Header Code", required=True)
     name = fields.Char(string="Header Name", required=True)
-    company_id = fields.Many2one(
-        "res.company", string="Company", required=False
-    )  # Add this line
 
     sub_header_ids = fields.One2many(
         "idil.chart.account.subheader", "header_id", string="Sub Headers"

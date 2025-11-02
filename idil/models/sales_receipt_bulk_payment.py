@@ -26,7 +26,7 @@ class ReceiptBulkPayment(models.Model):
     date = fields.Date(default=fields.Date.context_today, string="Date", required=True)
     line_ids = fields.One2many(
         "idil.receipt.bulk.payment.line",
-        "bulk_payment_id",
+        "bulk_receipt_payment_id",
         string="Receipt Lines",
     )
 
@@ -41,7 +41,9 @@ class ReceiptBulkPayment(models.Model):
         store=False,
     )
     payment_method_ids = fields.One2many(
-        "idil.receipt.bulk.payment.method", "bulk_payment_id", string="Payment Methods"
+        "idil.receipt.bulk.payment.method",
+        "bulk_receipt_payment_id",
+        string="Payment Methods",
     )
     payment_methods_total = fields.Float(
         string="Payment Methods Total", compute="_compute_payment_methods_total"
@@ -363,7 +365,7 @@ class ReceiptBulkPayment(models.Model):
                             dr_line = self.env["idil.transaction_bookingline"].create(
                                 {
                                     "transaction_booking_id": trx_booking.id,
-                                    "bulk_payment_id": self.id,
+                                    "bulk_receipt_payment_id": self.id,
                                     "transaction_type": "dr",
                                     "account_number": payment_account.id,
                                     "dr_amount": to_pay,
@@ -376,7 +378,7 @@ class ReceiptBulkPayment(models.Model):
                             cr_line = self.env["idil.transaction_bookingline"].create(
                                 {
                                     "transaction_booking_id": trx_booking.id,
-                                    "bulk_payment_id": self.id,
+                                    "bulk_receipt_payment_id": self.id,
                                     "transaction_type": "cr",
                                     "account_number": ar_account.id,
                                     "dr_amount": 0.0,
@@ -398,7 +400,7 @@ class ReceiptBulkPayment(models.Model):
                             dr_bank = self.env["idil.transaction_bookingline"].create(
                                 {
                                     "transaction_booking_id": trx_booking.id,
-                                    "bulk_payment_id": self.id,
+                                    "bulk_receipt_payment_id": self.id,
                                     "transaction_type": "dr",
                                     "account_number": payment_account.id,
                                     "dr_amount": pay_amt_src,
@@ -414,7 +416,7 @@ class ReceiptBulkPayment(models.Model):
                             ].create(
                                 {
                                     "transaction_booking_id": trx_booking.id,
-                                    "bulk_payment_id": self.id,
+                                    "bulk_receipt_payment_id": self.id,
                                     "transaction_type": "cr",
                                     "account_number": source_clearing_account.id,
                                     "dr_amount": 0.0,
@@ -430,7 +432,7 @@ class ReceiptBulkPayment(models.Model):
                             ].create(
                                 {
                                     "transaction_booking_id": trx_booking.id,
-                                    "bulk_payment_id": self.id,
+                                    "bulk_receipt_payment_id": self.id,
                                     "transaction_type": "dr",
                                     "account_number": target_clearing_account.id,
                                     "dr_amount": to_pay,
@@ -444,7 +446,7 @@ class ReceiptBulkPayment(models.Model):
                             cr_ar = self.env["idil.transaction_bookingline"].create(
                                 {
                                     "transaction_booking_id": trx_booking.id,
-                                    "bulk_payment_id": self.id,
+                                    "bulk_receipt_payment_id": self.id,
                                     "transaction_type": "cr",
                                     "account_number": ar_account.id,
                                     "dr_amount": 0.0,
@@ -464,7 +466,7 @@ class ReceiptBulkPayment(models.Model):
                         payment = self.env["idil.sales.payment"].create(
                             {
                                 "sales_receipt_id": receipt.id,
-                                "bulk_payment_id": self.id,
+                                "bulk_receipt_payment_id": self.id,
                                 "payment_method_ids": [(4, method.id)],
                                 "transaction_booking_ids": [(4, trx_booking.id)],
                                 # Link detailed booking lines too (optional if your model uses it)
@@ -483,7 +485,7 @@ class ReceiptBulkPayment(models.Model):
                             self.env["idil.salesperson.transaction"].create(
                                 {
                                     "sales_person_id": receipt.salesperson_id.id,
-                                    "bulk_payment_id": self.id,
+                                    "bulk_receipt_payment_id": self.id,
                                     "date": self.date,
                                     "sales_payment_id": payment.id,
                                     "sales_receipt_id": receipt.id,
@@ -506,7 +508,7 @@ class ReceiptBulkPayment(models.Model):
                                         else False
                                     ),
                                     "customer_id": receipt.customer_id.id,
-                                    "bulk_payment_id": self.id,
+                                    "bulk_receipt_payment_id": self.id,
                                     "payment_method": "cash",
                                     "sales_payment_id": payment.id,
                                     "sales_receipt_id": receipt.id,
@@ -572,7 +574,7 @@ class ReceiptBulkPayment(models.Model):
                 for rec in self:
                     # Gather only payments created by/linked to this bulk
                     payments = self.env["idil.sales.payment"].search(
-                        [("bulk_payment_id", "=", rec.id)]
+                        [("bulk_receipt_payment_id", "=", rec.id)]
                     )
                     if rec.state == "confirmed":
                         # 1) Reverse per-payment effects in the exact opposite order
@@ -622,7 +624,7 @@ class ReceiptBulkPaymentLine(models.Model):
     _name = "idil.receipt.bulk.payment.line"
     _description = "Bulk Receipt Payment Line"
 
-    bulk_payment_id = fields.Many2one(
+    bulk_receipt_payment_id = fields.Many2one(
         "idil.receipt.bulk.payment", string="Bulk Payment"
     )
     receipt_id = fields.Many2one("idil.sales.receipt", string="Receipt", required=True)
@@ -661,7 +663,7 @@ class ReceiptBulkPaymentMethod(models.Model):
     company_id = fields.Many2one(
         "res.company", default=lambda s: s.env.company, required=True
     )
-    bulk_payment_id = fields.Many2one(
+    bulk_receipt_payment_id = fields.Many2one(
         "idil.receipt.bulk.payment", string="Bulk Payment"
     )
     payment_account_id = fields.Many2one(
@@ -713,12 +715,12 @@ class ReceiptBulkPaymentMethod(models.Model):
         compute="_compute_payment_datetime",
     )
 
-    @api.depends("bulk_payment_id.date")
+    @api.depends("bulk_receipt_payment_id.date")
     def _compute_payment_datetime(self):
         for rec in self:
             rec.payment_date = (
-                fields.Datetime.to_datetime(rec.bulk_payment_id.date)
-                if rec.bulk_payment_id and rec.bulk_payment_id.date
+                fields.Datetime.to_datetime(rec.bulk_receipt_payment_id.date)
+                if rec.bulk_receipt_payment_id and rec.bulk_receipt_payment_id.date
                 else False
             )
 

@@ -238,7 +238,7 @@ class SalespersonTransaction(models.Model):
         string="Sales Return",
         ondelete="cascade",
     )
-    bulk_payment_id = fields.Many2one(
+    bulk_receipt_payment_id = fields.Many2one(
         "idil.receipt.bulk.payment", index=True, ondelete="cascade"
     )
 
