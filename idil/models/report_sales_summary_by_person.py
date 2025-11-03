@@ -1,6 +1,5 @@
 from odoo import models, fields
-import base64
-import io
+import base64, io
 from collections import defaultdict
 from reportlab.platypus import (
     SimpleDocTemplate,
@@ -85,7 +84,7 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
         ]
 
         # -------------------------
-        # Opening balance (from first opening balance receipt, if any)
+        # Opening balance from opening-balance receipt (if any)
         # -------------------------
         self.env.cr.execute(
             """
@@ -102,42 +101,71 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
         opening_balance = opening_balance_result[0] if opening_balance_result else 0.0
 
         # -------------------------
-        # Previous balance (before start_date)
+        # PREVIOUS BALANCE before start_date:
+        #   previous_sales_before  = sum( (qty - disc - returns) * price - commission ) on orders < start_date
+        #   previous_paid_before   = sum( payments.paid_amount ) where DATE(payment_date) < start_date
+        #   previous_balance       = previous_sales_before - previous_paid_before
         # -------------------------
+        # previous_sales_before
         self.env.cr.execute(
             """
             SELECT
-                SUM( ((COALESCE(sol.quantity, 0) - COALESCE(sol.discount_quantity, 0) - COALESCE(srl.returned_quantity, 0)) * COALESCE(sol.price_unit, 0))
-                    -(((COALESCE(sol.quantity, 0) - COALESCE(sol.discount_quantity, 0) - COALESCE(srl.returned_quantity, 0)) * COALESCE(sol.price_unit, 0)) * COALESCE(p.commission, 0))
-                ) AS total_sales_minus_commission,
-                SUM(COALESCE(src.paid_amount, 0)) AS total_paid_before
-            FROM public.idil_sales_sales_personnel sp
-            INNER JOIN public.idil_salesperson_place_order spo ON sp.id = spo.salesperson_id
-            INNER JOIN idil_sale_order so ON so.sales_person_id = spo.salesperson_id AND so.salesperson_order_id = spo.id
+                COALESCE(SUM(
+                    (
+                      (COALESCE(sol.quantity,0)
+                      - COALESCE(sol.discount_quantity,0)
+                      - COALESCE(srl.returned_quantity,0)) * COALESCE(sol.price_unit,0)
+                    )
+                    - (
+                      (
+                        (COALESCE(sol.quantity,0)
+                        - COALESCE(sol.discount_quantity,0)
+                        - COALESCE(srl.returned_quantity,0)) * COALESCE(sol.price_unit,0)
+                      ) * COALESCE(p.commission,0)
+                    )
+                ), 0) AS sales_minus_commission_before
+            FROM idil_salesperson_place_order spo
+            INNER JOIN idil_sale_order so
+                    ON so.sales_person_id = spo.salesperson_id
+                   AND so.salesperson_order_id = spo.id
             INNER JOIN idil_sale_order_line sol ON sol.order_id = so.id
-            INNER JOIN my_product_product p ON sol.product_id = p.id
-            LEFT JOIN public.idil_sale_return sr ON sp.id = sr.salesperson_id AND so.id = sr.sale_order_id
-            LEFT JOIN public.idil_sale_return_line srl ON sr.id = srl.return_id AND p.id = srl.product_id
-            LEFT JOIN idil_sales_receipt src ON so.id = src.sales_order_id AND sp.id = src.salesperson_id
+            INNER JOIN my_product_product p    ON p.id = sol.product_id
+            LEFT JOIN  idil_sale_return sr
+                    ON sr.salesperson_id = spo.salesperson_id
+                   AND sr.sale_order_id  = so.id
+            LEFT JOIN  idil_sale_return_line srl
+                    ON srl.return_id = sr.id
+                   AND srl.product_id = p.id
             WHERE spo.state = 'confirmed'
-              AND sp.id = %s
+              AND spo.salesperson_id = %s
               AND DATE(so.order_date) < %s
             """,
             (self.salesperson_id.id, self.start_date),
         )
-        result = self.env.cr.fetchone()
-        previous_net = result[0] or 0.0
-        previous_paid = result[1] or 0.0
-        previous_balance = previous_net - previous_paid
+        previous_sales_before = self.env.cr.fetchone()[0] or 0.0
+
+        # previous_paid_before (by ACTUAL payment_date)
+        self.env.cr.execute(
+            """
+            SELECT COALESCE(SUM(p.paid_amount), 0)
+            FROM idil_sales_payment p
+            INNER JOIN idil_sales_receipt r ON r.id = p.sales_receipt_id
+            WHERE r.salesperson_id = %s
+              AND DATE(p.payment_date) < %s
+            """,
+            (self.salesperson_id.id, self.start_date),
+        )
+        previous_paid_before = self.env.cr.fetchone()[0] or 0.0
+
+        previous_balance = previous_sales_before - previous_paid_before
 
         # -------------------------
-        # SALES (by order day)
+        # SALES inside [start_date, end_date]
         # -------------------------
         self.env.cr.execute(
             """
             SELECT
                 DATE(so.order_date) AS order_day,
-                so.id               AS order_id,
                 p.name,
                 sol.quantity,
                 (((COALESCE(sol.quantity, 0)) - (COALESCE(srl.returned_quantity, 0))) * (p.discount / 100)) AS celis_tos,
@@ -153,43 +181,39 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
                 (((COALESCE(sol.quantity, 0)
                   - (((COALESCE(sol.quantity, 0)) - (COALESCE(srl.returned_quantity, 0))) * (p.discount / 100))
                   - COALESCE(srl.returned_quantity, 0)) * COALESCE(sol.price_unit, 0)) * COALESCE(sol.commission, 0)) AS comm
-            FROM public.idil_sales_sales_personnel sp
-            INNER JOIN public.idil_salesperson_place_order spo
-                ON sp.id = spo.salesperson_id
+            FROM idil_salesperson_place_order spo
             INNER JOIN idil_sale_order so
-                ON so.sales_person_id = spo.salesperson_id
-               AND so.salesperson_order_id = spo.id
+                    ON so.sales_person_id = spo.salesperson_id
+                   AND so.salesperson_order_id = spo.id
             INNER JOIN idil_sale_order_line sol ON sol.order_id = so.id
-            INNER JOIN my_product_product p ON sol.product_id = p.id
-            LEFT JOIN public.idil_sale_return sr
-                ON sp.id = sr.salesperson_id
-               AND so.id = sr.sale_order_id
-            LEFT JOIN public.idil_sale_return_line srl
-                ON sr.id = srl.return_id
-               AND p.id = srl.product_id
+            INNER JOIN my_product_product p    ON sol.product_id = p.id
+            LEFT JOIN  idil_sale_return sr
+                    ON sr.salesperson_id = spo.salesperson_id
+                   AND sr.sale_order_id  = so.id
+            LEFT JOIN  idil_sale_return_line srl
+                    ON srl.return_id = sr.id
+                   AND srl.product_id = p.id
             WHERE spo.state = 'confirmed'
-              AND sp.id = %s
+              AND spo.salesperson_id = %s
               AND DATE(so.order_date) BETWEEN %s AND %s
-            ORDER BY spo.id, so.id, sol.id;
+            ORDER BY so.id, sol.id
             """,
             (self.salesperson_id.id, self.start_date, self.end_date),
         )
         sales_rows = self.env.cr.fetchall()
-
         sales_by_day = defaultdict(list)
         for r in sales_rows:
-            sales_by_day[r[0]].append(r)
+            order_day = r[0]
+            sales_by_day[order_day].append(r)
 
         # -------------------------
-        # PAYMENTS (by actual *payment* date) from idil_sales_payment
+        # PAYMENTS inside [start_date, end_date] by ACTUAL payment_date
         # -------------------------
         self.env.cr.execute(
             """
-            SELECT DATE(p.payment_date) AS paid_day,
-                   SUM(COALESCE(p.paid_amount, 0)) AS total_paid
+            SELECT DATE(p.payment_date) AS paid_day, SUM(COALESCE(p.paid_amount,0)) AS total_paid
             FROM idil_sales_payment p
-            INNER JOIN idil_sales_receipt r
-                    ON r.id = p.sales_receipt_id
+            INNER JOIN idil_sales_receipt r ON r.id = p.sales_receipt_id
             WHERE r.salesperson_id = %s
               AND DATE(p.payment_date) BETWEEN %s AND %s
             GROUP BY DATE(p.payment_date)
@@ -200,11 +224,11 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
         for d, amt in self.env.cr.fetchall() or []:
             paid_by_day[d] = float(amt or 0.0)
 
-        # All days that have sales or payments
+        # Union of days that have sales or payments
         all_days = sorted(set(sales_by_day.keys()) | set(paid_by_day.keys()))
 
         # -------------------------
-        # Build table with OUTSTANDING (to date)
+        # Build table with running Outstanding
         # -------------------------
         headers = [
             "Date",
@@ -224,29 +248,17 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
         total_lacag = total_commission = total_paid = total_balance = 0.0
         highlight_rows, merged_rows = [], []
 
-        # Start cumulative outstanding from opening + previous
+        # Starting outstanding at beginning of the range
         cumulative_outstanding = opening_balance + previous_balance
-        # Optional: store outstanding per day if you need it elsewhere
-        outstanding_by_day = {}
 
         for day in all_days:
             daily_rows = sales_by_day.get(day, [])
             subtotal_lacag = subtotal_commission = subtotal_balance = 0.0
 
-            # Detail sales lines (if any)
             for r in daily_rows:
-                product = r[2]
-                cadad = r[3]
-                celis_tos = r[4]
-                celis = r[5]
-                net = r[6]
-                qiime = r[7]
-                lacag = r[8]
-                per = r[9]
-                comm = r[10]
-
+                # r: 0 day, 1 product, 2 qty, 3 celis_tos, 4 celis, 5 net, 6 qiime, 7 lacag, 8 per, 9 comm
+                product, cadad, celis_tos, celis, net, qiime, lacag, per, comm = r[1:10]
                 balance = lacag - comm
-
                 data.append(
                     [
                         day.strftime("%d/%m/%Y"),
@@ -267,11 +279,8 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
                 subtotal_balance += balance
 
             paid_today = paid_by_day.get(day, 0.0)
-
-            # Day Total for the day (sales - commission) minus paid on that day
             day_total = subtotal_balance - paid_today
 
-            # Rows: Subtotal / Paid / Day Total
             for label, value in [
                 (f"Subtotal {day.strftime('%d/%m/%Y')}", f"{subtotal_balance:,.2f}"),
                 (f"Paid {day.strftime('%d/%m/%Y')}", f"{paid_today:,.2f}"),
@@ -285,10 +294,8 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
                 highlight_rows.append(idx)
                 merged_rows.append(idx)
 
-            # NEW: Outstanding since beginning (to date)
+            # Running outstanding (since beginning up to this day)
             cumulative_outstanding += day_total
-            outstanding_by_day[day] = cumulative_outstanding
-
             row = [""] * 11
             row[0] = f"Outstanding (to date) {day.strftime('%d/%m/%Y')}"
             row[-1] = f"{cumulative_outstanding:,.2f}"
@@ -297,13 +304,12 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
             highlight_rows.append(idx)
             merged_rows.append(idx)
 
-            # Update totals for the GRAND TOTAL section
             total_lacag += subtotal_lacag
             total_commission += subtotal_commission
             total_paid += paid_today
-            total_balance += day_total  # equals Σ(subtotal_balance - paid_today)
+            total_balance += day_total
 
-        # GRAND TOTAL row
+        # GRAND TOTAL
         data.append(
             [
                 "GRAND TOTAL",
@@ -327,7 +333,7 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
         highlight_rows.append(len(data) - 1)
         merged_rows.append(len(data) - 1)
 
-        # Opening balance
+        # Summary rows after the table
         data.append(
             [
                 "OPENING BALANCE",
@@ -346,7 +352,6 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
         highlight_rows.append(len(data) - 1)
         merged_rows.append(len(data) - 1)
 
-        # Previous balance
         data.append(
             [
                 "PREVIOUS BALANCE",
@@ -365,14 +370,12 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
         highlight_rows.append(len(data) - 1)
         merged_rows.append(len(data) - 1)
 
-        # Total paid
         data.append(
             ["TOTAL PAID:", "", "", "", "", "", "", "", "", "", f"{total_paid:,.2f}"]
         )
         highlight_rows.append(len(data) - 1)
         merged_rows.append(len(data) - 1)
 
-        # Final balance (equals last outstanding)
         final_balance_amount = opening_balance + previous_balance + total_balance
         data.append(
             [
@@ -393,7 +396,6 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
         highlight_rows.append(final_balance_index)
         merged_rows.append(final_balance_index)
 
-        # Table styling
         table = Table(data, colWidths=[70, 140, 50, 60, 50, 40, 60, 80, 50, 70, 100])
         style = TableStyle(
             [
@@ -430,7 +432,6 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
                 "mimetype": "application/pdf",
             }
         )
-
         return {
             "type": "ir.actions.act_url",
             "url": f"/web/content/{attachment.id}?download=true",
