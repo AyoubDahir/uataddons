@@ -451,9 +451,10 @@ class IdilSalesPayment(models.Model):
 
     sales_receipt_id = fields.Many2one("idil.sales.receipt", string="Sales Receipt")
     # idil.sales.payment
-    bulk_payment_id = fields.Many2one(
+    bulk_receipt_payment_id = fields.Many2one(
         "idil.receipt.bulk.payment", index=True, ondelete="set null"
     )
+
     payment_account = fields.Many2one("idil.chart.account", string="Payment Account")
     payment_date = fields.Datetime(string="Payment Date", default=fields.Datetime.now)
     paid_amount = fields.Float(string="Paid Amount")

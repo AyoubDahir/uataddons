@@ -180,6 +180,9 @@ class TransactionBooking(models.Model):
     bulk_payment_id = fields.Many2one(
         "idil.vendor.bulk.payment", string="Related Bulk Payment", ondelete="cascade"
     )
+    bulk_receipt_payment_id = fields.Many2one(
+        "idil.receipt.bulk.payment", index=True, ondelete="cascade"
+    )
     sales_opening_balance_id = fields.Many2one(
         "idil.sales.opening.balance",
         string="Opening Balance",
@@ -237,9 +240,6 @@ class TransactionBooking(models.Model):
         required=True,
         help="Select the exchange rate for the transaction.",
         tracking=True,
-    )
-    bulk_payment_id = fields.Many2one(
-        "idil.receipt.bulk.payment", index=True, ondelete="cascade"
     )
 
     @api.constrains("trx_date")
@@ -579,7 +579,7 @@ class TransactionBookingline(models.Model):
         help="Same rate as on the parent booking.",
     )
 
-    bulk_payment_id = fields.Many2one(
+    bulk_receipt_payment_id = fields.Many2one(
         "idil.receipt.bulk.payment", index=True, ondelete="cascade"
     )
 
