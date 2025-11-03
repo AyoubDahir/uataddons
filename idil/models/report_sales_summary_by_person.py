@@ -85,7 +85,7 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
         ]
 
         # -------------------------
-        # Opening balance (first opening-balance receipt, if any)
+        # Opening balance (from first opening balance receipt, if any)
         # -------------------------
         self.env.cr.execute(
             """
@@ -103,7 +103,6 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
 
         # -------------------------
         # Previous balance (before start_date)
-        # (kept as in your version)
         # -------------------------
         self.env.cr.execute(
             """
@@ -132,7 +131,7 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
         previous_balance = previous_net - previous_paid
 
         # -------------------------
-        # MAIN SALES DATA (by order day)
+        # SALES (by order day)
         # -------------------------
         self.env.cr.execute(
             """
@@ -177,14 +176,12 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
         )
         sales_rows = self.env.cr.fetchall()
 
-        # Sales grouped by day
         sales_by_day = defaultdict(list)
         for r in sales_rows:
             sales_by_day[r[0]].append(r)
 
         # -------------------------
-        # PAYMENTS BY ACTUAL *PAYMENT* DATE (from idil_sales_payment)
-        # Join to receipt to filter by salesperson
+        # PAYMENTS (by actual *payment* date) from idil_sales_payment
         # -------------------------
         self.env.cr.execute(
             """
@@ -203,11 +200,11 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
         for d, amt in self.env.cr.fetchall() or []:
             paid_by_day[d] = float(amt or 0.0)
 
-        # Union of all days that have sales or payments
+        # All days that have sales or payments
         all_days = sorted(set(sales_by_day.keys()) | set(paid_by_day.keys()))
 
         # -------------------------
-        # Build report table
+        # Build table with OUTSTANDING (to date)
         # -------------------------
         headers = [
             "Date",
@@ -224,20 +221,19 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
         ]
         data = [headers]
 
-        total_lacag = 0.0
-        total_commission = 0.0
-        total_paid = 0.0
-        total_balance = 0.0
-        highlight_rows = []
-        merged_rows = []
+        total_lacag = total_commission = total_paid = total_balance = 0.0
+        highlight_rows, merged_rows = [], []
+
+        # Start cumulative outstanding from opening + previous
+        cumulative_outstanding = opening_balance + previous_balance
+        # Optional: store outstanding per day if you need it elsewhere
+        outstanding_by_day = {}
 
         for day in all_days:
             daily_rows = sales_by_day.get(day, [])
-            subtotal_lacag = 0.0
-            subtotal_commission = 0.0
-            subtotal_balance = 0.0
+            subtotal_lacag = subtotal_commission = subtotal_balance = 0.0
 
-            # Detail lines (sales)
+            # Detail sales lines (if any)
             for r in daily_rows:
                 product = r[2]
                 cadad = r[3]
@@ -272,14 +268,14 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
 
             paid_today = paid_by_day.get(day, 0.0)
 
-            # Day summary rows (always show so payment-only days appear)
+            # Day Total for the day (sales - commission) minus paid on that day
+            day_total = subtotal_balance - paid_today
+
+            # Rows: Subtotal / Paid / Day Total
             for label, value in [
                 (f"Subtotal {day.strftime('%d/%m/%Y')}", f"{subtotal_balance:,.2f}"),
                 (f"Paid {day.strftime('%d/%m/%Y')}", f"{paid_today:,.2f}"),
-                (
-                    f"Day Total {day.strftime('%d/%m/%Y')}",
-                    f"{(subtotal_balance - paid_today):,.2f}",
-                ),
+                (f"Day Total {day.strftime('%d/%m/%Y')}", f"{day_total:,.2f}"),
             ]:
                 row = [""] * 11
                 row[0] = label
@@ -289,10 +285,23 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
                 highlight_rows.append(idx)
                 merged_rows.append(idx)
 
+            # NEW: Outstanding since beginning (to date)
+            cumulative_outstanding += day_total
+            outstanding_by_day[day] = cumulative_outstanding
+
+            row = [""] * 11
+            row[0] = f"Outstanding (to date) {day.strftime('%d/%m/%Y')}"
+            row[-1] = f"{cumulative_outstanding:,.2f}"
+            data.append(row)
+            idx = len(data) - 1
+            highlight_rows.append(idx)
+            merged_rows.append(idx)
+
+            # Update totals for the GRAND TOTAL section
             total_lacag += subtotal_lacag
             total_commission += subtotal_commission
             total_paid += paid_today
-            total_balance += subtotal_balance - paid_today
+            total_balance += day_total  # equals Σ(subtotal_balance - paid_today)
 
         # GRAND TOTAL row
         data.append(
@@ -318,7 +327,7 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
         highlight_rows.append(len(data) - 1)
         merged_rows.append(len(data) - 1)
 
-        # Opening balance row
+        # Opening balance
         data.append(
             [
                 "OPENING BALANCE",
@@ -337,7 +346,7 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
         highlight_rows.append(len(data) - 1)
         merged_rows.append(len(data) - 1)
 
-        # Previous balance row
+        # Previous balance
         data.append(
             [
                 "PREVIOUS BALANCE",
@@ -356,14 +365,14 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
         highlight_rows.append(len(data) - 1)
         merged_rows.append(len(data) - 1)
 
-        # Total paid row
+        # Total paid
         data.append(
             ["TOTAL PAID:", "", "", "", "", "", "", "", "", "", f"{total_paid:,.2f}"]
         )
         highlight_rows.append(len(data) - 1)
         merged_rows.append(len(data) - 1)
 
-        # Final balance
+        # Final balance (equals last outstanding)
         final_balance_amount = opening_balance + previous_balance + total_balance
         data.append(
             [
