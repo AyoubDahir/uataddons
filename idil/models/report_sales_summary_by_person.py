@@ -101,10 +101,7 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
         opening_balance = opening_balance_result[0] if opening_balance_result else 0.0
 
         # -------------------------
-        # PREVIOUS BALANCE before start_date:
-        #   previous_sales_before  = sum( (qty - disc - returns) * price - commission ) on orders < start_date
-        #   previous_paid_before   = sum( payments.paid_amount ) where DATE(payment_date) < start_date
-        #   previous_balance       = previous_sales_before - previous_paid_before
+        # PREVIOUS BALANCE before start_date
         # -------------------------
         # previous_sales_before
         self.env.cr.execute(
@@ -228,7 +225,7 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
         all_days = sorted(set(sales_by_day.keys()) | set(paid_by_day.keys()))
 
         # -------------------------
-        # Build table with running Outstanding
+        # Build table with running Outstanding + daily & cumulative Lacag/Commission
         # -------------------------
         headers = [
             "Date",
@@ -250,6 +247,10 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
 
         # Starting outstanding at beginning of the range
         cumulative_outstanding = opening_balance + previous_balance
+
+        # NEW: running totals to show on the Outstanding line
+        running_lacag = 0.0
+        running_commission = 0.0
 
         for day in all_days:
             daily_rows = sales_by_day.get(day, [])
@@ -281,24 +282,50 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
             paid_today = paid_by_day.get(day, 0.0)
             day_total = subtotal_balance - paid_today
 
-            for label, value in [
-                (f"Subtotal {day.strftime('%d/%m/%Y')}", f"{subtotal_balance:,.2f}"),
-                (f"Paid {day.strftime('%d/%m/%Y')}", f"{paid_today:,.2f}"),
-                (f"Day Total {day.strftime('%d/%m/%Y')}", f"{day_total:,.2f}"),
-            ]:
-                row = [""] * 11
-                row[0] = label
-                row[-1] = value
-                data.append(row)
-                idx = len(data) - 1
-                highlight_rows.append(idx)
-                merged_rows.append(idx)
+            # --- Subtotal row: show today's Lacag & Commission totals too
+            row = [""] * 11
+            row[0] = f"Subtotal {day.strftime('%d/%m/%Y')}"
+            row[7] = f"{subtotal_lacag:,.2f}"  # Lacag (col 8)
+            row[9] = f"{subtotal_commission:,.2f}"  # Commission (col 10)
+            row[-1] = f"{subtotal_balance:,.2f}"  # Balance
+            data.append(row)
+            idx = len(data) - 1
+            highlight_rows.append(idx)
+            merged_rows.append(idx)
 
-            # Running outstanding (since beginning up to this day)
+            # --- Paid row (balance-only)
+            row = [""] * 11
+            row[0] = f"Paid {day.strftime('%d/%m/%Y')}"
+            row[-1] = f"{paid_today:,.2f}"
+            data.append(row)
+            idx = len(data) - 1
+            highlight_rows.append(idx)
+            merged_rows.append(idx)
+
+            # --- Day Total row (balance-only)
+            row = [""] * 11
+            row[0] = f"Day Total {day.strftime('%d/%m/%Y')}"
+            row[-1] = f"{day_total:,.2f}"
+            data.append(row)
+            idx = len(data) - 1
+            highlight_rows.append(idx)
+            merged_rows.append(idx)
+
+            # Running outstanding since beginning up to this day
             cumulative_outstanding += day_total
+
+            # Update running Lacag/Commission to date for the Outstanding line
+            running_lacag += subtotal_lacag
+            running_commission += subtotal_commission
+
+            # --- Outstanding (to date) row with cumulative Lacag/Commission
             row = [""] * 11
             row[0] = f"Outstanding (to date) {day.strftime('%d/%m/%Y')}"
-            row[-1] = f"{cumulative_outstanding:,.2f}"
+            row[7] = f"{running_lacag:,.2f}"  # cumulative Lacag
+            row[9] = f"{running_commission:,.2f}"  # cumulative Commission
+            row[-1] = (
+                f"{cumulative_outstanding:,.2f}"  # cumulative Balance (outstanding)
+            )
             data.append(row)
             idx = len(data) - 1
             highlight_rows.append(idx)
