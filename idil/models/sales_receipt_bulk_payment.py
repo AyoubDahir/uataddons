@@ -474,7 +474,7 @@ class ReceiptBulkPayment(models.Model):
                                     (4, bl_id) for bl_id in booking_lines_to_link
                                 ],
                                 "payment_account": payment_account.id,
-                                "payment_date": fields.Datetime.now(),
+                                "payment_date": self.date,
                                 "paid_amount": to_pay,  # AR currency
                             }
                         )

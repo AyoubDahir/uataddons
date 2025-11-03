@@ -85,7 +85,7 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
         ]
 
         # -------------------------
-        # Opening balance (from first opening balance receipt, if any)
+        # Opening balance (first opening-balance receipt, if any)
         # -------------------------
         self.env.cr.execute(
             """
@@ -103,6 +103,7 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
 
         # -------------------------
         # Previous balance (before start_date)
+        # (kept as in your version)
         # -------------------------
         self.env.cr.execute(
             """
@@ -131,7 +132,7 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
         previous_balance = previous_net - previous_paid
 
         # -------------------------
-        # Main data query (add so.id to identify orders of each day)
+        # MAIN SALES DATA (by order day)
         # -------------------------
         self.env.cr.execute(
             """
@@ -152,10 +153,7 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
                 (COALESCE(sol.commission, 0) * 100) AS per,
                 (((COALESCE(sol.quantity, 0)
                   - (((COALESCE(sol.quantity, 0)) - (COALESCE(srl.returned_quantity, 0))) * (p.discount / 100))
-                  - COALESCE(srl.returned_quantity, 0)) * COALESCE(sol.price_unit, 0)) * COALESCE(sol.commission, 0)) AS comm,
-                DATE(src.receipt_date) AS receipt_day,
-                COALESCE(src.paid_amount, 0) AS paid_amount,
-                src.id AS receipt_id
+                  - COALESCE(srl.returned_quantity, 0)) * COALESCE(sol.price_unit, 0)) * COALESCE(sol.commission, 0)) AS comm
             FROM public.idil_sales_sales_personnel sp
             INNER JOIN public.idil_salesperson_place_order spo
                 ON sp.id = spo.salesperson_id
@@ -170,9 +168,6 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
             LEFT JOIN public.idil_sale_return_line srl
                 ON sr.id = srl.return_id
                AND p.id = srl.product_id
-            LEFT JOIN idil_sales_receipt src
-                ON so.id = src.sales_order_id
-               AND sp.id = src.salesperson_id
             WHERE spo.state = 'confirmed'
               AND sp.id = %s
               AND DATE(so.order_date) BETWEEN %s AND %s
@@ -180,53 +175,52 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
             """,
             (self.salesperson_id.id, self.start_date, self.end_date),
         )
-        rows = self.env.cr.fetchall()
+        sales_rows = self.env.cr.fetchall()
 
-        # Group lines by order_day and collect order_ids per day
-        grouped = defaultdict(list)
-        orders_by_day = defaultdict(set)
-        for r in rows:
-            order_day = r[0]
-            order_id = r[1]
-            grouped[order_day].append(r)
-            if order_id:
-                orders_by_day[order_day].add(order_id)
+        # Sales grouped by day
+        sales_by_day = defaultdict(list)
+        for r in sales_rows:
+            sales_by_day[r[0]].append(r)
 
         # -------------------------
-        # Compute paid_by_day = payments against orders placed that day (any receipt date)
+        # PAYMENTS BY ACTUAL *PAYMENT* DATE (from idil_sales_payment)
+        # Join to receipt to filter by salesperson
         # -------------------------
+        self.env.cr.execute(
+            """
+            SELECT DATE(p.payment_date) AS paid_day,
+                   SUM(COALESCE(p.paid_amount, 0)) AS total_paid
+            FROM idil_sales_payment p
+            INNER JOIN idil_sales_receipt r
+                    ON r.id = p.sales_receipt_id
+            WHERE r.salesperson_id = %s
+              AND DATE(p.payment_date) BETWEEN %s AND %s
+            GROUP BY DATE(p.payment_date)
+            """,
+            (self.salesperson_id.id, self.start_date, self.end_date),
+        )
         paid_by_day = defaultdict(float)
-        for order_day, order_ids in orders_by_day.items():
-            if not order_ids:
-                continue
-            # Use IN %s with a tuple to avoid psycopg2 "list" issues
-            self.env.cr.execute(
-                """
-                SELECT SUM(COALESCE(paid_amount, 0))
-                FROM idil_sales_receipt
-                WHERE salesperson_id = %s
-                  AND sales_order_id IN %s
-                """,
-                (self.salesperson_id.id, tuple(order_ids)),
-            )
-            paid_sum = self.env.cr.fetchone()[0] or 0.0
-            paid_by_day[order_day] = float(paid_sum)
+        for d, amt in self.env.cr.fetchall() or []:
+            paid_by_day[d] = float(amt or 0.0)
+
+        # Union of all days that have sales or payments
+        all_days = sorted(set(sales_by_day.keys()) | set(paid_by_day.keys()))
 
         # -------------------------
         # Build report table
         # -------------------------
         headers = [
-            "Date",  # 0
-            "Product",  # 1
-            "Cadad",  # 2
-            "Celis Tos",  # 3
-            "Celis",  # 4
-            "Net",  # 5
-            "Qiime",  # 6
-            "Lacag",  # 7
-            "Per %",  # 8
-            "Commission",  # 9
-            "Balance",  # 10
+            "Date",
+            "Product",
+            "Cadad",
+            "Celis Tos",
+            "Celis",
+            "Net",
+            "Qiime",
+            "Lacag",
+            "Per %",
+            "Commission",
+            "Balance",
         ]
         data = [headers]
 
@@ -237,16 +231,14 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
         highlight_rows = []
         merged_rows = []
 
-        # Iterate by day
-        for day in sorted(grouped.keys()):
-            daily_rows = grouped[day]
+        for day in all_days:
+            daily_rows = sales_by_day.get(day, [])
             subtotal_lacag = 0.0
             subtotal_commission = 0.0
             subtotal_balance = 0.0
 
+            # Detail lines (sales)
             for r in daily_rows:
-                # Unpack by column index (see SELECT list above)
-                # 0: order_day, 1: order_id,
                 product = r[2]
                 cadad = r[3]
                 celis_tos = r[4]
@@ -256,7 +248,6 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
                 lacag = r[8]
                 per = r[9]
                 comm = r[10]
-                # r[11] receipt_day, r[12] paid_amount, r[13] receipt_id (not used here)
 
                 balance = lacag - comm
 
@@ -281,7 +272,7 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
 
             paid_today = paid_by_day.get(day, 0.0)
 
-            # Summary rows per day
+            # Day summary rows (always show so payment-only days appear)
             for label, value in [
                 (f"Subtotal {day.strftime('%d/%m/%Y')}", f"{subtotal_balance:,.2f}"),
                 (f"Paid {day.strftime('%d/%m/%Y')}", f"{paid_today:,.2f}"),
@@ -394,10 +385,7 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
         merged_rows.append(final_balance_index)
 
         # Table styling
-        table = Table(
-            data,
-            colWidths=[70, 140, 50, 60, 50, 40, 60, 80, 50, 70, 100],
-        )
+        table = Table(data, colWidths=[70, 140, 50, 60, 50, 40, 60, 80, 50, 70, 100])
         style = TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#B6862D")),
