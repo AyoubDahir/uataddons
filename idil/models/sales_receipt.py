@@ -245,7 +245,7 @@ class SalesReceipt(models.Model):
                     transaction_booking = self.env["idil.transaction_booking"].create(
                         {
                             "order_number": record.sales_order_id.name,
-                            "bulk_payment_id ": record.id,
+                            "bulk_receipt_payment_id": False,  # ✅ prevent stray FK
                             "trx_source_id": trx_source.id,
                             "customer_id": record.customer_id.id,
                             "reffno": order_name,  # Use the Sale Order name as reference
