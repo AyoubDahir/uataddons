@@ -1,5 +1,6 @@
 from venv import logger
-from odoo import api, fields, models
+from odoo import api, fields, models, _
+
 from odoo.exceptions import ValidationError
 
 
@@ -115,9 +116,91 @@ class IdilItemOpeningBalance(models.Model):
 
     # Above: add new, retain any already present (to avoid removing manually entered)
 
+    def _validate_before_post(self):
+        """Common pre-posting checks. Raises ValidationError with a clear list."""
+        for rec in self:
+
+            # Required source
+            source = self.env["idil.transaction.source"].search(
+                [("name", "=", "Inventory Opening Balance")], limit=1
+            )
+            if not source:
+                raise ValidationError(
+                    _("Transaction Source 'Inventory Opening Balance' not found.")
+                )
+
+            # Equity (Opening Balance) account
+            # Keep your original search behavior; fall back without currency if needed
+            EquityAccount = self.env["idil.chart.account"].search(
+                [("name", "=", "Opening Balance Account")], limit=1
+            )
+            if not EquityAccount:
+                raise ValidationError(
+                    _("Chart of Account 'Opening Balance Account' not found.")
+                )
+
+            # Collect issues
+            missing_accounts = []
+            bad_qty = []
+            bad_cost = []
+
+            for ln in rec.line_ids:
+                if not ln.item_id:
+                    missing_accounts.append(_("A line has no Item selected."))
+                    continue
+
+                # Business sanity checks
+                if ln.quantity is None or ln.quantity <= 0:
+                    bad_qty.append(f"{ln.item_id.display_name} (qty={ln.quantity})")
+                if ln.cost_price is None or ln.cost_price < 0:
+                    bad_cost.append(f"{ln.item_id.display_name} (cost={ln.cost_price})")
+
+                # The key guard: asset account must exist
+                if not ln.item_id.asset_account_id:
+                    missing_accounts.append(ln.item_id.display_name)
+
+            errors = []
+            if missing_accounts:
+                errors.append(
+                    _("- Missing asset account on items:\n  • ")
+                    + "\n  • ".join(sorted(set(missing_accounts)))
+                    + _("\n  Set 'Asset Account' on each Item, then try again.")
+                )
+            if bad_qty:
+                errors.append(
+                    _("- Invalid quantity (must be > 0) for:\n  • ")
+                    + "\n  • ".join(sorted(set(bad_qty)))
+                )
+            if bad_cost:
+                errors.append(
+                    _("- Invalid cost price (must be ≥ 0) for:\n  • ")
+                    + "\n  • ".join(sorted(set(bad_cost)))
+                )
+
+            if errors:
+                raise ValidationError(
+                    _("Cannot post Opening Balance:\n\n") + "\n\n".join(errors)
+                )
+
+            # Optional: warn on zero exchange rate
+            # (Block if you want strict behavior)
+            if rec.rate is None:
+                raise ValidationError(
+                    _("Exchange rate is not computed. Please save the document first.")
+                )
+            # if rec.rate == 0:
+            #     raise ValidationError(_("Exchange rate is 0. Set a valid rate before posting."))
+
+            # Return validated reusable references
+            return {
+                "source": source,
+                "equity_account": EquityAccount,
+            }
+
     def confirm_opening_balance(self):
         try:
             with self.env.cr.savepoint():
+                self._validate_before_post()
                 TransactionBooking = self.env["idil.transaction_booking"]
                 TransactionSource = self.env["idil.transaction.source"]
                 ItemMovement = self.env["idil.item.movement"]
