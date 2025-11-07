@@ -505,11 +505,11 @@ class IdilSalesPayment(models.Model):
                         {}
                     )  # Store payment_amounts grouped by bulk_payment_id
                     for method in bulk_payment_methods:
-                        if method.bulk_payment_id:
-                            if method.bulk_payment_id not in related_bulk_payments:
-                                related_bulk_payments[method.bulk_payment_id] = 0
+                        if method.bulk_receipt_payment_id:
+                            if method.bulk_receipt_payment_id not in related_bulk_payments:
+                                related_bulk_payments[method.bulk_receipt_payment_id] = 0
                             related_bulk_payments[
-                                method.bulk_payment_id
+                                method.bulk_receipt_payment_id
                             ] += method.payment_amount
 
                     # Delete the payment methods before adjusting the bulk payment
