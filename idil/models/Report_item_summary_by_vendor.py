@@ -12,11 +12,6 @@ from datetime import datetime
 class ItemSummaryReportWizard(models.TransientModel):
     _name = 'idil.item.summary.with.vendor'
     _description = 'Item Summary Report with Vendor Wizard'
-    
-    # Store report data for viewing - with readonly=False to ensure they can be written to
-    report_data = fields.Binary(string="Report PDF", attachment=True, readonly=False)
-    report_name = fields.Char(string="Report Name", readonly=False)
-    view_mode = fields.Boolean(string="View Mode", default=False, readonly=False)
 
     vendor_id = fields.Many2one(
         'idil.vendor.registration',
@@ -27,7 +22,15 @@ class ItemSummaryReportWizard(models.TransientModel):
     start_date = fields.Date(string="Start Date", required=True)
     end_date = fields.Date(string="End Date", required=True)
 
-    def generate_pdf_report(self, download_mode=True):
+    def generate_pdf_report(self):
+        """Generate and download PDF report directly"""
+        return self._generate_and_process_report(download=True)
+        
+    def view_report(self):
+        """Generate and view PDF report in browser"""
+        return self._generate_and_process_report(download=False)
+        
+    def _generate_and_process_report(self, download=True):
         # Fetch active company details
         company = self.env.company
         company_logo = company.logo if company.logo else None
@@ -162,94 +165,25 @@ class ItemSummaryReportWizard(models.TransientModel):
         encoded_pdf = base64.b64encode(pdf_data)
         filename = f"Item_Summary_Report_{self.vendor_id.name}_{self.start_date}_{self.end_date}.pdf"
         
-        if download_mode:
-            # Direct download mode
-            attachment = self.env['ir.attachment'].create({
-                'name': filename,
-                'type': 'binary',
-                'datas': encoded_pdf,
-                'mimetype': 'application/pdf',
-            })
-            
-            return {
-                'type': 'ir.actions.act_url',
-                'url': f'/web/content/{attachment.id}?download=true',
-                'target': 'new',
-            }
-        else:
-            try:
-                # Try to store PDF in the wizard record
-                self.write({
-                    'report_data': encoded_pdf,
-                    'report_name': filename
-                })
-                
-                # Create a new wizard to avoid potential database field issues
-                wizard = self.create({
-                    'vendor_id': self.vendor_id.id,
-                    'start_date': self.start_date,
-                    'end_date': self.end_date,
-                    'report_data': encoded_pdf,
-                    'report_name': filename
-                })
-                
-                # Return form view of the new wizard
-                return {
-                    'name': 'Item Summary Report',
-                    'view_mode': 'form',
-                    'res_model': 'idil.item.summary.with.vendor',
-                    'res_id': wizard.id,
-                    'type': 'ir.actions.act_window',
-                    'target': 'new',
-                    'views': [(self.env.ref('idil.item_summary_report_view_form').id, 'form')],
-                }
-            except Exception as e:
-                # If we hit any errors with the view mode, fall back to download
-                self.env.cr.rollback()
-                attachment = self.env['ir.attachment'].create({
-                    'name': filename,
-                    'type': 'binary',
-                    'datas': encoded_pdf,
-                    'mimetype': 'application/pdf',
-                })
-                
-                return {
-                    'type': 'ir.actions.act_url',
-                    'url': f'/web/content/{attachment.id}?download=true',
-                    'target': 'new',
-                }
-            
-    def view_report(self):
-        """Generate report for viewing before download"""
-        try:
-            return self.generate_pdf_report(download_mode=False)
-        except Exception as e:
-            # If we get an error related to missing columns, fall back to direct download
-            self.env.cr.rollback()
-            return self.generate_pdf_report(download_mode=True)
-    
-    def download_report(self):
-        """Download the already generated report"""
-        try:
-            if not self.report_data:
-                # If report hasn't been generated yet, generate and download it
-                return self.generate_pdf_report(download_mode=True)
-                
-            # Create attachment from stored report data
-            attachment = self.env['ir.attachment'].create({
-                'name': self.report_name or 'ItemSummaryReport.pdf',
-                'type': 'binary',
-                'datas': self.report_data,
-                'mimetype': 'application/pdf',
-            })
-            
+        # Create attachment
+        attachment = self.env['ir.attachment'].create({
+            'name': filename,
+            'type': 'binary',
+            'datas': encoded_pdf,
+            'mimetype': 'application/pdf',
+        })
+        
+        if download:
             # Return URL action to download the attachment
             return {
                 'type': 'ir.actions.act_url',
                 'url': f'/web/content/{attachment.id}?download=true',
                 'target': 'new',
             }
-        except Exception as e:
-            # If there's any error, fall back to direct generation and download
-            self.env.cr.rollback()
-            return self.generate_pdf_report(download_mode=True)
+        else:
+            # Return URL action to view the attachment in the browser
+            return {
+                'type': 'ir.actions.act_url',
+                'url': f'/web/content/{attachment.id}',
+                'target': 'new',
+            }

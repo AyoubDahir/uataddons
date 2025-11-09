@@ -17,25 +17,6 @@
             </form>
         </field>
     </record>
-    
-    <!-- View form for displaying the report before download -->
-    <record id="item_summary_report_view_form" model="ir.ui.view">
-        <field name="name">idil.item.summary.report.view.form</field>
-        <field name="model">idil.item.summary.with.vendor</field>
-        <field name="arch" type="xml">
-            <form string="Item Summary Report">
-                <!-- We're avoiding attrs that depend on fields that might not exist yet -->
-                <h2>Item Summary Report</h2>
-                <div>
-                    <field name="report_data" widget="pdf_viewer"/>
-                </div>
-                <footer>
-                    <button string="Download Report" type="object" name="download_report" class="btn-primary"/>
-                    <button string="Close" class="btn-secondary" special="cancel"/>
-                </footer>
-            </form>
-        </field>
-    </record>
 
     <record id="action_item_summary_with_vendor_report_wizard" model="ir.actions.act_window">
         <field name="name">Item Summary With Vendor</field>
