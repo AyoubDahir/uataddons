@@ -10,8 +10,8 @@
                     <field name="end_date"/>
                 </group>
                 <footer>
-                    <button string="View Report" type="object" name="view_report" class="btn-primary"/>
-                    <button string="Download PDF Report" type="object" name="generate_pdf_report" class="btn-secondary"/>
+                    <button name="view_report" string="View Report" type="object" class="btn-primary" data-hotkey="v"/>
+                    <button name="generate_pdf_report" string="Download PDF Report" type="object" class="btn-secondary" data-hotkey="d"/>
                     <button string="Cancel" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>

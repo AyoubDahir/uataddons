@@ -28,7 +28,12 @@ class ItemSummaryReportWizard(models.TransientModel):
         
     def view_report(self):
         """Generate and view PDF report in browser"""
-        return self._generate_and_process_report(download=False)
+        # Generate report for viewing in a new browser tab/window
+        result = self._generate_and_process_report(download=False)
+        # Explicitly set target to 'new' for viewing in new tab
+        if result.get('type') == 'ir.actions.act_url':
+            result['target'] = 'new'
+        return result
         
     def _generate_and_process_report(self, download=True):
         # Fetch active company details
@@ -181,9 +186,10 @@ class ItemSummaryReportWizard(models.TransientModel):
                 'target': 'new',
             }
         else:
-            # Return URL action to view the attachment in the browser
+            # Return URL action to view the attachment in the browser without downloading
+            # We remove the Content-Disposition header by setting download=false
             return {
                 'type': 'ir.actions.act_url',
-                'url': f'/web/content/{attachment.id}',
+                'url': f'/web/content/{attachment.id}?download=false',
                 'target': 'new',
             }
