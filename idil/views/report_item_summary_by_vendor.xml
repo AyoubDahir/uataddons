@@ -8,14 +8,34 @@
                     <field name="vendor_id"/>
                     <field name="start_date"/>
                     <field name="end_date"/>
-
                 </group>
                 <footer>
-                    <button string="Download PDF Report" type="object" name="generate_pdf_report"
-                            class="btn-secondary"/>
-
+                    <button string="View Report" type="object" name="view_report" class="btn-primary"/>
+                    <button string="Download PDF Report" type="object" name="generate_pdf_report" class="btn-secondary"/>
                     <button string="Cancel" class="btn-secondary" special="cancel"/>
                 </footer>
+            </form>
+        </field>
+    </record>
+    
+    <!-- View form for displaying the report before download -->
+    <record id="item_summary_report_view_form" model="ir.ui.view">
+        <field name="name">idil.item.summary.report.view.form</field>
+        <field name="model">idil.item.summary.with.vendor</field>
+        <field name="arch" type="xml">
+            <form string="Item Summary Report">
+                <field name="view_mode" invisible="1"/>
+                <field name="report_name" invisible="1"/>
+                <div attrs="{'invisible': [('view_mode', '=', False)]}">
+                    <h2>Item Summary Report</h2>
+                    <div>
+                        <field name="report_data" widget="pdf_viewer" filename="report_name"/>
+                    </div>
+                    <footer>
+                        <button string="Download Report" type="object" name="download_report" class="btn-primary"/>
+                        <button string="Close" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </div>
             </form>
         </field>
     </record>

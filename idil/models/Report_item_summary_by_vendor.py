@@ -12,6 +12,11 @@ from datetime import datetime
 class ItemSummaryReportWizard(models.TransientModel):
     _name = 'idil.item.summary.with.vendor'
     _description = 'Item Summary Report with Vendor Wizard'
+    
+    # Store report data for viewing
+    report_data = fields.Binary(string="Report PDF", attachment=True)
+    report_name = fields.Char(string="Report Name")
+    view_mode = fields.Boolean(string="View Mode", default=False)
 
     vendor_id = fields.Many2one(
         'idil.vendor.registration',
@@ -22,7 +27,7 @@ class ItemSummaryReportWizard(models.TransientModel):
     start_date = fields.Date(string="Start Date", required=True)
     end_date = fields.Date(string="End Date", required=True)
 
-    def generate_pdf_report(self):
+    def generate_pdf_report(self, download_mode=True):
         # Fetch active company details
         company = self.env.company
         company_logo = company.logo if company.logo else None
@@ -152,14 +157,64 @@ class ItemSummaryReportWizard(models.TransientModel):
         buffer.seek(0)
         pdf_data = buffer.read()
         buffer.close()
-
+        
+        # Encode PDF data
+        encoded_pdf = base64.b64encode(pdf_data)
+        filename = f"Item_Summary_Report_{self.vendor_id.name}_{self.start_date}_{self.end_date}.pdf"
+        
+        if download_mode:
+            # Direct download mode
+            attachment = self.env['ir.attachment'].create({
+                'name': filename,
+                'type': 'binary',
+                'datas': encoded_pdf,
+                'mimetype': 'application/pdf',
+            })
+            
+            return {
+                'type': 'ir.actions.act_url',
+                'url': f'/web/content/{attachment.id}?download=true',
+                'target': 'new',
+            }
+        else:
+            # View mode - store PDF in the wizard record
+            self.write({
+                'report_data': encoded_pdf,
+                'report_name': filename,
+                'view_mode': True
+            })
+            
+            # Return form view of the current wizard
+            return {
+                'name': 'Item Summary Report',
+                'view_mode': 'form',
+                'res_model': 'idil.item.summary.with.vendor',
+                'res_id': self.id,
+                'type': 'ir.actions.act_window',
+                'target': 'new',
+                'context': {'form_view_initial_mode': 'edit'},
+                'views': [(self.env.ref('idil.item_summary_report_view_form').id, 'form')],
+            }
+            
+    def view_report(self):
+        """Generate report for viewing before download"""
+        return self.generate_pdf_report(download_mode=False)
+    
+    def download_report(self):
+        """Download the already generated report"""
+        if not self.report_data:
+            # If report hasn't been generated yet, generate and download it
+            return self.generate_pdf_report(download_mode=True)
+            
+        # Create attachment from stored report data
         attachment = self.env['ir.attachment'].create({
-            'name': 'ItemSummaryReportByVendor.pdf',
+            'name': self.report_name or 'ItemSummaryReport.pdf',
             'type': 'binary',
-            'datas': base64.b64encode(pdf_data),
+            'datas': self.report_data,
             'mimetype': 'application/pdf',
         })
-
+        
+        # Return URL action to download the attachment
         return {
             'type': 'ir.actions.act_url',
             'url': f'/web/content/{attachment.id}?download=true',
