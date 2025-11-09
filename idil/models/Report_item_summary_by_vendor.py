@@ -78,9 +78,9 @@ class ItemSummaryReportWizard(models.TransientModel):
                 tb.vendor_id,
                 it.name AS item_name,
                 tl.item_id,
-                SUM(pl.quantity) AS total_quantity,
+                SUM(CASE WHEN tl.transaction_type = 'dr' THEN pl.quantity ELSE 0 END) AS total_quantity,
                 AVG(pl.cost_price) AS avg_cost_price,
-                SUM(pl.quantity) * AVG(pl.cost_price) AS total_balance
+                SUM(CASE WHEN tl.transaction_type = 'dr' THEN (pl.quantity * pl.cost_price) ELSE 0 END) AS total_balance
             FROM idil_transaction_bookingline tl
             INNER JOIN idil_transaction_booking tb ON tl.transaction_booking_id = tb.id
             INNER JOIN idil_vendor_registration vr ON tb.vendor_id = vr.id
@@ -88,6 +88,8 @@ class ItemSummaryReportWizard(models.TransientModel):
             LEFT JOIN idil_purchase_order_line pl ON pl.id = tl.order_line
             WHERE tb.vendor_id = %s 
             AND tl.transaction_date BETWEEN %s AND %s
+            -- Only include debit transactions (inventory additions) to avoid double counting
+            AND tl.transaction_type = 'dr'
             GROUP BY it.name, tl.item_id, tb.vendor_id
             ORDER BY avg_cost_price DESC
         """
@@ -111,7 +113,8 @@ class ItemSummaryReportWizard(models.TransientModel):
 
             # Accumulate grand totals
             grand_total_quantity += quantity
-            grand_total_balance += transaction[5] if transaction[5] else 0.0
+            # Direct sum of the balance which is already correctly calculated in the query
+            grand_total_balance += float(transaction[5] or 0.0)
 
             data.append([vendor_id, item_name, quantity, cost_price, balance])
 
