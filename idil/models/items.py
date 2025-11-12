@@ -168,12 +168,21 @@ class item(models.Model):
     def _onchange_item_type(self):
         """Try to load default accounts based on existing items of same type and currency"""
         if self.item_type and self.currency_id:
-            # Look for existing items with the same type and currency
-            existing_items = self.search([
-                ('item_type', '=', self.item_type),
-                ('currency_id', '=', self.currency_id.id),
-                ('id', '!=', self.id)  # Exclude current item
-            ], limit=1)
+            # For new records, the ID might be a NewId (string) which causes SQL errors
+            # when comparing with database IDs (integers)
+            if not self._origin.id:
+                # This is a new record, just search without excluding self
+                existing_items = self.search([
+                    ('item_type', '=', self.item_type),
+                    ('currency_id', '=', self.currency_id.id)
+                ], limit=1)
+            else:
+                # This is an existing record, exclude self from search
+                existing_items = self.search([
+                    ('item_type', '=', self.item_type),
+                    ('currency_id', '=', self.currency_id.id),
+                    ('id', '!=', self._origin.id)
+                ], limit=1)
             
             # If found, copy the accounts
             if existing_items:
@@ -212,24 +221,33 @@ class item(models.Model):
         """Debug function to check available accounts for the item"""
         if not self.currency_id:
             return {'error': 'Currency not set'}
+
+        # Make safe currency_id reference
+        currency_id = self.currency_id.id
+        if not isinstance(currency_id, int):
+            # If we have a problem with the currency ID, try to get it safely
+            try:
+                currency_id = int(currency_id)
+            except (ValueError, TypeError):
+                return {'error': 'Invalid currency ID format'}
             
         # Check for available purchase accounts
         purchase_accounts = self.env['idil.chart.account'].search([
             ('account_type', 'like', 'COGS'), 
-            ('currency_id', '=', self.currency_id.id), 
+            ('currency_id', '=', currency_id), 
             ('header_name', '=', 'Expenses')
         ])
         
         # Check for available sales accounts
         sales_accounts = self.env['idil.chart.account'].search([
             ('header_name', '=', 'Income'), 
-            ('currency_id', '=', self.currency_id.id)
+            ('currency_id', '=', currency_id)
         ])
         
         # Check for available asset accounts
         asset_accounts = self.env['idil.chart.account'].search([
             ('header_name', '=', 'Assets'),
-            ('currency_id', '=', self.currency_id.id)
+            ('currency_id', '=', currency_id)
         ])
         
         # Check for available adjustment accounts
@@ -237,7 +255,7 @@ class item(models.Model):
             '|', 
             ('header_name', '=', 'Assets'), 
             ('header_name', '=', 'Expenses'), 
-            ('currency_id', '=', self.currency_id.id), 
+            ('currency_id', '=', currency_id), 
             ('account_type', '=', 'Adjustment')
         ])
         
@@ -246,6 +264,12 @@ class item(models.Model):
             'sales_accounts': sales_accounts.mapped('name'),
             'asset_accounts': asset_accounts.mapped('name'),
             'adjustment_accounts': adjustment_accounts.mapped('name'),
+            'count': {
+                'purchase': len(purchase_accounts),
+                'sales': len(sales_accounts),
+                'asset': len(asset_accounts),
+                'adjustment': len(adjustment_accounts)
+            }
         }
 
     @api.constrains("name")
