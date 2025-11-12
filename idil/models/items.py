@@ -92,7 +92,6 @@ class item(models.Model):
         help="Account to report sales of this item",
         tracking=True,
         domain="[('header_name', '=', 'Income'), ('currency_id', '=', currency_id)]",
-        # Domain to filter accounts starting with '4' and in USD
     )
     asset_account_id = fields.Many2one(
         "idil.chart.account",
@@ -101,17 +100,15 @@ class item(models.Model):
         required=True,
         tracking=True,
         domain="[('header_name', '=', 'Assets'),('currency_id', '=', currency_id)]",
-        # Domain to filter accounts starting with '1' and in USD
     )
 
     adjustment_account_id = fields.Many2one(
         "idil.chart.account",
-        string="Asset Account",
+        string="Adjustment Account",
         help="Account to report adjustment of this item",
         required=True,
         tracking=True,
         domain="['|', ('header_name', '=', 'Assets'), ('header_name', '=', 'Expenses'), ('currency_id', '=', currency_id), ('account_type', '=', 'Adjustment' )]",
-        # Domain to filter accounts starting with '1' and in USD
     )
 
     days_until_expiration = fields.Integer(
@@ -152,7 +149,43 @@ class item(models.Model):
     def update_currency_id(self):
         usd_currency = self.env.ref("base.USD")
         self.search([]).write({"currency_id": usd_currency.id})
+        
+    @api.onchange('currency_id')
+    def _onchange_currency_id(self):
+        """Clear account fields when currency changes to force reselection"""
+        if self.currency_id:
+            # Keep the accounts if they match the currency, otherwise clear them
+            if self.purchase_account_id and self.purchase_account_id.currency_id != self.currency_id:
+                self.purchase_account_id = False
+            if self.sales_account_id and self.sales_account_id.currency_id != self.currency_id:
+                self.sales_account_id = False
+            if self.asset_account_id and self.asset_account_id.currency_id != self.currency_id:
+                self.asset_account_id = False
+            if self.adjustment_account_id and self.adjustment_account_id.currency_id != self.currency_id:
+                self.adjustment_account_id = False
 
+    @api.onchange('item_type')
+    def _onchange_item_type(self):
+        """Try to load default accounts based on existing items of same type and currency"""
+        if self.item_type and self.currency_id:
+            # Look for existing items with the same type and currency
+            existing_items = self.search([
+                ('item_type', '=', self.item_type),
+                ('currency_id', '=', self.currency_id.id),
+                ('id', '!=', self.id)  # Exclude current item
+            ], limit=1)
+            
+            # If found, copy the accounts
+            if existing_items:
+                if not self.purchase_account_id and existing_items.purchase_account_id:
+                    self.purchase_account_id = existing_items.purchase_account_id
+                if not self.sales_account_id and existing_items.sales_account_id:
+                    self.sales_account_id = existing_items.sales_account_id
+                if not self.asset_account_id and existing_items.asset_account_id:
+                    self.asset_account_id = existing_items.asset_account_id
+                if not self.adjustment_account_id and existing_items.adjustment_account_id:
+                    self.adjustment_account_id = existing_items.adjustment_account_id
+                    
     @api.depends_context("uid")
     def compute_item_total_value(self):
         """Compute total value per item: sum(dr_amount - cr_amount) where account is asset_account_id."""
@@ -174,6 +207,46 @@ class item(models.Model):
 
             result = self.env.cr.fetchone()
             item.total_price = round(result[0], 5) if result and result[0] else 0.0
+
+    def get_available_accounts(self):
+        """Debug function to check available accounts for the item"""
+        if not self.currency_id:
+            return {'error': 'Currency not set'}
+            
+        # Check for available purchase accounts
+        purchase_accounts = self.env['idil.chart.account'].search([
+            ('account_type', 'like', 'COGS'), 
+            ('currency_id', '=', self.currency_id.id), 
+            ('header_name', '=', 'Expenses')
+        ])
+        
+        # Check for available sales accounts
+        sales_accounts = self.env['idil.chart.account'].search([
+            ('header_name', '=', 'Income'), 
+            ('currency_id', '=', self.currency_id.id)
+        ])
+        
+        # Check for available asset accounts
+        asset_accounts = self.env['idil.chart.account'].search([
+            ('header_name', '=', 'Assets'),
+            ('currency_id', '=', self.currency_id.id)
+        ])
+        
+        # Check for available adjustment accounts
+        adjustment_accounts = self.env['idil.chart.account'].search([
+            '|', 
+            ('header_name', '=', 'Assets'), 
+            ('header_name', '=', 'Expenses'), 
+            ('currency_id', '=', self.currency_id.id), 
+            ('account_type', '=', 'Adjustment')
+        ])
+        
+        return {
+            'purchase_accounts': purchase_accounts.mapped('name'),
+            'sales_accounts': sales_accounts.mapped('name'),
+            'asset_accounts': asset_accounts.mapped('name'),
+            'adjustment_accounts': adjustment_accounts.mapped('name'),
+        }
 
     @api.constrains("name")
     def _check_unique_name(self):

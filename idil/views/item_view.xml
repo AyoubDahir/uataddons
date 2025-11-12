@@ -164,12 +164,21 @@
                         <page string="Account Information">
                             <group>
                                 <group>
-                                
-                                    <field name="currency_id"/>
-                                    <field name="purchase_account_id" string="Purchase Account"/>
-                                    <field name="sales_account_id" string="Sales Account"/>
-                                    <field name="asset_account_id" string="Asset Account"/>
-                                    <field name="adjustment_account_id" string="Adjustment Account"/>
+                                    <!-- Set currency_id first as it is required for other fields -->
+                                    <field name="currency_id" options="{'no_create': True, 'no_open': True}"/>
+                                    <field name="purchase_account_id" string="Purchase Account" 
+                                           options="{'no_create': True}" 
+                                           domain="[('account_type', 'like', 'COGS'), ('currency_id', '=', currency_id), ('header_name', '=', 'Expenses')]"/>
+                                    <field name="sales_account_id" string="Sales Account" 
+                                           options="{'no_create': True}" 
+                                           domain="[('header_name', '=', 'Income'), ('currency_id', '=', currency_id)]"/>
+                                    <field name="asset_account_id" string="Asset Account" 
+                                           options="{'no_create': True}" 
+                                           domain="[('header_name', '=', 'Assets'),('currency_id', '=', currency_id)]"/>
+                                    <field name="adjustment_account_id" string="Adjustment Account" 
+                                           options="{'no_create': True}" 
+                                           domain="['|', ('header_name', '=', 'Assets'), ('header_name', '=', 'Expenses'), ('currency_id', '=', currency_id), ('account_type', '=', 'Adjustment' )]"/>
+                                    <button name="get_available_accounts" string="Check Available Accounts" type="object" class="oe_link" help="This will check for available accounts in the system based on your currency."/>
                                 </group>
                             </group>
                         </page>
