@@ -1,0 +1,163 @@
+// -------------------------------------------------------------------------
+// Modern UI Overrides for BizCore
+// -------------------------------------------------------------------------
+
+// 1. Hide Odoo Branding
+// -------------------------------------------------------------------------
+.o_footer_copyright {
+    display: none !important;
+}
+
+.o_main_navbar .o_menu_brand {
+    display: none !important;
+}
+
+head title {
+    content: "BizCore" !important;
+}
+
+// 2. Modern Navbar (Glassmorphism)
+// -------------------------------------------------------------------------
+.o_main_navbar {
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    
+    .o_menu_apps .dropdown-toggle {
+        color: #1a1a1a !important;
+        &:hover {
+            background: rgba(0, 0, 0, 0.03) !important;
+        }
+    }
+    
+    .o_menu_sections .o_nav_entry {
+        color: #4a4a4a !important;
+        font-weight: 500;
+        &:hover {
+            background: rgba(0, 0, 0, 0.03) !important;
+        }
+    }
+}
+
+// 3. View Containers (Cards & Shadows)
+// -------------------------------------------------------------------------
+.o_content, .o_form_view, .o_list_view {
+    background-color: #f8f9fa !important; // Light gray background for contrast
+}
+
+.o_form_sheet_bg {
+    background: transparent !important;
+    padding: 20px !important;
+}
+
+.o_form_sheet {
+    background: #ffffff !important;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04) !important;
+    padding: 30px !important;
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+}
+
+.o_list_view .o_list_table {
+    background: #ffffff !important;
+    border-radius: 12px !important;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02) !important;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    
+    thead {
+        background: #f8f9fa;
+        th {
+            border-bottom: 1px solid #eaeaea !important;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            color: #6c757d;
+            padding: 12px 16px !important;
+        }
+    }
+    
+    tbody tr {
+        td {
+            padding: 12px 16px !important;
+            border-top: 1px solid #f1f1f1 !important;
+        }
+        &:hover {
+            background-color: #f8f9fa !important;
+        }
+    }
+}
+
+// 4. Modern Buttons
+// -------------------------------------------------------------------------
+.btn-primary {
+    background: linear-gradient(135deg, #3068A0 0%, #1F3E62 100%) !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 8px 20px !important;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(48, 104, 160, 0.2);
+    transition: all 0.2s ease;
+    
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(48, 104, 160, 0.3);
+    }
+    
+    &:active {
+        transform: translateY(0);
+    }
+}
+
+.btn-secondary {
+    background: #ffffff !important;
+    border: 1px solid #e0e0e0 !important;
+    color: #4a4a4a !important;
+    border-radius: 8px !important;
+    padding: 8px 20px !important;
+    
+    &:hover {
+        background: #f8f9fa !important;
+        border-color: #d0d0d0 !important;
+    }
+}
+
+// 5. Typography & Inputs
+// -------------------------------------------------------------------------
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    -webkit-font-smoothing: antialiased;
+}
+
+.o_field_widget {
+    input, select, textarea {
+        border-radius: 8px !important;
+        border: 1px solid #e0e0e0 !important;
+        padding: 8px 12px !important;
+        transition: border-color 0.2s ease;
+        
+        &:focus {
+            border-color: #3068A0 !important;
+            box-shadow: 0 0 0 3px rgba(48, 104, 160, 0.1) !important;
+        }
+    }
+}
+
+// 6. Kanban View Modernization
+// -------------------------------------------------------------------------
+.o_kanban_view .o_kanban_record {
+    border-radius: 12px !important;
+    border: 1px solid rgba(0,0,0,0.05) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02) !important;
+    background: #fff !important;
+    margin-bottom: 16px !important;
+    
+    &:hover {
+        box-shadow: 0 8px 24px rgba(0,0,0,0.06) !important;
+        transform: translateY(-2px);
+        transition: all 0.2s ease;
+    }
+}

@@ -15,11 +15,10 @@
         ],
         "point_of_sale.assets": [
             "idil/static/src/js/pos_customer_modification.js",
-            "idil/static/src/components/idil_dashboard.js",
         ],
         "web.assets_backend": [
             "idil/static/src/css/kanban.css",
-            # Include your new JS file here
+            "idil/static/src/scss/modern_ui.scss",
         ],
         "web._assets_primary_variables": [
             ("prepend", "idil/static/src/scss/primary_variables.scss"),
