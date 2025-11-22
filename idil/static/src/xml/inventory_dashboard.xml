@@ -97,6 +97,93 @@
                 </div>
             </div>
 
+            <!-- Financial & Actionable Row (New) -->
+            <div class="row mb-4">
+                <!-- Card 5: Total Spend -->
+                <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="row d-block d-xl-flex align-items-center">
+                                <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                    <div class="icon-shape icon-shape-success rounded me-4 me-sm-0" style="background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 15px; border-radius: 12px;">
+                                        <i class="fa fa-money fa-2x"></i>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-xl-7 px-xl-0">
+                                    <div class="d-none d-sm-block">
+                                        <h2 class="h6 text-gray-400 mb-0">Total Spend</h2>
+                                        <h3 class="fw-extrabold mb-2">$<span t-esc="(stats.total_spend || 0).toLocaleString()"></span></h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 6: Pending Approvals -->
+                <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="row d-block d-xl-flex align-items-center">
+                                <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                    <div class="icon-shape icon-shape-warning rounded me-4 me-sm-0" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; padding: 15px; border-radius: 12px;">
+                                        <i class="fa fa-clock-o fa-2x"></i>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-xl-7 px-xl-0">
+                                    <div class="d-none d-sm-block">
+                                        <h2 class="h6 text-gray-400 mb-0">Pending Orders</h2>
+                                        <h3 class="fw-extrabold mb-2" t-esc="stats.pending_count || 0"></h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 7: Stock Value -->
+                <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="row d-block d-xl-flex align-items-center">
+                                <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                    <div class="icon-shape icon-shape-info rounded me-4 me-sm-0" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; padding: 15px; border-radius: 12px;">
+                                        <i class="fa fa-archive fa-2x"></i>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-xl-7 px-xl-0">
+                                    <div class="d-none d-sm-block">
+                                        <h2 class="h6 text-gray-400 mb-0">Stock Value</h2>
+                                        <h3 class="fw-extrabold mb-2">$<span t-esc="(stats.stock_value || 0).toLocaleString()"></span></h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 8: Low Stock Alerts -->
+                <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="row d-block d-xl-flex align-items-center">
+                                <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                    <div class="icon-shape icon-shape-danger rounded me-4 me-sm-0" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 15px; border-radius: 12px;">
+                                        <i class="fa fa-exclamation-triangle fa-2x"></i>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-xl-7 px-xl-0">
+                                    <div class="d-none d-sm-block">
+                                        <h2 class="h6 text-gray-400 mb-0">Low Stock</h2>
+                                        <h3 class="fw-extrabold mb-2" t-esc="stats.low_stock_count || 0"></h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Charts Row -->
             <div class="row">
                 <div class="col-12 col-xl-8 mb-4">
