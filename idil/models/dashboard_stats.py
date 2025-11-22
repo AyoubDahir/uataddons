@@ -196,7 +196,7 @@ class IdilDashboard(models.Model):
             ('state', '=', 'confirmed')
         ])
         
-        total_wastage_value = sum(returns.mapped('total_amount'))
+        total_wastage_value = sum(returns.mapped('total_subtotal'))
         total_wastage_items = self.env['idil.sale.return.line'].search_count([
             ('return_id', 'in', returns.ids)
         ])
