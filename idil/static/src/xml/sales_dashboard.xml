@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="Idil.SalesDashboard" owl="1">
+        <div class="o_action_manager o_view_controller o_action">
+            <div class="container-fluid py-4">
+                <!-- Header -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h2 class="h4 mb-0">Sales Dashboard</h2>
+                        <p class="text-muted mb-0">Overview of sales performance and customer metrics.</p>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary btn-sm">
+                            <i class="fa fa-download me-2"></i>Export Report
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KPI Cards Row 1 -->
+                <div class="row mb-4">
+                    <!-- Total Sales -->
+                    <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="row d-block d-xl-flex align-items-center">
+                                    <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                        <div class="icon-shape icon-shape-primary rounded me-4 me-sm-0">
+                                            <i class="fa fa-dollar fa-2x"></i>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-xl-7 px-xl-0">
+                                        <div class="d-none d-sm-block">
+                                            <h2 class="h6 text-gray-400 mb-0">Total Sales</h2>
+                                            <h3 class="fw-extrabold mb-2">
+                                                <t t-esc="stats.total_sales"/>
+                                            </h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Active Customers -->
+                    <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="row d-block d-xl-flex align-items-center">
+                                    <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                        <div class="icon-shape icon-shape-secondary rounded me-4 me-sm-0">
+                                            <i class="fa fa-users fa-2x"></i>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-xl-7 px-xl-0">
+                                        <div class="d-none d-sm-block">
+                                            <h2 class="h6 text-gray-400 mb-0">Active Customers</h2>
+                                            <h3 class="fw-extrabold mb-2">
+                                                <t t-esc="stats.active_customers"/>
+                                            </h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pending Orders -->
+                    <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="row d-block d-xl-flex align-items-center">
+                                    <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                        <div class="icon-shape icon-shape-tertiary rounded me-4 me-sm-0">
+                                            <i class="fa fa-clock-o fa-2x"></i>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-xl-7 px-xl-0">
+                                        <div class="d-none d-sm-block">
+                                            <h2 class="h6 text-gray-400 mb-0">Pending Orders</h2>
+                                            <h3 class="fw-extrabold mb-2">
+                                                <t t-esc="stats.pending_sales_orders"/>
+                                            </h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sales Returns -->
+                    <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="row d-block d-xl-flex align-items-center">
+                                    <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                        <div class="icon-shape icon-shape-info rounded me-4 me-sm-0">
+                                            <i class="fa fa-undo fa-2x"></i>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-xl-7 px-xl-0">
+                                        <div class="d-none d-sm-block">
+                                            <h2 class="h6 text-gray-400 mb-0">Sales Returns</h2>
+                                            <h3 class="fw-extrabold mb-2">
+                                                <t t-esc="stats.sales_returns_count"/>
+                                            </h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KPI Cards Row 2 -->
+                <div class="row mb-4">
+                    <!-- Total Receipts -->
+                    <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="row d-block d-xl-flex align-items-center">
+                                    <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                        <div class="icon-shape icon-shape-success rounded me-4 me-sm-0">
+                                            <i class="fa fa-check-circle fa-2x"></i>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-xl-7 px-xl-0">
+                                        <div class="d-none d-sm-block">
+                                            <h2 class="h6 text-gray-400 mb-0">Total Receipts</h2>
+                                            <h3 class="fw-extrabold mb-2">
+                                                <t t-esc="stats.total_sales_receipts"/>
+                                            </h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Customer Orders -->
+                    <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="row d-block d-xl-flex align-items-center">
+                                    <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                        <div class="icon-shape icon-shape-warning rounded me-4 me-sm-0">
+                                            <i class="fa fa-shopping-cart fa-2x"></i>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-xl-7 px-xl-0">
+                                        <div class="d-none d-sm-block">
+                                            <h2 class="h6 text-gray-400 mb-0">Customer Orders</h2>
+                                            <h3 class="fw-extrabold mb-2">
+                                                <t t-esc="stats.customer_orders_count"/>
+                                            </h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="row">
+                    <div class="col-12 col-xl-8 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header d-flex flex-row align-items-center flex-0 border-bottom">
+                                <div class="d-block">
+                                    <h2 class="h6 text-gray-400 mb-0">Sales Overview</h2>
+                                    <h3 class="fw-extrabold mb-2">Monthly Sales</h3>
+                                </div>
+                            </div>
+                            <div class="card-body p-2">
+                                <div style="height: 300px;">
+                                    <canvas t-ref="chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-xl-4 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header d-flex flex-row align-items-center flex-0 border-bottom">
+                                <div class="d-block">
+                                    <h2 class="h6 text-gray-400 mb-0">Customers</h2>
+                                    <h3 class="fw-extrabold mb-2">Segmentation</h3>
+                                </div>
+                            </div>
+                            <div class="card-body p-2">
+                                <div style="height: 300px;">
+                                    <canvas t-ref="doughnut"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+</templates>

@@ -57,4 +57,11 @@ class IdilDashboard(models.Model):
             'total_payable': total_payable,
             'adjustment_count': adjustment_count,
             'adjustment_value': adjustment_value,
+            # Sales Metrics
+            'total_sales': sum(self.env['idil.sale.order'].search([('state', '=', 'confirmed')]).mapped('order_total')),
+            'active_customers': self.env['idil.customer.registration'].search_count([('status', '=', True)]),
+            'pending_sales_orders': self.env['idil.sale.order'].search_count([('state', '=', 'draft')]),
+            'sales_returns_count': self.env['idil.sale.return'].search_count([]),
+            'total_sales_receipts': sum(self.env['idil.sales.receipt'].search([('payment_status', '=', 'paid')]).mapped('paid_amount')),
+            'customer_orders_count': self.env['idil.customer.sale.order'].search_count([]),
         }
