@@ -77,7 +77,7 @@ class IdilDashboard(models.Model):
                 p.id,
                 p.name,
                 SUM(sol.quantity) as total_qty,
-                SUM(sol.subtotal) as total_revenue
+                SUM(sol.quantity * sol.price_unit) as total_revenue
             FROM idil_sale_order_line sol
             JOIN idil_item p ON p.id = sol.product_id
             JOIN idil_sale_order so ON so.id = sol.order_id
@@ -135,7 +135,7 @@ class IdilDashboard(models.Model):
         query = """
             SELECT 
                 p.name as category,
-                SUM(sol.subtotal) as total_sales,
+                SUM(sol.quantity * sol.price_unit) as total_sales,
                 SUM(sol.quantity) as total_qty
             FROM idil_sale_order_line sol
             JOIN idil_item p ON p.id = sol.product_id
