@@ -80,6 +80,97 @@ body,
     background: transparent !important;
 }
 
+/* ------------------------------------------------------------------------- */
+/* COMPONENT OVERRIDES (Kanban, Forms, Lists) */
+/* ------------------------------------------------------------------------- */
+
+/* 1. Kanban Cards */
+.o_kanban_record {
+    border-radius: 16px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+    background-color: #ffffff !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    margin-bottom: 16px !important;
+}
+
+.o_kanban_record:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
+    z-index: 10;
+}
+
+/* 2. Form Views */
+/* Main Form Container */
+.o_form_sheet {
+    border-radius: 16px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05) !important;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+    padding: 32px !important;
+    background-color: #ffffff !important;
+}
+
+/* Form Background */
+.o_form_view {
+    background-color: #f5f7fa !important;
+    /* Volt Content BG */
+}
+
+/* 3. Inputs & Fields */
+.o_field_widget input,
+.o_field_widget select,
+.o_field_widget textarea {
+    border-radius: 8px !important;
+    border: 1px solid #e5e7eb !important;
+    padding: 8px 12px !important;
+    transition: all 0.2s ease;
+    background-color: #ffffff !important;
+}
+
+.o_field_widget input:focus,
+.o_field_widget select:focus,
+.o_field_widget textarea:focus {
+    border-color: #4f6df5 !important;
+    /* Volt Blue */
+    box-shadow: 0 0 0 3px rgba(79, 109, 245, 0.15) !important;
+    outline: none !important;
+}
+
+/* 4. List Views (Tables) */
+.o_list_view .o_list_table {
+    background-color: #ffffff !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02) !important;
+    overflow: hidden;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+.o_list_view .o_list_table thead {
+    background-color: #f9fafb !important;
+    border-bottom: 1px solid #e5e7eb !important;
+}
+
+.o_list_view .o_list_table thead th {
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: #6b7280 !important;
+    /* Gray-500 */
+    padding: 12px 16px !important;
+    border: none !important;
+}
+
+.o_list_view .o_list_table tbody tr td {
+    padding: 12px 16px !important;
+    border-top: 1px solid #f3f4f6 !important;
+    vertical-align: middle !important;
+}
+
+.o_list_view .o_list_table tbody tr:hover {
+    background-color: #f9fafb !important;
+}
+
 .o_form_sheet {
     border-radius: 16px !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02) !important;

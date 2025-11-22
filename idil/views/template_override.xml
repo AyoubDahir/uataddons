@@ -21,6 +21,11 @@
                 <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
                 <title t-esc="title or 'Idil'"/>
                 <!--                <link type="image/x-icon" rel="shortcut icon" t-att-href="x_icon or '/web/static/img/favicon.ico'"/>-->
+                <!-- Google Font -->
+                <link rel="preconnect" href="https://fonts.googleapis.com"/>
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
+                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+
                 <link type="image/x-icon" rel="shortcut icon"
                       t-att-href="x_icon or '/idil/static/src/img/Idil.ico'"/>
 
