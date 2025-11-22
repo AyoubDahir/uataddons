@@ -1,0 +1,81 @@
+/* Volt Design Overrides for Odoo */
+
+/* Import Google Font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Force Font Family */
+body, .o_web_client {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif !important;
+}
+
+/* Navbar Gradient */
+.o_main_navbar {
+    background: linear-gradient(to bottom, #0c63b4 0%, #084d8f 100%) !important;
+    border-bottom: none !important;
+    color: white !important;
+}
+
+/* Sidebar Gradient (if applicable in this Odoo version/theme) */
+.o_main_sidebar, .o_sidebar_menu {
+    background: linear-gradient(to bottom, #0c63b4 0%, #084d8f 100%) !important;
+    color: white !important;
+}
+
+/* Navbar Text Color */
+.o_main_navbar .o_menu_brand, 
+.o_main_navbar .o_menu_sections > li > a, 
+.o_main_navbar .o_menu_systray > li > a {
+    color: white !important;
+}
+
+.o_main_navbar .o_menu_sections > li > a:hover, 
+.o_main_navbar .o_menu_systray > li > a:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Active Menu Item */
+.o_main_navbar .o_menu_sections > li.show > a,
+.o_main_navbar .o_menu_sections > li.active > a {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    font-weight: 600 !important;
+}
+
+/* Dropdown Menus */
+.dropdown-menu {
+    border-radius: 0.5rem !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    border: 1px solid rgba(0,0,0,0.05) !important;
+}
+
+/* Buttons */
+.btn-primary {
+    background-color: #4f6df5 !important; /* Volt Primary */
+    border-color: #4f6df5 !important;
+}
+
+.btn-primary:hover {
+    background-color: #3a56d7 !important;
+    border-color: #3a56d7 !important;
+}
+
+/* Cards */
+.o_kanban_record, .card {
+    border-radius: 16px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02) !important;
+    border: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Form Views */
+.o_form_view {
+    background-color: #f5f7fa !important; /* Volt Content BG */
+}
+
+.o_form_sheet_bg {
+    background: transparent !important;
+}
+
+.o_form_sheet {
+    border-radius: 16px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02) !important;
+    border: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
