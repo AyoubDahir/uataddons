@@ -98,7 +98,7 @@
         "views/sale_return.xml",
         "views/stock_adjustment_views.xml",
         "views/balance_sheet.xml",
-        "views/inventory_dashboard.xml",
+        # "views/inventory_dashboard.xml",
         "views/customer_sales_view.xml",
         "views/report_account_statements.xml",
         "views/product_adjustment_views.xml",
@@ -124,5 +124,6 @@
         # "views/model_export_wizard.xml",
         "views/menu_hr.xml",
         "views/menu.xml",
+        "views/inventory_dashboard.xml",
     ],
 }
