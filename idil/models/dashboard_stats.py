@@ -206,7 +206,7 @@ class IdilDashboard(models.Model):
             SELECT 
                 p.name,
                 SUM(srl.returned_quantity) as qty,
-                SUM(srl.returned_quantity * srl.price) as value
+                SUM(srl.returned_quantity * srl.price_unit) as value
             FROM idil_sale_return_line srl
             JOIN idil_item p ON p.id = srl.product_id
             JOIN idil_sale_return sr ON sr.id = srl.return_id
