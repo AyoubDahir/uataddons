@@ -79,7 +79,7 @@ class IdilDashboard(models.Model):
                 SUM(sol.quantity) as total_qty,
                 SUM(sol.subtotal) as total_revenue
             FROM idil_sale_order_line sol
-            JOIN idil_product p ON p.id = sol.product_id
+            JOIN idil_item p ON p.id = sol.product_id
             JOIN idil_sale_order so ON so.id = sol.order_id
             WHERE so.state = 'confirmed'
             GROUP BY p.id, p.name
@@ -138,7 +138,7 @@ class IdilDashboard(models.Model):
                 SUM(sol.subtotal) as total_sales,
                 SUM(sol.quantity) as total_qty
             FROM idil_sale_order_line sol
-            JOIN idil_product p ON p.id = sol.product_id
+            JOIN idil_item p ON p.id = sol.product_id
             LEFT JOIN idil_item_category ic ON ic.id = p.category_id
             JOIN idil_sale_order so ON so.id = sol.order_id
             WHERE so.state = 'confirmed'
@@ -208,7 +208,7 @@ class IdilDashboard(models.Model):
                 SUM(srl.returned_quantity) as qty,
                 SUM(srl.returned_quantity * srl.price) as value
             FROM idil_sale_return_line srl
-            JOIN idil_product p ON p.id = srl.product_id
+            JOIN idil_item p ON p.id = srl.product_id
             JOIN idil_sale_return sr ON sr.id = srl.return_id
             WHERE sr.state = 'confirmed'
             AND sr.return_date >= %s
