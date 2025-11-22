@@ -66,243 +66,210 @@ $o-grays: (
   600: $o-gray-600,
   700: $o-gray-700,
   800: $o-gray-800,
-  900: $o-gray-900,
-  ) !default;
+  $o-warning: #E6A100 !default;
+  $o-danger: #C73A40 !default;
 
-// ------------------------------------
-// Masdar Brand Palette (Modernized)
-// ------------------------------------
-$o-brand-odoo: #1F3E62 !default; // Deep Blue
-$o-community-color: #3068A0 !default; // Primary Blue
-$o-enterprise-color: #1F3E62 !default; // Deep Navy
+  // Fine-tune contextual text colors
+  $o-theme-text-colors: (
+    "success": #0B7A26,
+    "info": #1F6A9A,
+    "warning": #875C00,
+    "danger": #B1363B,
+    ) !default;
 
-// Primary brand (Modern Deep Blue)
-$masdar-blue: #3068A0;
-$masdar-blue-600: #295A8B;
-$masdar-blue-700: #1F3E62;
-$masdar-navy: #152a42;
+  // ------------------------------------
+  // Opacity Map
+  // ------------------------------------
+  $o-opacity-disabled: .5 !default;
+  $o-opacity-muted: .76 !default;
+  $o-opacities: (
+    0: 0,
+    25: .25,
+    50: .5,
+    75: .75,
+    100: 1,
+    disabled: $o-opacity-disabled,
+    muted: $o-opacity-muted,
+    ) !default;
 
-// Secondary accent
-$masdar-brick: #985858; // Keeping as secondary accent
-$masdar-brick-600: #854A4A;
+  // ------------------------------------
+  // Text / Background / Links
+  // ------------------------------------
+  $o-main-text-color: $o-gray-800 !default;
+  $o-main-bg-color: $masdar-sky-50 !default;
+  $o-main-color-muted: rgba($o-main-text-color, $o-opacity-muted) !default;
+  $o-main-headings-color: $o-gray-900 !default;
+  $o-main-link-color: darken($o-brand-primary, 5%) !default;
+  $o-main-favorite-color: #f3cc00 !default;
+  $o-main-code-color: #d2317b !default;
 
-// Tints / backgrounds (Clean White/Gray)
-$masdar-sky-50: #f8f9fa;
-$masdar-sky-100: #f1f4f8;
-$masdar-sky-200: #e9ecef;
+  // ------------------------------------
+  // Components Color System
+  // ------------------------------------
+  $o-component-active-color: $o-white !default;
+  $o-component-active-bg: $o-brand-primary !default;
+  $o-component-active-border: $o-brand-primary !default;
 
-// Assign brand tokens
-$o-brand-primary: $masdar-blue !default;
-$o-brand-secondary: $masdar-navy !default;
-$o-brand-lightsecondary: $masdar-sky-100 !default;
+  $o-view-background-color: $masdar-sky-100 !default;
+  $o-shadow-color: rgba(31, 62, 98, 0.22) !default;
 
-$o-action: $o-brand-primary !default; // primary action color
-$o-success: #28a745 !default;
-$o-info: #2A7DB7 !default; // tuned towards brand
-$o-warning: #E6A100 !default;
-$o-danger: #C73A40 !default;
+  $o-form-lightsecondary: #cbd5e1 !default;
 
-// Fine-tune contextual text colors
-$o-theme-text-colors: (
-  "success": #0B7A26,
-  "info": #1F6A9A,
-  "warning": #875C00,
-  "danger": #B1363B,
-  ) !default;
+  $o-list-footer-bg-color: transparent !default;
+  $o-list-footer-font-weight: bold !default;
 
-// ------------------------------------
-// Opacity Map
-// ------------------------------------
-$o-opacity-disabled: .5 !default;
-$o-opacity-muted: .76 !default;
-$o-opacities: (
-  0: 0,
-  25: .25,
-  50: .5,
-  75: .75,
-  100: 1,
-  disabled: $o-opacity-disabled,
-  muted: $o-opacity-muted,
-  ) !default;
+  // Custom utility color maps
+  $o-text-colors-custom: (
+    "action": $o-action,
+    "favourite": $o-main-favorite-color,
+    ) !default;
 
-// ------------------------------------
-// Text / Background / Links
-// ------------------------------------
-$o-main-text-color: $o-gray-800 !default;
-$o-main-bg-color: $masdar-sky-50 !default;
-$o-main-color-muted: rgba($o-main-text-color, $o-opacity-muted) !default;
-$o-main-headings-color: $o-gray-900 !default;
-$o-main-link-color: darken($o-brand-primary, 5%) !default;
-$o-main-favorite-color: #f3cc00 !default;
-$o-main-code-color: #d2317b !default;
+  $o-bg-colors-custom: (
+    "action": $o-action,
+    "view": $masdar-blue,
+    // app menu background
+    "favourite": $o-main-favorite-color,
+    ) !default;
 
-// ------------------------------------
-// Components Color System
-// ------------------------------------
-$o-component-active-color: $o-white !default;
-$o-component-active-bg: $o-brand-primary !default;
-$o-component-active-border: $o-brand-primary !default;
+  $o-btn-custom: (
+    "favourite": $o-main-favorite-color,
+    ) !default;
 
-$o-view-background-color: $masdar-sky-100 !default;
-$o-shadow-color: rgba(31, 62, 98, 0.22) !default;
+  // ------------------------------------
+  // Borders & Layout
+  // ------------------------------------
+  $o-border-color: var(--border-color, #{$o-gray-300}) !default;
 
-$o-form-lightsecondary: #cbd5e1 !default;
+  // Inputs
+  $o-input-padding-y: 2px !default;
+  $o-input-padding-x: 4px !default;
+  $o-input-border-required: $o-brand-primary !default;
+  $o-input-hover-border-color: $o-gray-300 !default;
 
-$o-list-footer-bg-color: transparent !default;
-$o-list-footer-font-weight: bold !default;
+  // Grid & Spacing
+  $o-extra-grid-breakpoints: (
+    xs: 0,
+    vsm: 475px,
+    sm: 576px,
+    md: 768px,
+    lg: 992px,
+    xl: 1200px,
+    xxl: 1534px,
+    ) !default;
+  $o-spacer: 16px !default;
+  $o-form-group-cols: 12 !default;
+  $o-form-spacing-unit: 5px !default;
+  $o-horizontal-padding: $o-spacer !default;
+  $o-innergroup-rpadding: 45px !default;
+  $o-dropdown-hpadding: 20px !default;
+  $o-dropdown-vpadding: 3px !default;
+  $o-dropdown-max-height: 70vh !default;
 
-// Custom utility color maps
-$o-text-colors-custom: (
-  "action": $o-action,
-  "favourite": $o-main-favorite-color,
-  ) !default;
+  $o-statbutton-height: 44px !default;
+  $o-statbutton-vpadding: 0px !default;
+  $o-statbutton-spacing: 6px !default;
 
-$o-bg-colors-custom: (
-  "action": $o-action,
-  "view": $masdar-blue,
-  // app menu background
-  "favourite": $o-main-favorite-color,
-  ) !default;
+  $o-modal-lg: 980px !default;
+  $o-modal-md: 650px !default;
+  $o-sheet-cancel-tpadding: 0px !default;
 
-$o-btn-custom: (
-  "favourite": $o-main-favorite-color,
-  ) !default;
+  $o-statusbar-height: 33px !default;
+  $o-label-font-size-factor: 0.8 !default;
 
-// ------------------------------------
-// Borders & Layout
-// ------------------------------------
-$o-border-color: var(--border-color, #{$o-gray-300}) !default;
+  // ------------------------------------
+  // List / Badges
+  // ------------------------------------
+  $o-list-group-active-color: $o-white !default;
+  $o-list-group-active-bg: $masdar-blue-600 !default;
 
-// Inputs
-$o-input-padding-y: 2px !default;
-$o-input-padding-x: 4px !default;
-$o-input-border-required: $o-brand-primary !default;
-$o-input-hover-border-color: $o-gray-300 !default;
+  $o-badge-min-width: 3ch !default;
+  $o-nb-calendar-colors: 24 !default;
 
-// Grid & Spacing
-$o-extra-grid-breakpoints: (
-  xs: 0,
-  vsm: 475px,
-  sm: 576px,
-  md: 768px,
-  lg: 992px,
-  xl: 1200px,
-  xxl: 1534px,
-  ) !default;
-$o-spacer: 16px !default;
-$o-form-group-cols: 12 !default;
-$o-form-spacing-unit: 5px !default;
-$o-horizontal-padding: $o-spacer !default;
-$o-innergroup-rpadding: 45px !default;
-$o-dropdown-hpadding: 20px !default;
-$o-dropdown-vpadding: 3px !default;
-$o-dropdown-max-height: 70vh !default;
+  $o-base-settings-mobile-tabs-height: 40px !default;
+  $o-base-settings-mobile-tabs-overflow-gap: 3% !default;
 
-$o-statbutton-height: 44px !default;
-$o-statbutton-vpadding: 0px !default;
-$o-statbutton-spacing: 6px !default;
+  $o-cp-breadcrumb-height: 30px !default;
+  $o-cp-button-sm-no-border-padding: 0.4rem !default;
+  $o-datepicker-week-color: #8f8f8f !default;
 
-$o-modal-lg: 980px !default;
-$o-modal-md: 650px !default;
-$o-sheet-cancel-tpadding: 0px !default;
+  $o-card-body-bg-opacity: 0.9 !default;
 
-$o-statusbar-height: 33px !default;
-$o-label-font-size-factor: 0.8 !default;
+  // ------------------------------------
+  // Radii & Touch
+  // ------------------------------------
+  $o-border-radius: o-to-rem(6px) !default;
+  $o-border-radius-sm: o-to-rem(4px) !default;
+  $o-border-radius-lg: o-to-rem(10px) !default;
 
-// ------------------------------------
-// List / Badges
-// ------------------------------------
-$o-list-group-active-color: $o-white !default;
-$o-list-group-active-bg: $masdar-blue-600 !default;
+  $o-touch-btn-padding: 7px 14px !default;
 
-$o-badge-min-width: 3ch !default;
-$o-nb-calendar-colors: 24 !default;
+  // ------------------------------------
+  // Buttons (Bootstrap overrides)
+  // ------------------------------------
+  $o-btns-bs-override: (
+    ) !default;
+  $o-btns-bs-override: map-merge(("primary": (background: $o-brand-primary,
+          border: $o-brand-primary,
+          color: $o-white,
 
-$o-base-settings-mobile-tabs-height: 40px !default;
-$o-base-settings-mobile-tabs-overflow-gap: 3% !default;
+          hover-background: $masdar-blue-600,
+          hover-border: $masdar-blue-700,
+          hover-color: $o-white,
 
-$o-cp-breadcrumb-height: 30px !default;
-$o-cp-button-sm-no-border-padding: 0.4rem !default;
-$o-datepicker-week-color: #8f8f8f !default;
+          active-background: $masdar-navy,
+          active-border: $masdar-navy,
+          active-color: $o-white,
+        ),
+        "secondary": (background: $o-gray-300,
+          border: $o-gray-300,
+          color: $o-gray-900,
 
-$o-card-body-bg-opacity: 0.9 !default;
+          hover-background: $o-gray-400,
+          hover-border: $o-gray-400,
+          hover-color: $o-gray-900,
 
-// ------------------------------------
-// Radii & Touch
-// ------------------------------------
-$o-border-radius: o-to-rem(6px) !default;
-$o-border-radius-sm: o-to-rem(4px) !default;
-$o-border-radius-lg: o-to-rem(10px) !default;
+          active-background: $o-component-active-bg,
+          active-border: $o-component-active-border,
+          active-color: $o-component-active-color,
+        ),
+        "light": (background: $o-white,
+          border: $o-white,
+          color: $o-gray-800,
 
-$o-touch-btn-padding: 7px 14px !default;
+          hover-background: $o-gray-200,
+          hover-border: $o-gray-200,
+          hover-color: $o-gray-900,
 
-// ------------------------------------
-// Buttons (Bootstrap overrides)
-// ------------------------------------
-$o-btns-bs-override: (
-  ) !default;
-$o-btns-bs-override: map-merge(("primary": (background: $o-brand-primary,
-        border: $o-brand-primary,
-        color: $o-white,
+          active-background: $o-component-active-bg,
+          active-border: $o-component-active-border,
+          active-color: $o-component-active-color,
+        ),
+        "danger": (background: $o-danger,
+          border: $o-danger,
+          color: $o-white,
 
-        hover-background: $masdar-blue-600,
-        hover-border: $masdar-blue-700,
-        hover-color: $o-white,
+          hover-background: darken($o-danger, 6%),
+          hover-border: darken($o-danger, 10%),
+          hover-color: $o-white,
 
-        active-background: $masdar-navy,
-        active-border: $masdar-navy,
-        active-color: $o-white,
-      ),
-      "secondary": (background: $o-gray-300,
-        border: $o-gray-300,
-        color: $o-gray-900,
+          active-background: darken($o-danger, 12%),
+          active-border: darken($o-danger, 12%),
+          active-color: $o-white,
+        ),
+        "warning": (background: $o-warning,
+          border: $o-warning,
+          color: #1e1e1e,
 
-        hover-background: $o-gray-400,
-        hover-border: $o-gray-400,
-        hover-color: $o-gray-900,
+          hover-background: darken($o-warning, 6%),
+          hover-border: darken($o-warning, 8%),
+          hover-color: #111,
 
-        active-background: $o-component-active-bg,
-        active-border: $o-component-active-border,
-        active-color: $o-component-active-color,
-      ),
-      "light": (background: $o-white,
-        border: $o-white,
-        color: $o-gray-800,
-
-        hover-background: $o-gray-200,
-        hover-border: $o-gray-200,
-        hover-color: $o-gray-900,
-
-        active-background: $o-component-active-bg,
-        active-border: $o-component-active-border,
-        active-color: $o-component-active-color,
-      ),
-      "danger": (background: $o-danger,
-        border: $o-danger,
-        color: $o-white,
-
-        hover-background: darken($o-danger, 6%),
-        hover-border: darken($o-danger, 10%),
-        hover-color: $o-white,
-
-        active-background: darken($o-danger, 12%),
-        active-border: darken($o-danger, 12%),
-        active-color: $o-white,
-      ),
-      "warning": (background: $o-warning,
-        border: $o-warning,
-        color: #1e1e1e,
-
-        hover-background: darken($o-warning, 6%),
-        hover-border: darken($o-warning, 8%),
-        hover-color: #111,
-
-        active-background: darken($o-warning, 12%),
-        active-border: darken($o-warning, 12%),
-        active-color: #111,
-      ),
-    ), $o-btns-bs-override
-);
+          active-background: darken($o-warning, 12%),
+          active-border: darken($o-warning, 12%),
+          active-color: #111,
+        ),
+      ), $o-btns-bs-override
+  );
 
 $o-btns-bs-outline-override: (
   ) !default;
