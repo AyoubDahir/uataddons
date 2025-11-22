@@ -1,6 +1,6 @@
 {
     "name": "BizCore",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "category": "Core Business Platform",
     "license": "LGPL-3",
     "summary": " Core Business Platform",
