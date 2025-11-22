@@ -129,21 +129,21 @@ class IdilDashboard(models.Model):
     @api.model
     def get_sales_by_category(self):
         """
-        Get sales breakdown by product category.
-        Note: Assuming products have a category_id field
+        Get sales breakdown by product (Top 5 products).
+        Note: Items don't have categories, so we group by product instead.
         """
         query = """
             SELECT 
-                COALESCE(ic.name, 'Uncategorized') as category,
+                p.name as category,
                 SUM(sol.subtotal) as total_sales,
                 SUM(sol.quantity) as total_qty
             FROM idil_sale_order_line sol
             JOIN idil_item p ON p.id = sol.product_id
-            LEFT JOIN idil_item_category ic ON ic.id = p.category_id
             JOIN idil_sale_order so ON so.id = sol.order_id
             WHERE so.state = 'confirmed'
-            GROUP BY ic.name
+            GROUP BY p.name
             ORDER BY total_sales DESC
+            LIMIT 5
         """
         self.env.cr.execute(query)
         results = self.env.cr.dictfetchall()
