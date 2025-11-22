@@ -20,7 +20,7 @@
             "idil/static/src/css/kanban.css",
             "idil/static/src/scss/modern_ui.scss",
             # "idil/static/src/css/volt.css",
-            # "idil/static/src/scss/volt_overrides.scss",
+            "idil/static/src/scss/volt_overrides.scss",
             # "idil/static/src/js/volt.js",
         ],
         "web._assets_primary_variables": [
