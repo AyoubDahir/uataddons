@@ -30,6 +30,19 @@ class IdilDashboard(models.Model):
         # Low Stock Alerts (Quantity < 10)
         low_stock_count = self.env['idil.item'].search_count([('quantity', '<', 10)])
 
+        # 3. Comprehensive Metrics (Vendors, Payments, Adjustments)
+        # Active Vendors
+        vendor_count = self.env['idil.vendor.registration'].search_count([('active', '=', True)])
+        
+        # Vendor Payments
+        vendor_transactions = self.env['idil.vendor_transaction'].search([])
+        total_paid = sum(vendor_transactions.mapped('paid_amount'))
+        total_payable = sum(vendor_transactions.mapped('remaining_amount'))
+        
+        # Stock Adjustments
+        adjustment_count = self.env['idil.stock.adjustment'].search_count([])
+        adjustment_value = sum(self.env['idil.stock.adjustment'].search([]).mapped('total_amount'))
+
         return {
             'purchase_count': purchase_count,
             'vendor_trx_count': vendor_trx_count,
@@ -39,4 +52,9 @@ class IdilDashboard(models.Model):
             'pending_count': pending_count,
             'stock_value': stock_value,
             'low_stock_count': low_stock_count,
+            'vendor_count': vendor_count,
+            'total_paid': total_paid,
+            'total_payable': total_payable,
+            'adjustment_count': adjustment_count,
+            'adjustment_value': adjustment_value,
         }
