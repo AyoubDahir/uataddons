@@ -21,7 +21,10 @@
             "idil/static/src/scss/modern_ui.scss",
             # "idil/static/src/css/volt.css",
             "idil/static/src/scss/volt_overrides.scss",
-            # "idil/static/src/js/volt.js",
+            "idil/static/src/js/volt.js",
+            "idil/static/src/js/inventory_dashboard.js",
+            "idil/static/src/xml/inventory_dashboard.xml",
+            "https://cdn.jsdelivr.net/npm/chart.js",
         ],
         "web._assets_primary_variables": [
             ("prepend", "idil/static/src/scss/primary_variables.scss"),
@@ -33,9 +36,9 @@
         "data/transaction_source_data.xml",
         "data/seq_journal_entry.xml",
         "data/restaurant_chart_of_accounts.xml",
-        "data/customer_types.xml",  # Reference to your XML data file
-        "data/unit_measures.xml",  # Reference to your XML data file
-        "data/item_categories.xml",  # Reference to your XML data file
+        "data/customer_types.xml",
+        "data/unit_measures.xml",
+        "data/item_categories.xml",
         "data/idil_sequence.xml",
         "data/delete.xml",
         "data/booking_sequence.xml",
@@ -95,7 +98,7 @@
         "views/sale_return.xml",
         "views/stock_adjustment_views.xml",
         "views/balance_sheet.xml",
-        # "views/dashboard_view.xml",
+        "views/inventory_dashboard.xml",
         "views/customer_sales_view.xml",
         "views/report_account_statements.xml",
         "views/product_adjustment_views.xml",
