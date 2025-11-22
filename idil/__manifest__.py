@@ -8,20 +8,26 @@
     "depends": ["mail", "point_of_sale", "web"],
     "application": True,
     "sequence": -100,
+    "author": "shaheen",
     "assets": {
+        "web.assets_common": [
+        ],
+        "point_of_sale.assets": [
+            "idil/static/src/js/pos_customer_modification.js",
+        ],
         "web.assets_backend": [
-            # Chart.js (External)
-            "https://cdn.jsdelivr.net/npm/chart.js",
-            
-            # Volt Theme Assets
-            "idil/static/src/css/volt.css",
+            "idil/static/src/css/kanban.css",
+            "idil/static/src/scss/modern_ui.scss",
+            "idil/static/src/scss/volt_overrides.scss",
             "idil/static/src/js/volt.js",
-            
-            # Dashboards
             "idil/static/src/js/inventory_dashboard.js",
             "idil/static/src/xml/inventory_dashboard.xml",
             "idil/static/src/js/sales_dashboard.js",
             "idil/static/src/xml/sales_dashboard.xml",
+            "https://cdn.jsdelivr.net/npm/chart.js",
+        ],
+        "web._assets_primary_variables": [
+            ("prepend", "idil/static/src/scss/primary_variables.scss"),
         ],
     },
     "data": [
@@ -119,5 +125,6 @@
         "views/menu_hr.xml",
         "views/menu.xml",
         "views/inventory_dashboard.xml",
+        "views/sales_dashboard.xml",
     ],
 }
