@@ -2,58 +2,6 @@
 // Modern UI Overrides for BizCore
 // -------------------------------------------------------------------------
 
-// 1. Hide Odoo Branding
-// -------------------------------------------------------------------------
-.o_footer_copyright {
-    display: none !important;
-}
-
-.o_main_navbar .o_menu_brand {
-    display: none !important;
-}
-
-head title {
-    content: "BizCore" !important;
-}
-
-// 2. Modern Navbar (Glassmorphism)
-// -------------------------------------------------------------------------
-/*
-.o_main_navbar {
-    background: rgba(255, 255, 255, 0.95) !important;
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-    
-    .o_menu_apps .dropdown-toggle {
-        color: #1a1a1a !important;
-        &:hover {
-            background: rgba(0, 0, 0, 0.03) !important;
-        }
-    }
-    
-    .o_menu_sections .o_nav_entry {
-        color: #4a4a4a !important;
-        font-weight: 500;
-        &:hover {
-            background: rgba(0, 0, 0, 0.03) !important;
-        }
-    }
-}
-*/
-
-// 3. View Containers (Cards & Shadows)
-// -------------------------------------------------------------------------
-.o_content,
-.o_form_view,
-.o_list_view {
-    background-color: #f8f9fa !important; // Light gray background for contrast
-}
-
-.o_form_sheet_bg {
-    background: transparent !important;
-    padding: 20px !important;
-}
 
 .o_form_sheet {
     background: #ffffff !important;
@@ -151,7 +99,7 @@ body {
         transition: border-color 0.2s ease;
 
         &:focus {
-            border-color: #3068A0 !important;
+            border-color: #e0e0e0 !important;
             box-shadow: 0 0 0 3px rgba(48, 104, 160, 0.1) !important;
         }
     }
