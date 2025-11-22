@@ -1,60 +1,69 @@
-/* ==========================================================================
-   MODERN WHITE NAVBAR - NO BLUE!
+/* ========================================================================== 
+   CLEAN WHITE NAVBAR - FORCE OVERRIDE BLUE NAVBAR
    ========================================================================== */
 
-/* Force Font Family */
 body,
 .o_web_client {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif !important;
+    font-family: 'Inter', sans-serif !important;
 }
 
-/* NAVBAR - Clean White Background */
-.o_main_navbar {
+/* Force white navbar on ALL navbar selectors */
+.o_main_navbar,
+nav.o_main_navbar,
+header.o_main_navbar,
+.top_heading,
+#oe_main_menu_navbar {
     background: #ffffff !important;
+    background-color: #ffffff !important;
+    background-image: none !important;
     border-bottom: 1px solid #e5e7eb !important;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
     height: 64px !important;
     padding: 0 24px !important;
 }
 
-/* Menu Items */
-.o_main_navbar .o_menu_sections>li>a {
+/* Remove all gradients and blue backgrounds */
+.o_main_navbar *,
+header *,
+.top_heading * {
+    background-image: none !important;
+}
+
+/* Force all navbar links to be dark gray */
+.o_main_navbar a,
+.o_main_navbar .o_menu_sections>li>a,
+.top_heading a,
+header a {
     color: #4b5563 !important;
     font-size: 14px !important;
     font-weight: 500 !important;
     padding: 8px 16px !important;
     border-radius: 8px !important;
-    transition: all 0.2s ease !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
 }
 
-.o_main_navbar .o_menu_sections>li>a:hover {
+.o_main_navbar a:hover,
+.top_heading a:hover {
     background-color: #f3f4f6 !important;
+    background-image: none !important;
     color: #111827 !important;
 }
 
-/* Active Menu - Gray Highlight (NO BLUE!) */
-.o_main_navbar .o_menu_sections>li.show>a,
-.o_main_navbar .o_menu_sections>li.active>a {
+/* Active menu - gray highlight */
+.o_main_navbar .o_menu_sections>li.active>a,
+.o_main_navbar .o_menu_sections>li.show>a {
     background-color: #e5e7eb !important;
+    background-image: none !important;
     color: #111827 !important;
     font-weight: 600 !important;
 }
 
-/* Brand */
-.o_menu_brand {
-    font-weight: 700 !important;
-    font-size: 18px !important;
-    color: #111827 !important;
-    margin-right: 32px !important;
-}
-
-/* Systray Icons */
+/* Systray icons */
 .o_menu_systray .o_nav_entry {
     color: #6b7280 !important;
-    width: 40px !important;
-    height: 40px !important;
-    border-radius: 10px !important;
-    transition: all 0.2s ease !important;
+    background: transparent !important;
 }
 
 .o_menu_systray .o_nav_entry:hover {
@@ -62,7 +71,7 @@ body,
     color: #111827 !important;
 }
 
-/* Buttons - Dark Gray (NO BLUE!) */
+/* Buttons - Dark gray */
 .btn-primary {
     background-color: #374151 !important;
     border-color: #374151 !important;
@@ -70,24 +79,9 @@ body,
 
 .btn-primary:hover {
     background-color: #1f2937 !important;
-    border-color: #1f2937 !important;
 }
 
-/* Kanban Cards */
-.o_kanban_record {
-    border-radius: 16px !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
-    background-color: #ffffff !important;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    margin-bottom: 16px !important;
-}
-
-.o_kanban_record:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
-}
-
-/* Form Views */
+/* Form views */
 .o_form_view {
     background-color: #f5f7fa !important;
 }
@@ -95,22 +89,11 @@ body,
 .o_form_sheet {
     border-radius: 16px !important;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05) !important;
-    border: 1px solid rgba(0, 0, 0, 0.05) !important;
     padding: 32px !important;
     background-color: #ffffff !important;
 }
 
-/* Input Fields - Gray Focus (NO BLUE!) */
-.o_field_widget input,
-.o_field_widget select,
-.o_field_widget textarea {
-    border-radius: 8px !important;
-    border: 1px solid #e5e7eb !important;
-    padding: 8px 12px !important;
-    transition: all 0.2s ease;
-    background-color: #ffffff !important;
-}
-
+/* Input focus - gray */
 .o_field_widget input:focus,
 .o_field_widget select:focus,
 .o_field_widget textarea:focus {
@@ -119,34 +102,15 @@ body,
     outline: none !important;
 }
 
-/* List Views */
+/* Tables */
 .o_list_view .o_list_table {
     background-color: #ffffff !important;
     border-radius: 12px !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02) !important;
-    overflow: hidden;
-    border: 1px solid rgba(0, 0, 0, 0.05) !important;
 }
 
 .o_list_view .o_list_table thead {
     background-color: #f9fafb !important;
-    border-bottom: 1px solid #e5e7eb !important;
-}
-
-.o_list_view .o_list_table thead th {
-    text-transform: uppercase;
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    color: #6b7280 !important;
-    padding: 12px 16px !important;
-    border: none !important;
-}
-
-.o_list_view .o_list_table tbody tr td {
-    padding: 12px 16px !important;
-    border-top: 1px solid #f3f4f6 !important;
-    vertical-align: middle !important;
 }
 
 .o_list_view .o_list_table tbody tr:hover {
@@ -157,27 +121,8 @@ body,
 .dropdown-menu {
     border-radius: 0.5rem !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
-    border: 1px solid rgba(0, 0, 0, 0.05) !important;
-}
-
-.o_user_menu .dropdown-menu {
-    border-radius: 12px !important;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
-    border: none !important;
-    margin-top: 12px !important;
-    padding: 8px !important;
-}
-
-.o_user_menu .dropdown-item {
-    border-radius: 8px !important;
-    padding: 8px 16px !important;
-    margin-bottom: 2px !important;
-    color: #4b5563 !important;
-    transition: all 0.2s ease;
 }
 
 .o_user_menu .dropdown-item:hover {
     background-color: #f3f4f6 !important;
-    color: #111827 !important;
-    transform: translateX(2px);
 }
