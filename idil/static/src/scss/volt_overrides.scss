@@ -1,10 +1,12 @@
 /* Volt Design Overrides for Odoo */
 
 /* Import Google Font */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+/* Import Google Font - REMOVED to prevent crash */
+/* @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap'); */
 
 /* Force Font Family */
-body, .o_web_client {
+body,
+.o_web_client {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif !important;
 }
 
@@ -16,26 +18,27 @@ body, .o_web_client {
 }
 
 /* Sidebar Gradient (if applicable in this Odoo version/theme) */
-.o_main_sidebar, .o_sidebar_menu {
+.o_main_sidebar,
+.o_sidebar_menu {
     background: linear-gradient(to bottom, #0c63b4 0%, #084d8f 100%) !important;
     color: white !important;
 }
 
 /* Navbar Text Color */
-.o_main_navbar .o_menu_brand, 
-.o_main_navbar .o_menu_sections > li > a, 
-.o_main_navbar .o_menu_systray > li > a {
+.o_main_navbar .o_menu_brand,
+.o_main_navbar .o_menu_sections>li>a,
+.o_main_navbar .o_menu_systray>li>a {
     color: white !important;
 }
 
-.o_main_navbar .o_menu_sections > li > a:hover, 
-.o_main_navbar .o_menu_systray > li > a:hover {
+.o_main_navbar .o_menu_sections>li>a:hover,
+.o_main_navbar .o_menu_systray>li>a:hover {
     background-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 /* Active Menu Item */
-.o_main_navbar .o_menu_sections > li.show > a,
-.o_main_navbar .o_menu_sections > li.active > a {
+.o_main_navbar .o_menu_sections>li.show>a,
+.o_main_navbar .o_menu_sections>li.active>a {
     background-color: rgba(255, 255, 255, 0.2) !important;
     font-weight: 600 !important;
 }
@@ -44,12 +47,13 @@ body, .o_web_client {
 .dropdown-menu {
     border-radius: 0.5rem !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
-    border: 1px solid rgba(0,0,0,0.05) !important;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
 }
 
 /* Buttons */
 .btn-primary {
-    background-color: #4f6df5 !important; /* Volt Primary */
+    background-color: #4f6df5 !important;
+    /* Volt Primary */
     border-color: #4f6df5 !important;
 }
 
@@ -59,7 +63,8 @@ body, .o_web_client {
 }
 
 /* Cards */
-.o_kanban_record, .card {
+.o_kanban_record,
+.card {
     border-radius: 16px !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02) !important;
     border: 1px solid rgba(0, 0, 0, 0.06) !important;
@@ -67,7 +72,8 @@ body, .o_web_client {
 
 /* Form Views */
 .o_form_view {
-    background-color: #f5f7fa !important; /* Volt Content BG */
+    background-color: #f5f7fa !important;
+    /* Volt Content BG */
 }
 
 .o_form_sheet_bg {
