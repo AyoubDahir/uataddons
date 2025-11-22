@@ -166,7 +166,7 @@ class IdilDashboard(models.Model):
                 SUM(so.order_total) as total_sales,
                 SUM(so.commission_amount) as total_commission
             FROM idil_sale_order so
-            JOIN idil_sales_salespersonnel sp ON sp.id = so.sales_person_id
+            JOIN idil_sales_sales_personnel sp ON sp.id = so.sales_person_id
             WHERE so.state = 'confirmed'
             GROUP BY sp.id, sp.name
             ORDER BY total_sales DESC
