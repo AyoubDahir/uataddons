@@ -246,7 +246,7 @@ class IdilDashboard(models.Model):
         preorder_value = sum(
             self.env['idil.customer.sale.order'].search([
                 ('state', '=', 'draft')
-            ]).mapped('total')
+            ]).mapped('order_total')
         )
         
         return {
