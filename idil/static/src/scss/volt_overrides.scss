@@ -1,7 +1,6 @@
-/* Volt Design Overrides for Odoo */
-
-/* Import Google Font - REMOVED to prevent crash */
-/* @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap'); */
+/* ========================================================================= */
+/* VOLT DESIGN OVERRIDES FOR ODOO - PREMIUM NAVBAR */
+/* ========================================================================= */
 
 /* Force Font Family */
 body,
@@ -9,52 +8,114 @@ body,
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif !important;
 }
 
-/* Navbar - Clean White Design */
+/* ========================================================================= */
+/* PREMIUM NAVBAR - WHITE DESIGN */
+/* ========================================================================= */
+
 .o_main_navbar {
     background: #ffffff !important;
     border-bottom: 1px solid #e5e7eb !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
-    color: #111827 !important;
-    height: 60px !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+    height: 64px !important;
+    padding: 0 24px !important;
+    display: flex !important;
+    align-items: center !important;
 }
 
-/* Sidebar (if applicable) */
-.o_main_sidebar,
-.o_sidebar_menu {
-    background: #ffffff !important;
-    border-right: 1px solid #e5e7eb !important;
-    color: #374151 !important;
+/* ========================================================================= */
+/* MENU ITEMS - MODERN STYLING */
+/* ========================================================================= */
+
+.o_menu_sections {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    list-style: none !important;
 }
 
-/* Navbar Text Color - Dark for White Background */
-.o_main_navbar .o_menu_brand,
-.o_main_navbar .o_menu_sections>li>a,
-.o_main_navbar .o_menu_systray>li>a {
-    color: #374151 !important;
+.o_main_navbar .o_menu_sections>li>a {
+    color: #4b5563 !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    padding: 8px 16px !important;
+    border-radius: 8px !important;
+    transition: all 0.2s ease !important;
+    text-decoration: none !important;
+    white-space: nowrap !important;
 }
 
-.o_main_navbar .o_menu_sections>li>a:hover,
-.o_main_navbar .o_menu_systray>li>a:hover {
+.o_main_navbar .o_menu_sections>li>a:hover {
     background-color: #f3f4f6 !important;
     color: #111827 !important;
-    border-radius: 6px !important;
 }
 
-/* Active Menu Item - Blue Highlight */
+/* Active Menu - Blue Gradient */
 .o_main_navbar .o_menu_sections>li.show>a,
 .o_main_navbar .o_menu_sections>li.active>a {
-    background-color: #eff6ff !important;
-    color: #1e40af !important;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+    color: #ffffff !important;
     font-weight: 600 !important;
-    border-radius: 6px !important;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2) !important;
 }
 
-/* Dropdown Menus */
-.dropdown-menu {
-    border-radius: 0.5rem !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
-    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+/* Brand */
+.o_menu_brand {
+    font-weight: 700 !important;
+    font-size: 18px !important;
+    letter-spacing: -0.02em !important;
+    color: #111827 !important;
+    margin-right: 32px !important;
 }
+
+/* ========================================================================= */
+/* SYSTRAY (RIGHT SIDE ICONS) */
+/* ========================================================================= */
+
+.o_menu_systray {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    margin-left: auto !important;
+}
+
+.o_menu_systray .o_nav_entry {
+    color: #6b7280 !important;
+    width: 40px !important;
+    height: 40px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 10px !important;
+    transition: all 0.2s ease !important;
+}
+
+.o_menu_systray .o_nav_entry:hover {
+    background-color: #f3f4f6 !important;
+    color: #111827 !important;
+}
+
+/* App Switcher */
+.o_menu_apps .dropdown-toggle {
+    color: #6b7280 !important;
+    width: 40px !important;
+    height: 40px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 10px !important;
+    transition: all 0.2s ease !important;
+}
+
+.o_menu_apps .dropdown-toggle:hover {
+    background-color: #f3f4f6 !important;
+    color: #111827 !important;
+}
+
+/* ========================================================================= */
+/* OTHER COMPONENTS */
+/* ========================================================================= */
 
 /* Buttons */
 .btn-primary {
@@ -75,20 +136,10 @@ body,
     border: 1px solid rgba(0, 0, 0, 0.06) !important;
 }
 
-/* Form Views */
-.o_form_view {
-    background-color: #f5f7fa !important;
-}
-
-.o_form_sheet_bg {
-    background: transparent !important;
-}
-
-/* 1. Kanban Cards */
+/* Kanban Cards */
 .o_kanban_record {
     border-radius: 16px !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
-    border: 1px solid rgba(0, 0, 0, 0.05) !important;
     background-color: #ffffff !important;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     margin-bottom: 16px !important;
@@ -97,10 +148,13 @@ body,
 .o_kanban_record:hover {
     transform: translateY(-3px);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
-    z-index: 10;
 }
 
-/* 2. Form Sheet */
+/* Form Views */
+.o_form_view {
+    background-color: #f5f7fa !important;
+}
+
 .o_form_sheet {
     border-radius: 16px !important;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05) !important;
@@ -109,7 +163,7 @@ body,
     background-color: #ffffff !important;
 }
 
-/* 3. Inputs & Fields */
+/* Input Fields */
 .o_field_widget input,
 .o_field_widget select,
 .o_field_widget textarea {
@@ -128,7 +182,7 @@ body,
     outline: none !important;
 }
 
-/* 4. List Views (Tables) */
+/* List Views (Tables) */
 .o_list_view .o_list_table {
     background-color: #ffffff !important;
     border-radius: 12px !important;
@@ -162,30 +216,11 @@ body,
     background-color: #f9fafb !important;
 }
 
-/* Systray Icons (Right Side) - Dark for White Navbar */
-.o_menu_systray .o_nav_entry,
-.o_menu_systray i {
-    color: #374151 !important;
-    opacity: 0.8;
-    transition: all 0.2s ease;
-}
-
-.o_menu_systray .o_nav_entry:hover,
-.o_menu_systray .o_nav_entry:focus {
-    background-color: #f3f4f6 !important;
-    border-radius: 50% !important;
-    opacity: 1;
-    color: #111827 !important;
-}
-
-/* Adjust spacing for systray items */
-.o_menu_systray>li {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 40px !important;
-    height: 40px !important;
-    margin: 0 4px !important;
+/* Dropdown Menus */
+.dropdown-menu {
+    border-radius: 0.5rem !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
 }
 
 /* User Profile Dropdown */
@@ -210,27 +245,6 @@ body,
     background-color: #f3f4f6 !important;
     color: #111827 !important;
     transform: translateX(2px);
-}
-
-/* App Switcher & Brand - Dark for White Navbar */
-.o_menu_apps .dropdown-toggle {
-    color: #374151 !important;
-    opacity: 0.8;
-}
-
-.o_menu_apps .dropdown-toggle:hover {
-    background-color: #f3f4f6 !important;
-    border-radius: 8px !important;
-    opacity: 1;
-}
-
-.o_menu_brand {
-    font-weight: 700 !important;
-    font-size: 1.1rem !important;
-    letter-spacing: -0.02em !important;
-    color: #111827 !important;
-    opacity: 1 !important;
-    margin-left: 12px !important;
 }
 
 @keyframes fadeIn {
