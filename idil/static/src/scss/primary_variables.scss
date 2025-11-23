@@ -56,6 +56,59 @@ $o-gray-600: #6c757d !default;
 $o-gray-700: #495057 !default;
 $o-gray-800: #343a40 !default;
 $o-gray-900: #212529 !default;
+
+$o-grays: (
+  100: $o-gray-100,
+  200: $o-gray-200,
+  300: $o-gray-300,
+  400: $o-gray-400,
+  500: $o-gray-500,
+  600: $o-gray-600,
+  700: $o-gray-700,
+  800: $o-gray-800,
+  900: $o-gray-900,
+  ) !default;
+
+// ------------------------------------
+// Masdar Brand Palette (Changed to White/Gray)
+// ------------------------------------
+$o-brand-odoo: #ffffff !default; // Clean White
+$o-community-color: #374151 !default; // Neutral Gray
+$o-enterprise-color: #1f2937 !default; // Dark Gray
+
+// Primary brand (Changed to Neutral Gray/White)
+$masdar-blue: #374151; // Changed from blue to gray
+$masdar-blue-600: #1f2937; // Dark gray
+$masdar-blue-700: #111827; // Very dark gray
+$masdar-navy: #111827;
+
+// Secondary accent
+$masdar-brick: #985858; // Keeping as secondary accent
+$masdar-brick-600: #854A4A;
+
+// Tints / backgrounds (Clean White/Gray)
+$masdar-sky-50: #f8f9fa;
+$masdar-sky-100: #f1f4f8;
+$masdar-sky-200: #e9ecef;
+
+// Assign brand tokens (Changed to neutral grays)
+$o-brand-primary: #374151 !default; // Gray instead of blue
+$o-brand-secondary: #f3f4f6 !default; // Light gray instead of navy
+$o-brand-lightsecondary: $masdar-sky-100 !default;
+
+$o-action: $o-brand-primary !default; // primary action color
+$o-success: #28a745 !default;
+$o-info: #2A7DB7 !default; // tuned towards brand
+$o-warning: #E6A100 !default;
+$o-danger: #C73A40 !default;
+
+// Fine-tune contextual text colors
+$o-theme-text-colors: (
+  "success": #0B7A26,
+  "info": #1F6A9A,
+  "warning": #875C00,
+  "danger": #B1363B,
+  ) !default;
 $o-opacity-muted: .76 !default;
 $o-opacities: (
   0: 0,
