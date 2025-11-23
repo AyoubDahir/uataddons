@@ -109,6 +109,11 @@ $o-theme-text-colors: (
   "warning": #875C00,
   "danger": #B1363B,
   ) !default;
+
+// ------------------------------------
+// Opacity Map
+// ------------------------------------
+$o-opacity-disabled: .5 !default;
 $o-opacity-muted: .76 !default;
 $o-opacities: (
   0: 0,
@@ -124,6 +129,7 @@ $o-opacities: (
 // Text / Background / Links
 // ------------------------------------
 $o-main-text-color: $o-gray-800 !default;
+
 $o-main-bg-color: $masdar-sky-50 !default;
 $o-main-color-muted: rgba($o-main-text-color, $o-opacity-muted) !default;
 $o-main-headings-color: $o-gray-900 !default;
