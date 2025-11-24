@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="Idil.InventoryDashboard" owl="1">
+        <div class="o_inventory_dashboard h-100 overflow-auto" style="background-color: #f5f7fa; padding: 20px;">
+            <!-- Header -->
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center py-4">
+                <div class="d-block mb-4 mb-md-0">
+                    <h2 class="h4">Inventory Dashboard</h2>
+                    <p class="mb-0">Overview of your purchasing and inventory performance.</p>
+                </div>
+            </div>
+
+            <!-- KPI Cards Row -->
+            <div class="row mb-4">
+                <!-- Card 1: Purchased Items -->
+                <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="row d-block d-xl-flex align-items-center">
+                                <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                    <div class="icon-shape icon-shape-primary rounded me-4 me-sm-0" style="background: rgba(79, 109, 245, 0.1); color: #4f6df5; padding: 15px; border-radius: 12px;">
+                                        <i class="fa fa-shopping-cart fa-2x"></i>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-xl-7 px-xl-0">
+                                    <div class="d-none d-sm-block">
+                                        <h2 class="h6 text-gray-400 mb-0">Purchased Items</h2>
+                                        <h3 class="fw-extrabold mb-2" t-esc="stats.purchase_count || 0"></h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Vendor Transactions -->
+                <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="row d-block d-xl-flex align-items-center">
+                                <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                    <div class="icon-shape icon-shape-secondary rounded me-4 me-sm-0" style="background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 15px; border-radius: 12px;">
+                                        <i class="fa fa-exchange fa-2x"></i>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-xl-7 px-xl-0">
+                                    <div class="d-none d-sm-block">
+                                        <h2 class="h6 text-gray-400 mb-0">Vendor Tx</h2>
+                                        <h3 class="fw-extrabold mb-2" t-esc="stats.vendor_trx_count || 0"></h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3: Returns -->
+                <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="row d-block d-xl-flex align-items-center">
+                                <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                    <div class="icon-shape icon-shape-tertiary rounded me-4 me-sm-0" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; padding: 15px; border-radius: 12px;">
+                                        <i class="fa fa-undo fa-2x"></i>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-xl-7 px-xl-0">
+                                    <div class="d-none d-sm-block">
+                                        <h2 class="h6 text-gray-400 mb-0">Returns</h2>
+                                        <h3 class="fw-extrabold mb-2" t-esc="stats.purchase_return_count || 0"></h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 4: Products -->
+                <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="row d-block d-xl-flex align-items-center">
+                                <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                    <div class="icon-shape icon-shape-info rounded me-4 me-sm-0" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; padding: 15px; border-radius: 12px;">
+                                        <i class="fa fa-cube fa-2x"></i>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-xl-7 px-xl-0">
+                                    <div class="d-none d-sm-block">
+                                        <h2 class="h6 text-gray-400 mb-0">Products</h2>
+                                        <h3 class="fw-extrabold mb-2" t-esc="stats.product_count || 0"></h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Financial & Actionable Row (New) -->
+            <div class="row mb-4">
+                <!-- Card 5: Total Spend -->
+                <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="row d-block d-xl-flex align-items-center">
+                                <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                    <div class="icon-shape icon-shape-success rounded me-4 me-sm-0" style="background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 15px; border-radius: 12px;">
+                                        <i class="fa fa-money fa-2x"></i>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-xl-7 px-xl-0">
+                                    <div class="d-none d-sm-block">
+                                        <h2 class="h6 text-gray-400 mb-0">Total Spend</h2>
+                                        <h3 class="fw-extrabold mb-2">$<span t-esc="(stats.total_spend || 0).toLocaleString()"></span></h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 6: Pending Approvals -->
+                <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="row d-block d-xl-flex align-items-center">
+                                <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                    <div class="icon-shape icon-shape-warning rounded me-4 me-sm-0" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; padding: 15px; border-radius: 12px;">
+                                        <i class="fa fa-clock-o fa-2x"></i>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-xl-7 px-xl-0">
+                                    <div class="d-none d-sm-block">
+                                        <h2 class="h6 text-gray-400 mb-0">Pending Orders</h2>
+                                        <h3 class="fw-extrabold mb-2" t-esc="stats.pending_count || 0"></h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 7: Stock Value -->
+                <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="row d-block d-xl-flex align-items-center">
+                                <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                    <div class="icon-shape icon-shape-info rounded me-4 me-sm-0" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; padding: 15px; border-radius: 12px;">
+                                        <i class="fa fa-archive fa-2x"></i>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-xl-7 px-xl-0">
+                                    <div class="d-none d-sm-block">
+                                        <h2 class="h6 text-gray-400 mb-0">Stock Value</h2>
+                                        <h3 class="fw-extrabold mb-2">$<span t-esc="(stats.stock_value || 0).toLocaleString()"></span></h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 8: Low Stock Alerts -->
+                <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="row d-block d-xl-flex align-items-center">
+                                <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                    <div class="icon-shape icon-shape-danger rounded me-4 me-sm-0" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 15px; border-radius: 12px;">
+                                        <i class="fa fa-exclamation-triangle fa-2x"></i>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-xl-7 px-xl-0">
+                                    <div class="d-none d-sm-block">
+                                        <h2 class="h6 text-gray-400 mb-0">Low Stock</h2>
+                                        <h3 class="fw-extrabold mb-2" t-esc="stats.low_stock_count || 0"></h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comprehensive Metrics Row (New) -->
+            <div class="row mb-4">
+                <!-- Card 9: Active Vendors -->
+                <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="row d-block d-xl-flex align-items-center">
+                                <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                    <div class="icon-shape icon-shape-primary rounded me-4 me-sm-0" style="background: rgba(79, 109, 245, 0.1); color: #4f6df5; padding: 15px; border-radius: 12px;">
+                                        <i class="fa fa-users fa-2x"></i>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-xl-7 px-xl-0">
+                                    <div class="d-none d-sm-block">
+                                        <h2 class="h6 text-gray-400 mb-0">Active Vendors</h2>
+                                        <h3 class="fw-extrabold mb-2" t-esc="stats.vendor_count || 0"></h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 10: Total Paid -->
+                <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="row d-block d-xl-flex align-items-center">
+                                <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                    <div class="icon-shape icon-shape-success rounded me-4 me-sm-0" style="background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 15px; border-radius: 12px;">
+                                        <i class="fa fa-check-circle fa-2x"></i>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-xl-7 px-xl-0">
+                                    <div class="d-none d-sm-block">
+                                        <h2 class="h6 text-gray-400 mb-0">Total Paid</h2>
+                                        <h3 class="fw-extrabold mb-2">$<span t-esc="(stats.total_paid || 0).toLocaleString()"></span></h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 11: Total Payable (AP) -->
+                <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="row d-block d-xl-flex align-items-center">
+                                <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                    <div class="icon-shape icon-shape-danger rounded me-4 me-sm-0" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 15px; border-radius: 12px;">
+                                        <i class="fa fa-balance-scale fa-2x"></i>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-xl-7 px-xl-0">
+                                    <div class="d-none d-sm-block">
+                                        <h2 class="h6 text-gray-400 mb-0">Total Payable</h2>
+                                        <h3 class="fw-extrabold mb-2">$<span t-esc="(stats.total_payable || 0).toLocaleString()"></span></h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 12: Stock Adjustments -->
+                <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="row d-block d-xl-flex align-items-center">
+                                <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                    <div class="icon-shape icon-shape-warning rounded me-4 me-sm-0" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; padding: 15px; border-radius: 12px;">
+                                        <i class="fa fa-sliders fa-2x"></i>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-xl-7 px-xl-0">
+                                    <div class="d-none d-sm-block">
+                                        <h2 class="h6 text-gray-400 mb-0">Adjustments</h2>
+                                        <h3 class="fw-extrabold mb-2" t-esc="stats.adjustment_count || 0"></h3>
+                                        <small class="text-muted">Value: $<span t-esc="(stats.adjustment_value || 0).toLocaleString()"></span></small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="row">
+                <div class="col-12 col-xl-8 mb-4">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header d-flex flex-row align-items-center flex-0 border-bottom">
+                            <div class="d-block">
+                                <h2 class="h6 text-gray-400 mb-0">Purchases Overview</h2>
+                                <h3 class="fw-extrabold mb-2">Monthly Activity</h3>
+                            </div>
+                        </div>
+                        <div class="card-body p-2">
+                            <div style="height: 300px;">
+                                <canvas t-ref="chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-xl-4 mb-4">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header d-flex flex-row align-items-center flex-0 border-bottom">
+                            <div class="d-block">
+                                <h2 class="h6 text-gray-400 mb-0">Top Vendors</h2>
+                                <h3 class="fw-extrabold mb-2">Distribution</h3>
+                            </div>
+                        </div>
+                        <div class="card-body p-2">
+                            <div style="height: 300px;">
+                                <canvas t-ref="doughnut"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+</templates>

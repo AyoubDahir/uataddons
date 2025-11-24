@@ -1,0 +1,335 @@
+/// Masdar Theme Variables
+/// Brand extracted from logo: Blue #3068A0, Brick #985858
+/// Drop this file after Bootstrap/Odoo defaults so it overrides them.
+
+// ------------------------------------
+// Contrast & Color Scheme
+// ------------------------------------
+$o-frontend-min-contrast-ratio: 2.9 !default;
+$o-webclient-color-scheme: bright !default;
+
+// ------------------------------------
+// Typography
+// ------------------------------------
+$o-root-font-size: 1rem !default;
+$o-font-size-base: o-to-rem(14px) !default;
+$o-font-size-base-touch: o-to-rem(16px) !default;
+$o-font-size-base-small: o-to-rem(13px) !default;
+$o-font-size-base-smaller: o-to-rem(12px) !default;
+$o-line-height-base: 1.5 !default;
+
+$o-system-fonts: (
+  -apple-system,
+  BlinkMacSystemFont,
+  "Segoe UI",
+  Roboto,
+  "Helvetica Neue",
+  Ubuntu,
+  "Noto Sans",
+  Arial,
+  sans-serif,
+  "Apple Color Emoji",
+  "Segoe UI Emoji",
+  "Segoe UI Symbol",
+  "Noto Color Emoji") !default;
+$o-font-family-sans-serif: o-add-unicode-support-font($o-system-fonts) !default;
+$o-font-family-monospace: o-add-unicode-support-font((SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace)) !default;
+$o-headings-font-family: o-add-unicode-support-font(("SF Pro Display", $o-system-fonts)) !default;
+
+$o-font-weight-normal: 400 !default;
+$o-font-weight-medium: 500 !default;
+$o-font-weight-bold: 700 !default;
+$o-font-weight-extrabold: 800 !default;
+
+// ------------------------------------
+// Base Colors
+// ------------------------------------
+$o-white: #FFFFFF !default;
+$o-black: #000000 !default;
+
+$o-gray-100: #f8f9fa !default;
+$o-gray-200: #e9ecef !default;
+$o-gray-300: #dee2e6 !default;
+$o-gray-400: #ced4da !default;
+$o-gray-500: #adb5bd !default;
+$o-gray-600: #6c757d !default;
+$o-gray-700: #495057 !default;
+$o-gray-800: #343a40 !default;
+$o-gray-900: #212529 !default;
+
+$o-grays: (
+  100: $o-gray-100,
+  200: $o-gray-200,
+  300: $o-gray-300,
+  400: $o-gray-400,
+  500: $o-gray-500,
+  600: $o-gray-600,
+  700: $o-gray-700,
+  800: $o-gray-800,
+  900: $o-gray-900,
+  ) !default;
+
+// ------------------------------------
+// Masdar Brand Palette (Changed to White/Gray)
+// ------------------------------------
+$o-brand-odoo: #ffffff !default; // Clean White
+$o-community-color: #374151 !default; // Neutral Gray
+$o-enterprise-color: #1f2937 !default; // Dark Gray
+
+// Primary brand (Changed to Neutral Gray/White)
+$masdar-blue: #374151; // Changed from blue to gray
+$masdar-blue-600: #1f2937; // Dark gray
+$masdar-blue-700: #111827; // Very dark gray
+$masdar-navy: #111827;
+
+// Secondary accent
+$masdar-brick: #985858; // Keeping as secondary accent
+$masdar-brick-600: #854A4A;
+
+// Tints / backgrounds (Clean White/Gray)
+$masdar-sky-50: #f8f9fa;
+$masdar-sky-100: #f1f4f8;
+$masdar-sky-200: #e9ecef;
+
+// Assign brand tokens (Changed to neutral grays)
+$o-brand-primary: #374151 !default; // Gray instead of blue
+$o-brand-secondary: #f3f4f6 !default; // Light gray instead of navy
+$o-brand-lightsecondary: $masdar-sky-100 !default;
+
+$o-action: $o-brand-primary !default; // primary action color
+$o-success: #28a745 !default;
+$o-info: #2A7DB7 !default; // tuned towards brand
+$o-warning: #E6A100 !default;
+$o-danger: #C73A40 !default;
+
+// Fine-tune contextual text colors
+$o-theme-text-colors: (
+  "success": #0B7A26,
+  "info": #1F6A9A,
+  "warning": #875C00,
+  "danger": #B1363B,
+  ) !default;
+
+// ------------------------------------
+// Opacity Map
+// ------------------------------------
+$o-opacity-disabled: .5 !default;
+$o-opacity-muted: .76 !default;
+$o-opacities: (
+  0: 0,
+  25: .25,
+  50: .5,
+  75: .75,
+  100: 1,
+  disabled: $o-opacity-disabled,
+  muted: $o-opacity-muted,
+  ) !default;
+
+// ------------------------------------
+// Text / Background / Links
+// ------------------------------------
+$o-main-text-color: $o-gray-800 !default;
+
+$o-main-bg-color: $masdar-sky-50 !default;
+$o-main-color-muted: rgba($o-main-text-color, $o-opacity-muted) !default;
+$o-main-headings-color: $o-gray-900 !default;
+$o-main-link-color: darken($o-brand-primary, 5%) !default;
+$o-main-favorite-color: #f3cc00 !default;
+$o-main-code-color: #d2317b !default;
+
+// ------------------------------------
+// Components Color System
+// ------------------------------------
+$o-component-active-color: $o-white !default;
+$o-component-active-bg: $o-brand-primary !default;
+$o-component-active-border: $o-brand-primary !default;
+
+$o-view-background-color: $masdar-sky-100 !default;
+$o-shadow-color: rgba(31, 62, 98, 0.22) !default;
+
+$o-form-lightsecondary: #cbd5e1 !default;
+
+$o-list-footer-bg-color: transparent !default;
+$o-list-footer-font-weight: bold !default;
+
+// Custom utility color maps
+$o-text-colors-custom: (
+  "action": $o-action,
+  "favourite": $o-main-favorite-color,
+  ) !default;
+
+$o-bg-colors-custom: (
+  "action": $o-action,
+  "view": $masdar-blue,
+  // app menu background
+  "favourite": $o-main-favorite-color,
+  ) !default;
+
+$o-btn-custom: (
+  "favourite": $o-main-favorite-color,
+  ) !default;
+
+// ------------------------------------
+// Borders & Layout
+// ------------------------------------
+$o-border-color: var(--border-color, #{$o-gray-300}) !default;
+
+// Inputs
+$o-input-padding-y: 2px !default;
+$o-input-padding-x: 4px !default;
+$o-input-border-required: $o-brand-primary !default;
+$o-input-hover-border-color: $o-gray-300 !default;
+
+// Grid & Spacing
+$o-extra-grid-breakpoints: (
+  xs: 0,
+  vsm: 475px,
+  sm: 576px,
+  md: 768px,
+  lg: 992px,
+  xl: 1200px,
+  xxl: 1534px,
+  ) !default;
+$o-spacer: 16px !default;
+$o-form-group-cols: 12 !default;
+$o-form-spacing-unit: 5px !default;
+$o-horizontal-padding: $o-spacer !default;
+$o-innergroup-rpadding: 45px !default;
+$o-dropdown-hpadding: 20px !default;
+$o-dropdown-vpadding: 3px !default;
+$o-dropdown-max-height: 70vh !default;
+
+$o-statbutton-height: 44px !default;
+$o-statbutton-vpadding: 0px !default;
+$o-statbutton-spacing: 6px !default;
+
+$o-modal-lg: 980px !default;
+$o-modal-md: 650px !default;
+$o-sheet-cancel-tpadding: 0px !default;
+
+$o-statusbar-height: 33px !default;
+$o-label-font-size-factor: 0.8 !default;
+
+// ------------------------------------
+// List / Badges
+// ------------------------------------
+$o-list-group-active-color: $o-white !default;
+$o-list-group-active-bg: $masdar-blue-600 !default;
+
+$o-badge-min-width: 3ch !default;
+$o-nb-calendar-colors: 24 !default;
+
+$o-base-settings-mobile-tabs-height: 40px !default;
+$o-base-settings-mobile-tabs-overflow-gap: 3% !default;
+
+$o-cp-breadcrumb-height: 30px !default;
+$o-cp-button-sm-no-border-padding: 0.4rem !default;
+$o-datepicker-week-color: #8f8f8f !default;
+
+$o-card-body-bg-opacity: 0.9 !default;
+
+// ------------------------------------
+// Radii & Touch
+// ------------------------------------
+$o-border-radius: o-to-rem(6px) !default;
+$o-border-radius-sm: o-to-rem(4px) !default;
+$o-border-radius-lg: o-to-rem(10px) !default;
+
+$o-touch-btn-padding: 7px 14px !default;
+
+// ------------------------------------
+// Buttons (Bootstrap overrides)
+// ------------------------------------
+$o-btns-bs-override: (
+  ) !default;
+$o-btns-bs-override: map-merge(("primary": (background: $o-brand-primary,
+        border: $o-brand-primary,
+        color: $o-white,
+
+        hover-background: $masdar-blue-600,
+        hover-border: $masdar-blue-700,
+        hover-color: $o-white,
+
+        active-background: $masdar-navy,
+        active-border: $masdar-navy,
+        active-color: $o-white,
+      ),
+      "secondary": (background: $o-gray-300,
+        border: $o-gray-300,
+        color: $o-gray-900,
+
+        hover-background: $o-gray-400,
+        hover-border: $o-gray-400,
+        hover-color: $o-gray-900,
+
+        active-background: $o-component-active-bg,
+        active-border: $o-component-active-border,
+        active-color: $o-component-active-color,
+      ),
+      "light": (background: $o-white,
+        border: $o-white,
+        color: $o-gray-800,
+
+        hover-background: $o-gray-200,
+        hover-border: $o-gray-200,
+        hover-color: $o-gray-900,
+
+        active-background: $o-component-active-bg,
+        active-border: $o-component-active-border,
+        active-color: $o-component-active-color,
+      ),
+      "danger": (background: $o-danger,
+        border: $o-danger,
+        color: $o-white,
+
+        hover-background: darken($o-danger, 6%),
+        hover-border: darken($o-danger, 10%),
+        hover-color: $o-white,
+
+        active-background: darken($o-danger, 12%),
+        active-border: darken($o-danger, 12%),
+        active-color: $o-white,
+      ),
+      "warning": (background: $o-warning,
+        border: $o-warning,
+        color: #1e1e1e,
+
+        hover-background: darken($o-warning, 6%),
+        hover-border: darken($o-warning, 8%),
+        hover-color: #111,
+
+        active-background: darken($o-warning, 12%),
+        active-border: darken($o-warning, 12%),
+        active-color: #111,
+      ),
+    ), $o-btns-bs-override
+);
+
+$o-btns-bs-outline-override: (
+  ) !default;
+$o-btns-bs-outline-override: map-merge(("primary": (background: transparent,
+        border: $o-brand-primary,
+        color: $o-brand-primary,
+
+        hover-background: rgba($o-brand-primary, .08),
+        hover-border: $masdar-blue-600,
+        hover-color: $masdar-blue-600,
+
+        active-background: rgba($o-brand-primary, .16),
+        active-border: $masdar-navy,
+        active-color: $masdar-navy,
+      ),
+      "secondary": (background: transparent,
+        border: $o-gray-300,
+        color: $o-gray-800,
+
+        hover-background: $o-gray-200,
+        hover-border: $o-gray-300,
+        hover-color: $o-gray-900,
+
+        active-background: $o-component-active-bg,
+        active-border: $o-component-active-border,
+        active-color: $o-component-active-color,
+      ),
+    ), $o-btns-bs-outline-override
+);

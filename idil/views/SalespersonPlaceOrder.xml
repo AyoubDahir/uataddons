@@ -1,0 +1,123 @@
+<odoo>
+    <!-- Action: make TREE first -->
+    <record id="action_salesperson_order_tree" model="ir.actions.act_window">
+        <field name="name">Place Order by Sales Team</field>
+        <field name="res_model">idil.salesperson.place.order</field>
+        <!-- Tree first, then form -->
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Create your first team order</p>
+            <p>Use the filters to see Draft/Confirmed orders and group by date or salesperson.</p>
+        </field>
+    </record>
+
+    <!-- TREE VIEW (remove editable so a click opens the form) -->
+    <record id="view_salesperson_order_tree" model="ir.ui.view">
+        <field name="name">salesperson.order.tree</field>
+        <field name="model">idil.salesperson.place.order</field>
+        <field name="arch" type="xml">
+            <tree string="Team Orders" create="1" delete="0"
+                  decoration-muted="state == 'cancel'"
+                  decoration-info="state == 'draft'"
+                  decoration-success="state == 'confirmed'">
+                <field name="name" optional="show"/>
+                <field name="salesperson_id"/>
+                <field name="order_date" sum="Total Days"/>
+                <field name="state"/>
+                <field name="total_quantity" string="Total Quantity" sum="Total Quantity"/>
+                <field name="create_date" invisible="1"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- FORM VIEW -->
+    <record id="view_salesperson_order_form" model="ir.ui.view">
+        <field name="name">salesperson.order.form</field>
+        <field name="model">idil.salesperson.place.order</field>
+        <field name="arch" type="xml">
+            <form string="Place Order by Sales Team">
+                <header>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,cancel"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box"/>
+                    <group>
+                        <group>
+                            <field name="name" readonly="1" placeholder="Auto"/>
+                            <field name="salesperson_id" options="{'no_create_edit': True}"/>
+                        </group>
+                        <group>
+                            <field name="order_date"/>
+                        </group>
+                    </group>
+
+                    <!-- One2many lines: keep editable here (this is fine) -->
+                    <field name="order_lines" widget="one2many_list" context="{'default_order_id': active_id}">
+                        <tree editable="bottom" string="Lines">
+                            <field name="product_id" options="{'no_open': True}"/>
+                            <field name="quantity" sum="Total Quantity"/>
+                        </tree>
+                        <form>
+                            <group>
+                                <field name="product_id" options="{'no_open': True}"/>
+                                <field name="quantity"/>
+                            </group>
+                        </form>
+                    </field>
+                </sheet>
+              
+            </form>
+        </field>
+    </record>
+
+    <!-- PIVOT + GRAPH -->
+    <record id="view_salesperson_order_pivot" model="ir.ui.view">
+        <field name="name">salesperson.order.pivot</field>
+        <field name="model">idil.salesperson.place.order</field>
+        <field name="arch" type="xml">
+            <pivot string="Orders (Pivot)" stacked="True">
+                <field name="total_quantity" type="measure"/>
+                <field name="salesperson_id" type="row"/>
+                <field name="order_date" interval="month" type="col"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_salesperson_order_graph" model="ir.ui.view">
+        <field name="name">salesperson.order.graph</field>
+        <field name="model">idil.salesperson.place.order</field>
+        <field name="arch" type="xml">
+            <graph string="Orders (Graph)" type="bar">
+                <field name="order_date" interval="day"/>
+                <field name="total_quantity" type="measure"/>
+                <field name="salesperson_id" group="True"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- Attach views to the action in the right order -->
+    <record id="action_salesperson_order_tree_tree" model="ir.actions.act_window.view">
+        <field name="act_window_id" ref="action_salesperson_order_tree"/>
+        <field name="view_mode">tree</field>
+        <field name="view_id" ref="view_salesperson_order_tree"/>
+        <field name="sequence">1</field>
+    </record>
+    <record id="action_salesperson_order_tree_form" model="ir.actions.act_window.view">
+        <field name="act_window_id" ref="action_salesperson_order_tree"/>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_salesperson_order_form"/>
+        <field name="sequence">2</field>
+    </record>
+    <record id="action_salesperson_order_tree_pivot" model="ir.actions.act_window.view">
+        <field name="act_window_id" ref="action_salesperson_order_tree"/>
+        <field name="view_mode">pivot</field>
+        <field name="view_id" ref="view_salesperson_order_pivot"/>
+        <field name="sequence">3</field>
+    </record>
+    <record id="action_salesperson_order_tree_graph" model="ir.actions.act_window.view">
+        <field name="act_window_id" ref="action_salesperson_order_tree"/>
+        <field name="view_mode">graph</field>
+        <field name="view_id" ref="view_salesperson_order_graph"/>
+        <field name="sequence">4</field>
+    </record>
+</odoo>

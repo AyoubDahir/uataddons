@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="Idil.SalesDashboard" owl="1">
+        <div class="o_action_manager o_view_controller o_action">
+            <div class="container-fluid py-4">
+                <!-- Header -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h2 class="h4 mb-0">Bakery Sales Dashboard</h2>
+                        <p class="text-muted mb-0">Comprehensive overview of sales performance and bakery operations.</p>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary btn-sm">
+                            <i class="fa fa-download me-2"></i>Export Report
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KPI Cards Row 1: Core Sales -->
+                <div class="row mb-4">
+                    <!-- Total Sales -->
+                    <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="row d-block d-xl-flex align-items-center">
+                                    <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                        <div class="icon-shape icon-shape-primary rounded me-4 me-sm-0">
+                                            <i class="fa fa-dollar fa-2x"></i>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-xl-7 px-xl-0">
+                                        <div class="d-none d-sm-block">
+                                            <h2 class="h6 text-gray-400 mb-0">Total Sales</h2>
+                                            <h3 class="fw-extrabold mb-2">
+                                                $<t t-esc="stats.total_sales ? stats.total_sales.toFixed(2) : '0.00'"/>
+                                            </h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Active Customers -->
+                    <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="row d-block d-xl-flex align-items-center">
+                                    <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                        <div class="icon-shape icon-shape-secondary rounded me-4 me-sm-0">
+                                            <i class="fa fa-users fa-2x"></i>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-xl-7 px-xl-0">
+                                        <div class="d-none d-sm-block">
+                                            <h2 class="h6 text-gray-400 mb-0">Active Customers</h2>
+                                            <h3 class="fw-extrabold mb-2">
+                                                <t t-esc="stats.active_customers || 0"/>
+                                            </h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pending Orders -->
+                    <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="row d-block d-xl-flex align-items-center">
+                                    <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                        <div class="icon-shape icon-shape-tertiary rounded me-4 me-sm-0">
+                                            <i class="fa fa-clock-o fa-2x"></i>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-xl-7 px-xl-0">
+                                        <div class="d-none d-sm-block">
+                                            <h2 class="h6 text-gray-400 mb-0">Pending Orders</h2>
+                                            <h3 class="fw-extrabold mb-2">
+                                                <t t-esc="stats.pending_sales_orders || 0"/>
+                                            </h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sales Returns -->
+                    <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="row d-block d-xl-flex align-items-center">
+                                    <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                        <div class="icon-shape icon-shape-info rounded me-4 me-sm-0">
+                                            <i class="fa fa-undo fa-2x"></i>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-xl-7 px-xl-0">
+                                        <div class="d-none d-sm-block">
+                                            <h2 class="h6 text-gray-400 mb-0">Sales Returns</h2>
+                                            <h3 class="fw-extrabold mb-2">
+                                                <t t-esc="stats.sales_returns_count || 0"/>
+                                            </h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KPI Cards Row 2: Bakery-Specific -->
+                <div class="row mb-4">
+                    <!-- Wastage Counter (CRITICAL!) -->
+                    <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                        <div class="card border-0 shadow-sm border-start border-danger border-4">
+                            <div class="card-body">
+                                <div class="row d-block d-xl-flex align-items-center">
+                                    <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                        <div class="icon-shape icon-shape-danger rounded me-4 me-sm-0">
+                                            <i class="fa fa-trash fa-2x"></i>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-xl-7 px-xl-0">
+                                        <div class="d-none d-sm-block">
+                                            <h2 class="h6 text-gray-400 mb-0">Wastage (30d)</h2>
+                                            <h3 class="fw-extrabold mb-2 text-danger">
+                                                $<t t-esc="wastage.total_value ? wastage.total_value.toFixed(2) : '0.00'"/>
+                                            </h3>
+                                            <small class="text-muted"><t t-esc="wastage.total_items || 0"/> items</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pre-Orders -->
+                    <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="row d-block d-xl-flex align-items-center">
+                                    <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                        <div class="icon-shape icon-shape-warning rounded me-4 me-sm-0">
+                                            <i class="fa fa-calendar-check-o fa-2x"></i>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-xl-7 px-xl-0">
+                                        <div class="d-none d-sm-block">
+                                            <h2 class="h6 text-gray-400 mb-0">Pre-Orders</h2>
+                                            <h3 class="fw-extrabold mb-2">
+                                                <t t-esc="preorders.pending || 0"/>
+                                            </h3>
+                                            <small class="text-muted">$<t t-esc="preorders.total_value ? preorders.total_value.toFixed(2) : '0.00'"/> value</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Total Receipts -->
+                    <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="row d-block d-xl-flex align-items-center">
+                                    <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                        <div class="icon-shape icon-shape-success rounded me-4 me-sm-0">
+                                            <i class="fa fa-check-circle fa-2x"></i>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-xl-7 px-xl-0">
+                                        <div class="d-none d-sm-block">
+                                            <h2 class="h6 text-gray-400 mb-0">Total Receipts</h2>
+                                            <h3 class="fw-extrabold mb-2">
+                                                $<t t-esc="stats.total_sales_receipts ? stats.total_sales_receipts.toFixed(2) : '0.00'"/>
+                                            </h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Customer Orders -->
+                    <div class="col-12 col-sm-6 col-xl-3 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="row d-block d-xl-flex align-items-center">
+                                    <div class="col-12 col-xl-5 text-xl-center mb-3 mb-xl-0 d-flex align-items-center justify-content-xl-center">
+                                        <div class="icon-shape icon-shape-primary rounded me-4 me-sm-0">
+                                            <i class="fa fa-shopping-cart fa-2x"></i>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-xl-7 px-xl-0">
+                                        <div class="d-none d-sm-block">
+                                            <h2 class="h6 text-gray-400 mb-0">Customer Orders</h2>
+                                            <h3 class="fw-extrabold mb-2">
+                                                <t t-esc="stats.customer_orders_count || 0"/>
+                                            </h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row 1: Product Analysis -->
+                <div class="row mb-4">
+                    <!-- Top Products -->
+                    <div class="col-12 col-xl-6 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header d-flex flex-row align-items-center flex-0 border-bottom">
+                                <div class="d-block">
+                                    <h2 class="h6 text-gray-400 mb-0">Best Sellers</h2>
+                                    <h3 class="fw-extrabold mb-2">Top 10 Products</h3>
+                                </div>
+                            </div>
+                            <div class="card-body p-2">
+                                <div style="height: 400px;">
+                                    <canvas t-ref="topProducts"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Category Breakdown -->
+                    <div class="col-12 col-xl-6 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header d-flex flex-row align-items-center flex-0 border-bottom">
+                                <div class="d-block">
+                                    <h2 class="h6 text-gray-400 mb-0">Product Mix</h2>
+                                    <h3 class="fw-extrabold mb-2">Sales by Category</h3>
+                                </div>
+                            </div>
+                            <div class="card-body p-2">
+                                <div style="height: 400px;">
+                                    <canvas t-ref="category"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row 2: Time and Performance -->
+                <div class="row">
+                    <!-- Hourly Sales -->
+                    <div class="col-12 col-xl-8 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header d-flex flex-row align-items-center flex-0 border-bottom">
+                                <div class="d-block">
+                                    <h2 class="h6 text-gray-400 mb-0">Peak Hours</h2>
+                                    <h3 class="fw-extrabold mb-2">Hourly Sales Analysis</h3>
+                                </div>
+                            </div>
+                            <div class="card-body p-2">
+                                <div style="height: 300px;">
+                                    <canvas t-ref="hourlySales"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Salesperson Leaderboard -->
+                    <div class="col-12 col-xl-4 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header d-flex flex-row align-items-center flex-0 border-bottom">
+                                <div class="d-block">
+                                    <h2 class="h6 text-gray-400 mb-0">Performance</h2>
+                                    <h3 class="fw-extrabold mb-2">Top Salespeople</h3>
+                                </div>
+                            </div>
+                            <div class="card-body p-2">
+                                <div style="height: 300px;">
+                                    <canvas t-ref="leaderboard"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+</templates>

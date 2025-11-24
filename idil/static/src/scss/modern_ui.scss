@@ -1,0 +1,230 @@
+// -------------------------------------------------------------------------
+// Modern UI Overrides for BizCore - Premium Edition
+// -------------------------------------------------------------------------
+
+// 1. Animations & Keyframes
+// -------------------------------------------------------------------------
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translate3d(0, 20px, 0);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+@keyframes float {
+    0% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-5px);
+    }
+
+    100% {
+        transform: translateY(0px);
+    }
+}
+
+.o_action_manager {
+    animation: fadeInUp 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+// 2. Form Views & Sheets
+// -------------------------------------------------------------------------
+.o_form_sheet {
+    background: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    border-radius: 20px !important;
+    // Multi-layered shadow for depth
+    box-shadow:
+        0 10px 40px -10px rgba(0, 0, 0, 0.08),
+        0 0 20px -5px rgba(0, 0, 0, 0.04) !important;
+    padding: 40px !important;
+    max-width: 1200px !important;
+    margin: 20px auto !important;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+// 3. List Views
+// -------------------------------------------------------------------------
+.o_list_view .o_list_table {
+    background: #ffffff !important;
+    border-radius: 16px !important;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.03) !important;
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    margin-bottom: 20px !important;
+
+    thead {
+        background: #f8fafc; // Slate-50
+
+        th {
+            border-bottom: 1px solid #e2e8f0 !important;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            color: #64748b; // Slate-500
+            padding: 16px 20px !important;
+        }
+    }
+
+    tbody tr {
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+        td {
+            padding: 16px 20px !important;
+            border-top: 1px solid #f1f5f9 !important;
+            color: #334155; // Slate-700
+            font-weight: 500;
+        }
+
+        &:hover {
+            background-color: #f8fafc !important;
+            transform: scale(1.005);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            z-index: 1;
+            position: relative;
+        }
+    }
+}
+
+// 4. Modern Buttons
+// -------------------------------------------------------------------------
+.btn {
+    border-radius: 10px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.01em !important;
+    padding: 10px 24px !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    position: relative;
+    overflow: hidden;
+
+    &:active {
+        transform: scale(0.96);
+    }
+}
+
+.btn-primary {
+    background: #374151 !important; // Dark Gray
+    border: 1px solid #374151 !important;
+    box-shadow: 0 4px 12px rgba(55, 65, 81, 0.25);
+
+    &:hover {
+        background: #1f2937 !important;
+        border-color: #1f2937 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(55, 65, 81, 0.35);
+    }
+}
+
+.btn-secondary {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #475569 !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+
+    &:hover {
+        background: #f8fafc !important;
+        border-color: #cbd5e1 !important;
+        color: #1e293b !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+}
+
+// 5. Typography & Inputs
+// -------------------------------------------------------------------------
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    -webkit-font-smoothing: antialiased;
+    color: #1e293b; // Slate-800
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-weight: 600 !important;
+    letter-spacing: -0.02em;
+    color: #0f172a; // Slate-900
+}
+
+.o_field_widget {
+
+    input,
+    select,
+    textarea {
+        border-radius: 10px !important;
+        border: 1px solid #e2e8f0 !important;
+        padding: 10px 16px !important;
+        transition: all 0.2s ease;
+        background: #f8fafc;
+        font-weight: 500;
+        color: #334155;
+
+        &:focus {
+            background: #ffffff;
+            border-color: #94a3b8 !important;
+            box-shadow: 0 0 0 4px rgba(55, 65, 81, 0.1) !important; // Focus ring
+            outline: none;
+        }
+
+        &:hover {
+            border-color: #cbd5e1 !important;
+        }
+    }
+}
+
+// 6. Kanban View Modernization
+// -------------------------------------------------------------------------
+.o_kanban_view .o_kanban_record {
+    border-radius: 16px !important;
+    border: 1px solid rgba(0, 0, 0, 0.04) !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+    background: #fff !important;
+    margin-bottom: 20px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &:hover {
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+        transform: translateY(-4px);
+        z-index: 10;
+    }
+}
+
+// 7. Navbar Glassmorphism (Overrides volt_overrides if needed)
+// -------------------------------------------------------------------------
+.o_main_navbar {
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+// 8. Modal & Dialogs
+// -------------------------------------------------------------------------
+.modal-content {
+    border-radius: 24px !important;
+    border: none !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    overflow: hidden;
+}
+
+.modal-header {
+    border-bottom: 1px solid #f1f5f9;
+    padding: 24px 32px;
+}
+
+.modal-footer {
+    border-top: 1px solid #f1f5f9;
+    padding: 20px 32px;
+    background: #f8fafc;
+}
