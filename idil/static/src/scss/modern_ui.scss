@@ -248,3 +248,98 @@ h6 {
     padding: 20px 32px;
     background: #f8fafc;
 }
+
+// 9. Notebooks & Tabs (Fixing the "Items" tab look)
+// -------------------------------------------------------------------------
+.o_notebook_headers {
+    border-bottom: 2px solid #f1f5f9 !important;
+    margin-left: -20px !important;
+    margin-right: -20px !important;
+    padding-left: 20px !important;
+
+    .nav-tabs {
+        border-bottom: none !important;
+
+        .nav-item {
+            margin-bottom: -2px;
+
+            .nav-link {
+                border: none !important;
+                color: #64748b !important;
+                font-weight: 600;
+                padding: 16px 24px !important;
+                background: transparent !important;
+                border-bottom: 2px solid transparent !important;
+                transition: all 0.2s ease;
+
+                &.active {
+                    color: #374151 !important; // Dark Gray
+                    border-bottom: 2px solid #374151 !important;
+                }
+
+                &:hover {
+                    color: #374151 !important;
+                    background: #f8fafc !important;
+                }
+            }
+        }
+    }
+}
+
+// 10. Fix Textareas & Internal Notes
+// -------------------------------------------------------------------------
+.o_field_text,
+textarea {
+    min-height: 120px !important;
+    width: 100% !important;
+    resize: vertical;
+    line-height: 1.6 !important;
+}
+
+// Specific fix for the "Internal Notes" placeholder issue
+.o_group.o_inner_group {
+    width: 100% !important;
+    display: block !important; // Prevent weird flex shrinking
+}
+
+// 11. One2Many Lists (The "Items" table inside forms)
+// -------------------------------------------------------------------------
+.o_field_one2many {
+    .o_list_view {
+        box-shadow: none !important; // Remove double shadow inside forms
+        border: 1px solid #f1f5f9 !important;
+        margin-top: 16px !important;
+
+        .o_list_table {
+            border: none !important;
+        }
+    }
+
+    .o_field_x2many_list_row_add {
+        a {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 8px 16px;
+            background: #f1f5f9;
+            border-radius: 8px;
+            color: #475569;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+
+            &:hover {
+                background: #e2e8f0;
+                color: #1e293b;
+            }
+        }
+    }
+}
+
+// 12. Header Buttons (New, etc.)
+// -------------------------------------------------------------------------
+.o_control_panel .o_cp_buttons .btn {
+    text-transform: uppercase;
+    font-size: 0.75rem !important;
+    letter-spacing: 0.05em;
+    padding: 10px 20px !important;
+}
