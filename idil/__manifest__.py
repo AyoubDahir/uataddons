@@ -120,6 +120,8 @@
         "views/customer_place_order.xml",
         "views/system_clearing_wizard_view.xml",
         "views/report_productprofitability.xml",
+        "views/report_cashflow.xml",
+        "reports/report_cashflow.xml",
         "views/customer_sales_report_views.xml",
         # "views/model_export_wizard.xml",
         "views/menu_hr.xml",

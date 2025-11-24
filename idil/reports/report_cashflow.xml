@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+        <record id="action_report_cashflow" model="ir.actions.report">
+            <field name="name">Cash Flow Statement</field>
+            <field name="model">idil.cashflow.report.wizard</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">idil.report_cashflow_template</field>
+            <field name="report_file">idil.report_cashflow_template</field>
+            <field name="binding_model_id" ref="model_idil_cashflow_report_wizard"/>
+            <field name="binding_type">report</field>
+        </record>
+
+        <template id="report_cashflow_template">
+            <t t-call="web.html_container">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <div class="text-center">
+                            <h2>Cash Flow Statement</h2>
+                            <h4><t t-esc="company_name"/></h4>
+                            <p>From <span t-esc="start_date"/> To <span t-esc="end_date"/></p>
+                        </div>
+                        
+                        <table class="table table-sm table-striped mt-4">
+                            <thead>
+                                <tr>
+                                    <th>Description</th>
+                                    <th class="text-right">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="2" class="font-weight-bold">Operating Activities (Inflows)</td>
+                                </tr>
+                                <tr t-foreach="inflows" t-as="item">
+                                    <td class="pl-4"><t t-esc="item['name']"/></td>
+                                    <td class="text-right"><span t-esc="item['amount']" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/></td>
+                                </tr>
+                                <tr class="font-weight-bold">
+                                    <td>Total Inflows</td>
+                                    <td class="text-right"><span t-esc="total_inflow" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/></td>
+                                </tr>
+
+                                <tr>
+                                    <td colspan="2" class="font-weight-bold mt-2">Operating Activities (Outflows)</td>
+                                </tr>
+                                <tr t-foreach="outflows" t-as="item">
+                                    <td class="pl-4"><t t-esc="item['name']"/></td>
+                                    <td class="text-right"><span t-esc="item['amount']" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/></td>
+                                </tr>
+                                <tr class="font-weight-bold">
+                                    <td>Total Outflows</td>
+                                    <td class="text-right"><span t-esc="total_outflow" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/></td>
+                                </tr>
+
+                                <tr class="font-weight-bold bg-light">
+                                    <td>Net Cash Flow</td>
+                                    <td class="text-right"><span t-esc="net_cash_flow" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>
