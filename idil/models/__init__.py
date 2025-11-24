@@ -70,3 +70,4 @@ from . import report_customer_sales
 # from . import model_export_wizard
 # from . import report_production_summary
 from . import dashboard_stats
+from . import report_cashflow
