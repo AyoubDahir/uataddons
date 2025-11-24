@@ -47,17 +47,41 @@ class ReportCashFlow(models.AbstractModel):
         # But we can also just search lines and access .transaction_booking_id.trx_source_id
         lines = self.env['idil.transaction_bookingline'].search(domain)
 
-        # 3. Categorize
+        # 3. Categorize into Operating, Investing, Financing
         operating_inflows = {}
         operating_outflows = {}
+        investing_inflows = {}
+        investing_outflows = {}
+        financing_inflows = {}
+        financing_outflows = {}
         
-        total_inflow = 0.0
-        total_outflow = 0.0
+        total_operating_in = 0.0
+        total_operating_out = 0.0
+        total_investing_in = 0.0
+        total_investing_out = 0.0
+        total_financing_in = 0.0
+        total_financing_out = 0.0
 
         for line in lines:
-            # Determine amount: Debit increases Cash (Inflow), Credit decreases Cash (Outflow)
-            # Assuming Cash is an Asset account where Dr = Increase, Cr = Decrease
+            # EXCLUDE INTERNAL CASH TRANSFERS
+            booking = line.transaction_booking_id
+            all_accounts = booking.booking_lines.mapped('account_number')
             
+            # Skip if ALL accounts are cash/bank (internal transfer)
+            all_cash = all(acc.account_type in ['cash', 'bank_transfer'] for acc in all_accounts if acc)
+            if all_cash and len(all_accounts) > 0:
+                continue
+            
+            # Get the "other" account (non-cash)
+            other_accounts = [acc for acc in all_accounts 
+                             if acc and acc.account_type not in ['cash', 'bank_transfer']]
+            
+            if not other_accounts:
+                continue  # Skip if no other account found
+            
+            other_account = other_accounts[0]  # Take first non-cash account
+            
+            # Determine amount and direction
             amount = 0.0
             is_inflow = False
             
@@ -71,28 +95,71 @@ class ReportCashFlow(models.AbstractModel):
             if amount == 0:
                 continue
 
-            source = line.transaction_booking_id.trx_source_id
-            source_name = source.name if source else "Manual/Other"
+            # Classify by account type
+            category = 'operating'  # Default
             
-            # Grouping logic
-            if is_inflow:
-                total_inflow += amount
-                if source_name in operating_inflows:
-                    operating_inflows[source_name] += amount
+            # Check FinancialReporting field
+            if other_account.FinancialReporting == 'PL':
+                # Profit & Loss accounts (Revenue/Expense) → Operating
+                category = 'operating'
+            elif other_account.FinancialReporting == 'BS':
+                # Balance Sheet accounts - need more analysis
+                header_code = other_account.header_code or ''
+                account_name = (other_account.name or '').lower()
+                
+                # Investing: Fixed Assets (typically 15xx or 16xx)
+                if header_code.startswith('15') or header_code.startswith('16') or \
+                   'equipment' in account_name or 'machinery' in account_name or \
+                   'vehicle' in account_name or 'building' in account_name:
+                    category = 'investing'
+                # Financing: Equity, Loans, Drawings
+                elif header_code.startswith('3') or \
+                     'equity' in account_name or 'capital' in account_name or \
+                     'loan' in account_name or 'drawing' in account_name or \
+                     'dividend' in account_name:
+                    category = 'financing'
                 else:
-                    operating_inflows[source_name] = amount
-            else:
-                total_outflow += amount
-                if source_name in operating_outflows:
-                    operating_outflows[source_name] += amount
+                    # Other BS accounts (Receivable, Payable, Inventory) → Operating
+                    category = 'operating'
+            
+            source = line.transaction_booking_id.trx_source_id
+            source_name = source.name if source else "Other"
+            
+            # Add to appropriate category
+            if category == 'operating':
+                if is_inflow:
+                    total_operating_in += amount
+                    operating_inflows[source_name] = operating_inflows.get(source_name, 0) + amount
                 else:
-                    operating_outflows[source_name] = amount
+                    total_operating_out += amount
+                    operating_outflows[source_name] = operating_outflows.get(source_name, 0) + amount
+            elif category == 'investing':
+                if is_inflow:
+                    total_investing_in += amount
+                    investing_inflows[source_name] = investing_inflows.get(source_name, 0) + amount
+                else:
+                    total_investing_out += amount
+                    investing_outflows[source_name] = investing_outflows.get(source_name, 0) + amount
+            elif category == 'financing':
+                if is_inflow:
+                    total_financing_in += amount
+                    financing_inflows[source_name] = financing_inflows.get(source_name, 0) + amount
+                else:
+                    total_financing_out += amount
+                    financing_outflows[source_name] = financing_outflows.get(source_name, 0) + amount
 
         # Format for report
-        inflows_list = [{'name': k, 'amount': v} for k, v in operating_inflows.items()]
-        outflows_list = [{'name': k, 'amount': v} for k, v in operating_outflows.items()]
+        operating_in_list = [{'name': k, 'amount': v} for k, v in operating_inflows.items()]
+        operating_out_list = [{'name': k, 'amount': v} for k, v in operating_outflows.items()]
+        investing_in_list = [{'name': k, 'amount': v} for k, v in investing_inflows.items()]
+        investing_out_list = [{'name': k, 'amount': v} for k, v in investing_outflows.items()]
+        financing_in_list = [{'name': k, 'amount': v} for k, v in financing_inflows.items()]
+        financing_out_list = [{'name': k, 'amount': v} for k, v in financing_outflows.items()]
         
-        net_cash_flow = total_inflow - total_outflow
+        net_operating = total_operating_in - total_operating_out
+        net_investing = total_investing_in - total_investing_out
+        net_financing = total_financing_in - total_financing_out
+        net_cash_flow = net_operating + net_investing + net_financing
 
         company = self.env['res.company'].browse(company_id)
 
@@ -102,11 +169,26 @@ class ReportCashFlow(models.AbstractModel):
             'data': data,
             'start_date': start_date,
             'end_date': end_date,
-            'inflows': inflows_list,
-            'outflows': outflows_list,
-            'total_inflow': total_inflow,
-            'total_outflow': total_outflow,
+            # Operating
+            'operating_inflows': operating_in_list,
+            'operating_outflows': operating_out_list,
+            'total_operating_in': total_operating_in,
+            'total_operating_out': total_operating_out,
+            'net_operating': net_operating,
+            # Investing
+            'investing_inflows': investing_in_list,
+            'investing_outflows': investing_out_list,
+            'total_investing_in': total_investing_in,
+            'total_investing_out': total_investing_out,
+            'net_investing': net_investing,
+            # Financing
+            'financing_inflows': financing_in_list,
+            'financing_outflows': financing_out_list,
+            'total_financing_in': total_financing_in,
+            'total_financing_out': total_financing_out,
+            'net_financing': net_financing,
+            # Totals
             'net_cash_flow': net_cash_flow,
             'company_name': data.get('company_name'),
-            'company': company, # Pass the recordset for external_layout
+            'company': company,
         }

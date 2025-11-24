@@ -29,32 +29,78 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td colspan="2" class="font-weight-bold">Operating Activities (Inflows)</td>
+                                <!-- OPERATING ACTIVITIES -->
+                                <tr class="table-primary">
+                                    <td colspan="2" class="font-weight-bold">OPERATING ACTIVITIES</td>
                                 </tr>
-                                <tr t-foreach="inflows" t-as="item">
-                                    <td class="pl-4"><t t-esc="item['name']"/></td>
+                                <tr t-if="operating_inflows">
+                                    <td colspan="2" class="pl-3 font-weight-bold">Cash Inflows:</td>
+                                </tr>
+                                <tr t-foreach="operating_inflows" t-as="item">
+                                    <td class="pl-5"><t t-esc="item['name']"/></td>
                                     <td class="text-right"><span t-esc="item['amount']" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/></td>
                                 </tr>
-                                <tr class="font-weight-bold">
-                                    <td>Total Inflows</td>
-                                    <td class="text-right"><span t-esc="total_inflow" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/></td>
+                                <tr t-if="operating_outflows">
+                                    <td colspan="2" class="pl-3 font-weight-bold">Cash Outflows:</td>
                                 </tr>
-
-                                <tr>
-                                    <td colspan="2" class="font-weight-bold mt-2">Operating Activities (Outflows)</td>
+                                <tr t-foreach="operating_outflows" t-as="item">
+                                    <td class="pl-5"><t t-esc="item['name']"/></td>
+                                    <td class="text-right">(<span t-esc="item['amount']" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/> )</td>
                                 </tr>
-                                <tr t-foreach="outflows" t-as="item">
-                                    <td class="pl-4"><t t-esc="item['name']"/></td>
-                                    <td class="text-right"><span t-esc="item['amount']" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/></td>
-                                </tr>
-                                <tr class="font-weight-bold">
-                                    <td>Total Outflows</td>
-                                    <td class="text-right"><span t-esc="total_outflow" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/></td>
-                                </tr>
-
                                 <tr class="font-weight-bold bg-light">
-                                    <td>Net Cash Flow</td>
+                                    <td class="pl-3">Net Cash from Operating Activities</td>
+                                    <td class="text-right"><span t-esc="net_operating" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/></td>
+                                </tr>
+
+                                <!-- INVESTING ACTIVITIES -->
+                                <tr class="table-info">
+                                    <td colspan="2" class="font-weight-bold">INVESTING ACTIVITIES</td>
+                                </tr>
+                                <tr t-if="investing_inflows">
+                                    <td colspan="2" class="pl-3 font-weight-bold">Cash Inflows:</td>
+                                </tr>
+                                <tr t-foreach="investing_inflows" t-as="item">
+                                    <td class="pl-5"><t t-esc="item['name']"/></td>
+                                    <td class="text-right"><span t-esc="item['amount']" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/></td>
+                                </tr>
+                                <tr t-if="investing_outflows">
+                                    <td colspan="2" class="pl-3 font-weight-bold">Cash Outflows:</td>
+                                </tr>
+                                <tr t-foreach="investing_outflows" t-as="item">
+                                    <td class="pl-5"><t t-esc="item['name']"/></td>
+                                    <td class="text-right">(<span t-esc="item['amount']" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/> )</td>
+                                </tr>
+                                <tr class="font-weight-bold bg-light">
+                                    <td class="pl-3">Net Cash from Investing Activities</td>
+                                    <td class="text-right"><span t-esc="net_investing" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/></td>
+                                </tr>
+
+                                <!-- FINANCING ACTIVITIES -->
+                                <tr class="table-warning">
+                                    <td colspan="2" class="font-weight-bold">FINANCING ACTIVITIES</td>
+                                </tr>
+                                <tr t-if="financing_inflows">
+                                    <td colspan="2" class="pl-3 font-weight-bold">Cash Inflows:</td>
+                                </tr>
+                                <tr t-foreach="financing_inflows" t-as="item">
+                                    <td class="pl-5"><t t-esc="item['name']"/></td>
+                                    <td class="text-right"><span t-esc="item['amount']" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/></td>
+                                </tr>
+                                <tr t-if="financing_outflows">
+                                    <td colspan="2" class="pl-3 font-weight-bold">Cash Outflows:</td>
+                                </tr>
+                                <tr t-foreach="financing_outflows" t-as="item">
+                                    <td class="pl-5"><t t-esc="item['name']"/></td>
+                                    <td class="text-right">(<span t-esc="item['amount']" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/> )</td>
+                                </tr>
+                                <tr class="font-weight-bold bg-light">
+                                    <td class="pl-3">Net Cash from Financing Activities</td>
+                                    <td class="text-right"><span t-esc="net_financing" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/></td>
+                                </tr>
+
+                                <!-- NET CHANGE -->
+                                <tr class="table-success font-weight-bold">
+                                    <td class="pl-2">NET CHANGE IN CASH</td>
                                     <td class="text-right"><span t-esc="net_cash_flow" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/></td>
                                 </tr>
                             </tbody>

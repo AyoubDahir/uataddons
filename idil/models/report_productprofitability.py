@@ -78,7 +78,7 @@ class ProductProfitabilityReportWizard(models.TransientModel):
         elements += [
             Paragraph(f"<b>{(company.name or '').upper()}</b>", header_style),
             Spacer(1, 6),
-            Paragraph("<b>Product Profitability Analysis</b>", subtitle_style),
+            Paragraph("<b>Product Profitability Analysis (USD)</b>", subtitle_style),
             Spacer(1, 20),
             Paragraph(
                 f"<b>Report Period:</b> {start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')}",
@@ -90,21 +90,21 @@ class ProductProfitabilityReportWizard(models.TransientModel):
         # ========================= SQL =========================
         # Logic:
         # 1. Get all confirmed sales in the period.
-        # 2. Calculate Revenue (Qty * Price).
-        # 3. Calculate Cost (Qty * Product Cost).
-        # 4. Profit = Revenue - Cost.
+        # 2. Convert Revenue to USD using transaction exchange rate.
+        # 3. Calculate Cost in USD (already in USD).
+        # 4. Profit = Revenue (USD) - Cost (USD).
         sql = """
         SELECT
             p.name AS product_name,
             SUM(sol.quantity) AS sold_qty,
-            AVG(sol.price_unit) AS avg_price,
-            SUM(sol.quantity * sol.price_unit) AS total_revenue,
+            AVG(sol.price_unit / NULLIF(so.rate, 0)) AS avg_price,
+            SUM(sol.quantity * sol.price_unit / NULLIF(so.rate, 0)) AS total_revenue,
             p.cost AS unit_cost,
             SUM(sol.quantity * p.cost) AS total_cost,
-            (SUM(sol.quantity * sol.price_unit) - SUM(sol.quantity * p.cost)) AS net_profit,
+            (SUM(sol.quantity * sol.price_unit / NULLIF(so.rate, 0)) - SUM(sol.quantity * p.cost)) AS net_profit,
             CASE 
-                WHEN SUM(sol.quantity * sol.price_unit) > 0 
-                THEN ((SUM(sol.quantity * sol.price_unit) - SUM(sol.quantity * p.cost)) / SUM(sol.quantity * sol.price_unit)) * 100 
+                WHEN SUM(sol.quantity * sol.price_unit / NULLIF(so.rate, 0)) > 0 
+                THEN ((SUM(sol.quantity * sol.price_unit / NULLIF(so.rate, 0)) - SUM(sol.quantity * p.cost)) / SUM(sol.quantity * sol.price_unit / NULLIF(so.rate, 0))) * 100 
                 ELSE 0 
             END AS margin_percentage
         FROM idil_sale_order_line sol
@@ -138,11 +138,11 @@ class ProductProfitabilityReportWizard(models.TransientModel):
         headers = [
             "Product",
             "Sold Qty",
-            "Avg Price",
-            "Revenue",
-            "Unit Cost",
-            "Total Cost",
-            "Net Profit",
+            "Avg Price (USD)",
+            "Revenue (USD)",
+            "Unit Cost (USD)",
+            "Total Cost (USD)",
+            "Net Profit (USD)",
             "Margin %",
         ]
         data = [headers]
