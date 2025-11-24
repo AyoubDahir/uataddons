@@ -15,9 +15,9 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
 
-class ManufacturingReportWizard(models.TransientModel):
-    _name = "idil.manufacturing.report"
-    _description = "Manufacturing Summary Report"
+class ProductProfitabilityReportWizard(models.TransientModel):
+    _name = "idil.manufacturing.report"  # Keeping technical name to avoid migration issues, but logic is new
+    _description = "Product Profitability Analysis Report"
 
     start_date = fields.Date(string="Start Date", required=True)
     end_date = fields.Date(string="End Date", required=True)
@@ -49,7 +49,7 @@ class ManufacturingReportWizard(models.TransientModel):
             name="Header",
             parent=styles["Title"],
             fontSize=18,
-            textColor=colors.HexColor("#B6862D"),
+            textColor=colors.HexColor("#2C3E50"),
             alignment=1,
         )
         subtitle_style = ParagraphStyle(
@@ -68,20 +68,12 @@ class ManufacturingReportWizard(models.TransientModel):
                     )
                 )
             except Exception:
-                elements.append(Paragraph("<b>No Logo Available</b>", header_style))
-        else:
-            elements.append(Paragraph("<b>No Logo Available</b>", header_style))
+                pass
 
         elements += [
             Paragraph(f"<b>{(company.name or '').upper()}</b>", header_style),
             Spacer(1, 6),
-            Paragraph(
-                f"{company.partner_id.city or ''}, {company.partner_id.country_id.name or ''}<br/>"
-                f"Phone: {company.partner_id.phone or 'N/A'}<br/>"
-                f"Email: {company.partner_id.email or 'N/A'}<br/>"
-                f"Web: {company.website or 'N/A'}",
-                subtitle_style,
-            ),
+            Paragraph("<b>Product Profitability Analysis</b>", subtitle_style),
             Spacer(1, 20),
             Paragraph(
                 f"<b>Report Period:</b> {start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')}",
@@ -91,101 +83,34 @@ class ManufacturingReportWizard(models.TransientModel):
         ]
 
         # ========================= SQL =========================
+        # Logic:
+        # 1. Get all confirmed sales in the period.
+        # 2. Calculate Revenue (Qty * Price).
+        # 3. Calculate Cost (Qty * Product Cost).
+        # 4. Profit = Revenue - Cost.
         sql = """
-        WITH mo AS (
-            SELECT
-                mo.product_id,
-                SUM(CASE WHEN mo.scheduled_start_date < %(start)s THEN mo.product_qty ELSE 0 END)::numeric AS produced_before,
-                SUM(CASE WHEN mo.scheduled_start_date BETWEEN %(start)s AND %(end)s THEN mo.product_qty ELSE 0 END)::numeric AS prod_qty,
-                SUM(CASE WHEN mo.scheduled_start_date <= %(end)s THEN mo.product_qty ELSE 0 END)::numeric AS produced_to_end,
-                SUM(CASE WHEN mo.scheduled_start_date <= %(end)s THEN mo.product_cost ELSE 0 END)::numeric AS total_cost
-            FROM idil_manufacturing_order mo
-            WHERE mo.status = 'done'
-            AND mo.company_id = %(company_id)s
-            AND mo.scheduled_start_date <= %(end)s
-            GROUP BY mo.product_id
-        ),
-        pa AS (
-            SELECT
-                pa.product_id,
-                SUM(CASE WHEN pa.adjustment_date < %(start)s THEN pa.new_quantity ELSE 0 END)::numeric AS disposed_before,
-                SUM(CASE WHEN pa.adjustment_date BETWEEN %(start)s AND %(end)s THEN pa.new_quantity ELSE 0 END)::numeric AS disposed_in_period,
-                SUM(CASE WHEN pa.adjustment_date <= %(end)s THEN pa.new_quantity ELSE 0 END)::numeric AS disposed_to_end
-            FROM idil_product_adjustment pa
-            GROUP BY pa.product_id
-        ),
-        sales AS (
-            SELECT
-                sol.product_id,
-                SUM(CASE WHEN so.order_date < %(start)s THEN sol.quantity ELSE 0 END)::numeric AS sold_before,
-                SUM(CASE WHEN so.order_date BETWEEN %(start)s AND %(end)s THEN sol.quantity ELSE 0 END)::numeric AS sold_qty,
-                AVG(sol.price_unit)::numeric AS sales_price,
-                SUM(CASE WHEN so.order_date BETWEEN %(start)s AND %(end)s
-                        THEN (sol.quantity::numeric * sol.price_unit::numeric)
-                        ELSE 0::numeric END)::numeric AS total_sales
-            FROM idil_sale_order_line sol
-            JOIN idil_sale_order so ON sol.order_id = so.id
-            GROUP BY sol.product_id
-        )
         SELECT
-            p.name AS product,
-
-            -- Prev Qty = produced_before - disposed_before - sold_before
-            (COALESCE(mo.produced_before, 0::numeric)
-            - COALESCE(pa.disposed_before, 0::numeric)
-            - COALESCE(sales.sold_before, 0::numeric)) AS prev_qty,
-
-            COALESCE(mo.prod_qty, 0::numeric) AS prod_qty,
-
-            -- Total Qty = Prev + Prod (up to now)
-            ((COALESCE(mo.produced_before, 0::numeric)
-            - COALESCE(pa.disposed_before, 0::numeric)
-            - COALESCE(sales.sold_before, 0::numeric))
-            + COALESCE(mo.prod_qty, 0::numeric)) AS total_qty,
-
-            CASE
-            WHEN NULLIF(COALESCE(mo.produced_to_end, 0::numeric), 0::numeric) IS NOT NULL
-            THEN ROUND((COALESCE(mo.total_cost, 0::numeric) / NULLIF(mo.produced_to_end, 0::numeric)), 3)
-            ELSE 0::numeric
-            END AS unit_cost,
-
-            COALESCE(mo.total_cost, 0::numeric) AS total_cost,
-
-            COALESCE(pa.disposed_in_period, 0::numeric) AS disposed_in_period,
-
-            (COALESCE(mo.produced_to_end, 0::numeric) - COALESCE(pa.disposed_to_end, 0::numeric)) AS ready_qty,
-
-            COALESCE(sales.sold_qty, 0::numeric) AS sold_qty,
-
-            CASE
-            WHEN NULLIF(COALESCE(mo.produced_to_end, 0::numeric), 0::numeric) IS NOT NULL
-            THEN ROUND(
-                (COALESCE(mo.total_cost, 0::numeric) / NULLIF(mo.produced_to_end, 0::numeric))
-                * COALESCE(sales.sold_qty, 0::numeric)
-                , 2)
-            ELSE 0::numeric
-            END AS sold_cost,
-
-            COALESCE(sales.sales_price, 0::numeric) AS sales_price,
-            COALESCE(sales.total_sales, 0::numeric) AS total_sales,
-
-            (COALESCE(sales.total_sales, 0::numeric)
-            - CASE
-                WHEN NULLIF(COALESCE(mo.produced_to_end, 0::numeric), 0::numeric) IS NOT NULL
-                THEN ROUND(
-                    (COALESCE(mo.total_cost, 0::numeric) / NULLIF(mo.produced_to_end, 0::numeric))
-                    * COALESCE(sales.sold_qty, 0::numeric)
-                    , 2)
-                ELSE 0::numeric
-                END
-            ) AS net_profit
-
-        FROM my_product_product p
-        LEFT JOIN mo ON mo.product_id = p.id
-        LEFT JOIN pa ON pa.product_id = p.id
-        LEFT JOIN sales ON sales.product_id = p.id
-        ORDER BY p.name;
-                """
+            p.name AS product_name,
+            SUM(sol.quantity) AS sold_qty,
+            AVG(sol.price_unit) AS avg_price,
+            SUM(sol.quantity * sol.price_unit) AS total_revenue,
+            p.cost AS unit_cost,
+            SUM(sol.quantity * p.cost) AS total_cost,
+            (SUM(sol.quantity * sol.price_unit) - SUM(sol.quantity * p.cost)) AS net_profit,
+            CASE 
+                WHEN SUM(sol.quantity * sol.price_unit) > 0 
+                THEN ((SUM(sol.quantity * sol.price_unit) - SUM(sol.quantity * p.cost)) / SUM(sol.quantity * sol.price_unit)) * 100 
+                ELSE 0 
+            END AS margin_percentage
+        FROM idil_sale_order_line sol
+        JOIN idil_sale_order so ON sol.order_id = so.id
+        JOIN my_product_product p ON sol.product_id = p.id
+        WHERE so.state = 'confirmed'
+        AND so.order_date BETWEEN %(start)s AND %(end)s
+        AND so.company_id = %(company_id)s
+        GROUP BY p.name, p.cost
+        ORDER BY net_profit DESC;
+        """
 
         params = {
             "start": start_date,
@@ -199,47 +124,73 @@ class ManufacturingReportWizard(models.TransientModel):
         # ===================== TABLE OUTPUT =====================
         headers = [
             "Product",
-            "Prev Qty",
-            "Prod Qty",
-            "Total Qty",
+            "Sold Qty",
+            "Avg Price",
+            "Revenue",
             "Unit Cost",
             "Total Cost",
-            "Disposed",
-            "Ready Qty",
-            "Sold Qty",
-            "Sold Cost",
-            "Sales Price",
-            "Total Sales",
             "Net Profit",
+            "Margin %",
         ]
         data = [headers]
 
+        total_revenue = 0
+        total_cost = 0
+        total_profit = 0
+
         for row in rows:
-            formatted = []
-            for col in row:
-                if isinstance(col, (int, float, Decimal)):
-                    formatted.append(f"{col:,.2f}")
-                else:
-                    formatted.append(col or "")
+            # row: name, qty, avg_price, revenue, unit_cost, total_cost, profit, margin
+            formatted = [
+                row[0],  # Product
+                f"{row[1]:,.2f}",  # Qty
+                f"{row[2]:,.2f}",  # Avg Price
+                f"{row[3]:,.2f}",  # Revenue
+                f"{row[4]:,.2f}",  # Unit Cost
+                f"{row[5]:,.2f}",  # Total Cost
+                f"{row[6]:,.2f}",  # Profit
+                f"{row[7]:,.1f}%",  # Margin
+            ]
             data.append(formatted)
+            
+            total_revenue += row[3] or 0
+            total_cost += row[5] or 0
+            total_profit += row[6] or 0
 
-        col_widths = [140, 80, 80, 90, 80, 90, 80, 90, 80, 90, 80, 90, 90]
+        # Add Totals Row
+        data.append([
+            "TOTALS",
+            "",
+            "",
+            f"{total_revenue:,.2f}",
+            "",
+            f"{total_cost:,.2f}",
+            f"{total_profit:,.2f}",
+            f"{(total_profit / total_revenue * 100) if total_revenue else 0:,.1f}%"
+        ])
+
+        col_widths = [200, 60, 70, 90, 70, 90, 90, 70]
         table = Table(data, colWidths=col_widths)
-        table.setStyle(
-            TableStyle(
-                [
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#B6862D")),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                    ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-                    ("ALIGN", (1, 1), (-1, -1), "RIGHT"),
-                    ("ALIGN", (0, 0), (0, -1), "LEFT"),
-                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ]
-            )
+        
+        # Style
+        style = TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2C3E50")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+                ("ALIGN", (0, 0), (0, -1), "LEFT"),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                ("BACKGROUND", (0, 1), (-1, -2), colors.HexColor("#F8F9F9")),
+                ("GRID", (0, 0), (-1, -2), 0.5, colors.grey),
+                # Totals Row Style
+                ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#EAEDED")),
+                ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+                ("TOPPADDING", (0, -1), (-1, -1), 12),
+            ]
         )
+        table.setStyle(style)
 
-        elements.append(Spacer(1, 20))
         elements.append(table)
         doc.build(elements)
         buffer.seek(0)
@@ -247,7 +198,7 @@ class ManufacturingReportWizard(models.TransientModel):
 
         attachment = self.env["ir.attachment"].create(
             {
-                "name": f"manufacturing_report_{start_date}_{end_date}.pdf",
+                "name": f"profitability_report_{start_date}_{end_date}.pdf",
                 "type": "binary",
                 "datas": base64.b64encode(pdf_data),
                 "mimetype": "application/pdf",
