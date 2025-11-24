@@ -33,6 +33,11 @@ class ProductProfitabilityReportWizard(models.TransientModel):
         start_date = self.start_date
         end_date = self.end_date
 
+        # Fix: Swap dates if start > end
+        if start_date > end_date:
+            start_date, end_date = end_date, start_date
+
+
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
             buffer,
@@ -118,8 +123,16 @@ class ProductProfitabilityReportWizard(models.TransientModel):
             "company_id": company.id,
         }
 
+        import logging
+        _logger = logging.getLogger(__name__)
+        
+        _logger.info(f"Generating Profitability Report: Start={start_date}, End={end_date}, Company={company.id}")
+
         self.env.cr.execute(sql, params)
         rows = self.env.cr.fetchall()
+        
+        _logger.info(f"Profitability Report Query returned {len(rows)} rows.")
+
 
         # ===================== TABLE OUTPUT =====================
         headers = [
