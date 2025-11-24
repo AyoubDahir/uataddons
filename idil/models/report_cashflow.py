@@ -94,6 +94,8 @@ class ReportCashFlow(models.AbstractModel):
         
         net_cash_flow = total_inflow - total_outflow
 
+        company = self.env['res.company'].browse(company_id)
+
         return {
             'doc_ids': docids,
             'doc_model': 'idil.cashflow.report.wizard',
@@ -106,4 +108,5 @@ class ReportCashFlow(models.AbstractModel):
             'total_outflow': total_outflow,
             'net_cash_flow': net_cash_flow,
             'company_name': data.get('company_name'),
+            'company': company, # Pass the recordset for external_layout
         }
