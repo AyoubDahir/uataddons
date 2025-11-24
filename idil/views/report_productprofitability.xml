@@ -31,10 +31,6 @@
   </record>
 
   <!-- Menu Item -->
-  <menuitem id="menu_product_profitability_report"
-            name="Product Profitability"
-            parent="idil.menu_idil_reports"
-            action="action_product_profitability_report_wizard"
-            sequence="30"/>
+
 
 </odoo>

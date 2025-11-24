@@ -31,7 +31,7 @@
 
     <menuitem id="menu_cashflow_report"
               name="Cash Flow Statement"
-              parent="idil.menu_idil_reports"
+              parent="idil.FinancialReports"
               action="action_cashflow_report_wizard"
               sequence="40"/>
 </odoo>
