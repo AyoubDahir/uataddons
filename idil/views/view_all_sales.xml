@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_all_sales_tree" model="ir.ui.view">
+        <field name="name">idil.view.all.sales.tree</field>
+        <field name="model">idil.view.all.sales</field>
+        <field name="arch" type="xml">
+            <tree string="All Sales" create="false" edit="false" delete="false">
+                <field name="date"/>
+                <field name="ref"/>
+                <field name="sale_type" widget="badge" decoration-info="sale_type == 'salesperson'" decoration-success="sale_type == 'customer'" decoration-warning="sale_type == 'staff'"/>
+                <field name="party_name"/>
+                <field name="amount" sum="Total Amount"/>
+                <field name="currency_id"/>
+                <field name="state" widget="badge" decoration-success="state == 'done'" decoration-info="state == 'confirmed'" decoration-muted="state == 'draft'"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_all_sales_search" model="ir.ui.view">
+        <field name="name">idil.view.all.sales.search</field>
+        <field name="model">idil.view.all.sales</field>
+        <field name="arch" type="xml">
+            <search string="Search All Sales">
+                <field name="ref"/>
+                <field name="party_name"/>
+                <field name="sale_type"/>
+                <field name="state"/>
+                <filter string="Salesperson Sales" name="type_salesperson" domain="[('sale_type', '=', 'salesperson')]"/>
+                <filter string="Customer Sales" name="type_customer" domain="[('sale_type', '=', 'customer')]"/>
+                <filter string="Staff Sales" name="type_staff" domain="[('sale_type', '=', 'staff')]"/>
+                <separator/>
+                <filter string="Confirmed" name="confirmed" domain="[('state', 'in', ['confirmed', 'done'])]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Sale Type" name="group_type" context="{'group_by': 'sale_type'}"/>
+                    <filter string="Date" name="group_date" context="{'group_by': 'date:day'}"/>
+                    <filter string="Status" name="group_state" context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_view_all_sales" model="ir.actions.act_window">
+        <field name="name">All Sales</field>
+        <field name="res_model">idil.view.all.sales</field>
+        <field name="view_mode">tree</field>
+        <field name="search_view_id" ref="view_all_sales_search"/>
+        <field name="context">{'search_default_group_date': 1}</field>
+    </record>
+</odoo>
