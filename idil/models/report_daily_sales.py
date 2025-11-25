@@ -301,11 +301,30 @@ class ReportDailySales(models.AbstractModel):
 
     @api.model
     def _get_report_values(self, docids, data=None):
+        import logging
+        _logger = logging.getLogger(__name__)
+        
+        _logger.info("=" * 50)
+        _logger.info("REPORT VALUES DEBUG")
+        _logger.info(f"Doc IDs: {docids}")
+        if data:
+            _logger.info(f"Data keys: {data.keys()}")
+            if 'daily_summary' in data:
+                _logger.info(f"Daily Summary Count: {len(data['daily_summary'])}")
+                if len(data['daily_summary']) > 0:
+                    _logger.info(f"First Daily Record Type: {type(data['daily_summary'][0])}")
+                    _logger.info(f"First Daily Record Date: {data['daily_summary'][0].get('sale_date')} (Type: {type(data['daily_summary'][0].get('sale_date'))})")
+        else:
+            _logger.warning("DATA IS NONE OR EMPTY")
+        _logger.info("=" * 50)
+
         company = self.env['res.company'].browse(data.get('company_id', self.env.company.id))
+        docs = self.env['idil.daily.sales.report.wizard'].browse(docids)
         
         return {
             'doc_ids': docids,
             'doc_model': 'idil.daily.sales.report.wizard',
+            'docs': docs,
             'data': data,
             'start_date': data.get('start_date'),
             'end_date': data.get('end_date'),
