@@ -109,32 +109,10 @@ class DailySalesReportWizard(models.TransientModel):
         return self.env.cr.dictfetchall()
 
     def _get_payment_methods_data(self):
-        """Get payment method breakdown per day"""
-        params = {
-            'start': self.start_date,
-            'end': self.end_date,
-            'company_id': self.company_id.id,
-            'salesperson_id': self.salesperson_id.id if self.salesperson_id else None
-        }
-
-        sql = """
-        SELECT 
-            DATE(so.order_date) as sale_date,
-            COALESCE(so.payment_method, 'Not Specified') as payment_method,
-            COUNT(*) as transaction_count,
-            SUM(so.order_total / NULLIF(so.rate, 0)) as amount_usd,
-            SUM(so.order_total) as amount_shillings
-        FROM idil_sale_order so
-        WHERE so.state = 'confirmed'
-          AND so.order_date BETWEEN %(start)s AND %(end)s
-          AND so.company_id = %(company_id)s
-          AND (%(salesperson_id)s IS NULL OR so.sales_person_id = %(salesperson_id)s)
-        GROUP BY DATE(so.order_date), so.payment_method
-        ORDER BY sale_date, amount_usd DESC
-        """
-
-        self.env.cr.execute(sql, params)
-        return self.env.cr.dictfetchall()
+        """Get payment method breakdown per day - Not available in current schema"""
+        # Payment information is tracked in idil.sales.receipt table, not on sales order
+        # Returning empty list for now
+        return []
 
     def _get_salesperson_performance_data(self):
         """Get salesperson performance per day"""
