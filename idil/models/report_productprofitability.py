@@ -97,52 +97,43 @@ class ProductProfitabilityReportWizard(models.TransientModel):
         #    - If Currency is SL and Cost >= 50 -> Convert SL to USD
         # 4. Profit = Revenue (USD) - Cost (USD).
         sql = """
+        WITH converted_lines AS (
+            SELECT
+                p.name AS product_name,
+                p.cost,
+                pc.name AS currency_name,
+                sol.quantity,
+                sol.price_unit / NULLIF(so.rate, 0) AS price_usd,
+                sol.quantity * sol.price_unit / NULLIF(so.rate, 0) AS revenue_usd,
+                sol.quantity * 
+                    CASE 
+                        WHEN pc.name = 'USD' THEN p.cost
+                        WHEN p.cost < 50 THEN p.cost
+                        ELSE p.cost / NULLIF(so.rate, 0)
+                    END AS cost_usd
+            FROM idil_sale_order_line sol
+            JOIN idil_sale_order so ON sol.order_id = so.id
+            JOIN my_product_product p ON sol.product_id = p.id
+            LEFT JOIN res_currency pc ON p.asset_currency_id = pc.id
+            WHERE so.state = 'confirmed'
+            AND so.order_date BETWEEN %(start)s AND %(end)s
+            AND so.company_id = %(company_id)s
+        )
         SELECT
-            p.name AS product_name,
-            SUM(sol.quantity) AS sold_qty,
-            AVG(sol.price_unit / NULLIF(so.rate, 0)) AS avg_price,
-            SUM(sol.quantity * sol.price_unit / NULLIF(so.rate, 0)) AS total_revenue,
-            -- Cost conversion with Smart Heuristic
+            product_name,
+            SUM(quantity) AS sold_qty,
+            AVG(price_usd) AS avg_price,
+            SUM(revenue_usd) AS total_revenue,
+            SUM(cost_usd) / NULLIF(SUM(quantity), 0) AS unit_cost,
+            SUM(cost_usd) AS total_cost,
+            (SUM(revenue_usd) - SUM(cost_usd)) AS net_profit,
             CASE 
-                WHEN pc.name = 'USD' THEN p.cost
-                WHEN p.cost < 50 THEN p.cost  -- Assume USD for small values (Fix for misconfigured products)
-                ELSE p.cost / NULLIF(so.rate, 0)  -- Convert Shillings to USD
-            END AS unit_cost,
-            SUM(sol.quantity * 
-                CASE 
-                    WHEN pc.name = 'USD' THEN p.cost
-                    WHEN p.cost < 50 THEN p.cost
-                    ELSE p.cost / NULLIF(so.rate, 0)
-                END
-            ) AS total_cost,
-            (SUM(sol.quantity * sol.price_unit / NULLIF(so.rate, 0)) - 
-             SUM(sol.quantity * 
-                CASE 
-                    WHEN pc.name = 'USD' THEN p.cost
-                    WHEN p.cost < 50 THEN p.cost
-                    ELSE p.cost / NULLIF(so.rate, 0)
-                END
-             )) AS net_profit,
-            CASE 
-                WHEN SUM(sol.quantity * sol.price_unit / NULLIF(so.rate, 0)) > 0 
-                THEN ((SUM(sol.quantity * sol.price_unit / NULLIF(so.rate, 0)) - 
-                      SUM(sol.quantity * 
-                        CASE 
-                            WHEN pc.name = 'USD' THEN p.cost
-                            WHEN p.cost < 50 THEN p.cost
-                            ELSE p.cost / NULLIF(so.rate, 0)
-                        END
-                      )) / SUM(sol.quantity * sol.price_unit / NULLIF(so.rate, 0))) * 100 
+                WHEN SUM(revenue_usd) > 0 
+                THEN ((SUM(revenue_usd) - SUM(cost_usd)) / SUM(revenue_usd)) * 100 
                 ELSE 0 
             END AS margin_percentage
-        FROM idil_sale_order_line sol
-        JOIN idil_sale_order so ON sol.order_id = so.id
-        JOIN my_product_product p ON sol.product_id = p.id
-        LEFT JOIN res_currency pc ON p.asset_currency_id = pc.id
-        WHERE so.state = 'confirmed'
-        AND so.order_date BETWEEN %(start)s AND %(end)s
-        AND so.company_id = %(company_id)s
-        GROUP BY p.name, p.cost, pc.name
+        FROM converted_lines
+        GROUP BY product_name
         ORDER BY net_profit DESC;
         """
 
