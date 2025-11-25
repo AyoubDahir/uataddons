@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Daily Sales Report Wizard Form View -->
+    <record id="view_daily_sales_report_wizard_form" model="ir.ui.view">
+        <field name="name">idil.daily.sales.report.wizard.form</field>
+        <field name="model">idil.daily.sales.report.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Daily Sales Report">
+                <group>
+                    <group>
+                        <field name="start_date"/>
+                        <field name="end_date"/>
+                        <field name="company_id" groups="base.group_multi_company"/>
+                    </group>
+                    <group>
+                        <field name="salesperson_id" options="{'no_create': True}"/>
+                        <field name="report_type" widget="radio"/>
+                        <field name="currency_display"/>
+                    </group>
+                </group>
+                <footer>
+                    <button string="Generate PDF" type="object" name="generate_pdf_report" class="btn-primary"/>
+                    <button string="Export to Excel" type="object" name="generate_excel_report" class="btn-success"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Wizard Action -->
+    <record id="action_daily_sales_report_wizard" model="ir.actions.act_window">
+        <field name="name">Daily Sales Report</field>
+        <field name="res_model">idil.daily.sales.report.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="model_idil_daily_sales_report_wizard"/>
+    </record>
+
+    <!-- Menu Item under Financial Reports -->
+    <menuitem
+        id="menu_daily_sales_report"
+        name="Daily Sales Report"
+        parent="idil.FinancialReports"
+        action="action_daily_sales_report_wizard"
+        sequence="30"/>
+</odoo>

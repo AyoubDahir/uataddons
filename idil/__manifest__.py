@@ -122,6 +122,8 @@
         "views/report_productprofitability.xml",
         "views/report_cashflow.xml",
         "reports/report_cashflow.xml",
+        "views/report_daily_sales.xml",
+        "reports/report_daily_sales.xml",
         "views/customer_sales_report_views.xml",
         # "views/model_export_wizard.xml",
         "views/menu_hr.xml",
