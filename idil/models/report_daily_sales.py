@@ -19,7 +19,7 @@ class DailySalesReportWizard(models.TransientModel):
         default=fields.Date.context_today
     )
     salesperson_id = fields.Many2one(
-        'res.users',
+        'idil.sales.sales_personnel',
         string='Salesperson',
         help='Leave empty for all salespeople'
     )
