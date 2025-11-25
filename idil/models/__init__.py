@@ -72,3 +72,4 @@ from . import report_customer_sales
 from . import dashboard_stats
 from . import report_cashflow
 from . import report_daily_sales
+from . import view_all_sales
