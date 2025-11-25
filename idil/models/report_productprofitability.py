@@ -181,7 +181,7 @@ class ProductProfitabilityReportWizard(models.TransientModel):
             f"{(total_profit / total_revenue * 100) if total_revenue else 0:,.1f}%"
         ])
 
-        col_widths = [200, 60, 70, 90, 70, 90, 90, 70]
+        col_widths = [160, 55, 75, 85, 75, 85, 85, 60]
         table = Table(data, colWidths=col_widths)
         
         # Style
