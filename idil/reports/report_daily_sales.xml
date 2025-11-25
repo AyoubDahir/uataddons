@@ -3,172 +3,145 @@
     <!-- Daily Sales Report Template -->
     <template id="report_daily_sales_template">
         <t t-call="web.html_container">
-            <t t-foreach="docs" t-as="doc">
-                <t t-call="web.external_layout">
-                    <div class="page">
-                        <!-- Header -->
-                        <div class="text-center">
-                            <h2><t t-esc="company.name"/></h2>
-                            <h3>Daily Sales Report</h3>
-                            <p>
-                                <strong>Period:</strong> 
-                                <t t-esc="start_date"/> to <t t-esc="end_date"/>
-                            </p>
-                            <p>
-                                <strong>Salesperson:</strong> 
-                                <t t-esc="salesperson_name"/>
-                            </p>
-                        </div>
+            <t t-call="web.external_layout">
+                <div class="page">
+                    <!-- Header -->
+                    <div class="text-center">
+                        <h2><t t-esc="company.name"/></h2>
+                        <h3>Daily Sales Report</h3>
+                        <p>
+                            <strong>Period:</strong> 
+                            <t t-esc="start_date"/> to <t t-esc="end_date"/>
+                        </p>
+                        <p>
+                            <strong>Salesperson:</strong> 
+                            <t t-esc="salesperson_name"/>
+                        </p>
+                    </div>
 
-                        <t t-set="show_usd" t-value="currency_display in ['usd', 'both']"/>
-                        <t t-set="show_shilling" t-value="currency_display in ['shilling', 'both']"/>
+                    <t t-set="show_usd" t-value="currency_display in ['usd', 'both']"/>
+                    <t t-set="show_shilling" t-value="currency_display in ['shilling', 'both']"/>
 
-                        <!-- Daily Summary Section -->
-                        <h4 class="mt-4">Daily Summary</h4>
-                        <table class="table table-sm table-bordered">
-                            <thead class="bg-primary text-white">
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Orders</th>
-                                    <th t-if="show_usd">Revenue (USD)</th>
-                                    <th t-if="show_shilling">Revenue (Shillings)</th>
-                                    <th t-if="show_usd">Avg Order (USD)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr t-foreach="daily_summary" t-as="day">
-                                    <td><t t-esc="day['sale_date']"/></td>
-                                    <td class="text-right"><t t-esc="day['order_count']"/></td>
-                                    <td t-if="show_usd" class="text-right">
-                                        $<t t-esc="'{:,.2f}'.format(day['revenue_usd'] or 0)"/>
-                                    </td>
-                                    <td t-if="show_shilling" class="text-right">
-                                        <t t-esc="'{:,.2f}'.format(day['revenue_shillings'] or 0)"/>
-                                    </td>
-                                    <td t-if="show_usd" class="text-right">
-                                        $<t t-esc="'{:,.2f}'.format(day['avg_order_usd'] or 0)"/>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <!-- Daily Summary Section -->
+                    <h4 class="mt-4">Daily Summary</h4>
+                    <table class="table table-sm table-bordered">
+                        <thead class="bg-primary text-white">
+                            <tr>
+                                <th>Date</th>
+                                <th>Orders</th>
+                                <th t-if="show_usd">Revenue (USD)</th>
+                                <th t-if="show_shilling">Revenue (Shillings)</th>
+                                <th t-if="show_usd">Avg Order (USD)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="daily_summary" t-as="day">
+                                <td><t t-esc="day['sale_date']"/></td>
+                                <td class="text-right"><t t-esc="day['order_count']"/></td>
+                                <td t-if="show_usd" class="text-right">
+                                    $<t t-esc="'{:,.2f}'.format(day['revenue_usd'] or 0)"/>
+                                </td>
+                                <td t-if="show_shilling" class="text-right">
+                                    <t t-esc="'{:,.2f}'.format(day['revenue_shillings'] or 0)"/>
+                                </td>
+                                <td t-if="show_usd" class="text-right">
+                                    $<t t-esc="'{:,.2f}'.format(day['avg_order_usd'] or 0)"/>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
 
-                        <!-- Detailed Breakdown (if detailed mode) -->
-                        <t t-if="report_type == 'detailed'">
-                            <!-- Group data by/date -->
-                            <t t-foreach="daily_summary" t-as="day">
-                                <div class="page-break">
-                                    <h4 class="mt-4 mb-3">
-                                        <t t-esc="day['sale_date']"/> - Details
-                                    </h4>
+                    <!-- Detailed Breakdown (if detailed mode) -->
+                    <t t-if="report_type == 'detailed'">
+                        <!-- Group data by date -->
+                        <t t-foreach="daily_summary" t-as="day">
+                            <div class="page-break">
+                                <h4 class="mt-4 mb-3">
+                                    <t t-esc="day['sale_date']"/> - Details
+                                </h4>
 
-                                    <!-- Products Breakdown -->
-                                    <h5>Products Sold</h5>
+                                <!-- Products Breakdown -->
+                                <h5>Products Sold</h5>
+                                <table class="table table-sm table-bordered">
+                                    <thead class="bg-info text-white">
+                                        <tr>
+                                            <th>Product</th>
+                                            <th>Quantity</th>
+                                            <th t-if="show_usd">Revenue (USD)</th>
+                                            <th t-if="show_shilling">Revenue (Shillings)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr t-foreach="[p for p in products_breakdown if p['sale_date'] == day['sale_date']]" t-as="product">
+                                            <td><t t-esc="product['product_name']"/></td>
+                                            <td class="text-right"><t t-esc="'{:,.2f}'.format(product['qty_sold'])"/></td>
+                                            <td t-if="show_usd" class="text-right">
+                                                $<t t-esc="'{:,.2f}'.format(product['revenue_usd'] or 0)"/>
+                                            </td>
+                                            <td t-if="show_shilling" class="text-right">
+                                                <t t-esc="'{:,.2f}'.format(product['revenue_shillings'] or 0)"/>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                <!-- Salesperson Performance (if applicable) -->
+                                <t t-if="not salesperson_id">
+                                    <h5 class="mt-3">Salesperson Performance</h5>
                                     <table class="table table-sm table-bordered">
-                                        <thead class="bg-info text-white">
+                                        <thead class="bg-warning text-dark">
                                             <tr>
-                                                <th>Product</th>
-                                                <th>Quantity</th>
+                                                <th>Salesperson</th>
+                                                <th>Orders</th>
                                                 <th t-if="show_usd">Revenue (USD)</th>
                                                 <th t-if="show_shilling">Revenue (Shillings)</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr t-foreach="[p for p in products_breakdown if p['sale_date'] == day['sale_date']]" t-as="product">
-                                                <td><t t-esc="product['product_name']"/></td>
-                                                <td class="text-right"><t t-esc="'{:,.2f}'.format(product['qty_sold'])"/></td>
+                                            <tr t-foreach="[sp for sp in salesperson_performance if sp['sale_date'] == day['sale_date']]" t-as="sp">
+                                                <td><t t-esc="sp['salesperson']"/></td>
+                                                <td class="text-right"><t t-esc="sp['orders']"/></td>
                                                 <td t-if="show_usd" class="text-right">
-                                                    $<t t-esc="'{:,.2f}'.format(product['revenue_usd'] or 0)"/>
+                                                    $<t t-esc="'{:,.2f}'.format(sp['revenue_usd'] or 0)"/>
                                                 </td>
                                                 <td t-if="show_shilling" class="text-right">
-                                                    <t t-esc="'{:,.2f}'.format(product['revenue_shillings'] or 0)"/>
+                                                    <t t-esc="'{:,.2f}'.format(sp['revenue_shillings'] or 0)"/>
                                                 </td>
                                             </tr>
                                         </tbody>
                                     </table>
-
-                                    <!-- Payment Methods -->
-                                    <h5 class="mt-3">Payment Methods</h5>
-                                    <table class="table table-sm table-bordered">
-                                        <thead class="bg-success text-white">
-                                            <tr>
-                                                <th>Method</th>
-                                                <th>Transactions</th>
-                                                <th t-if="show_usd">Amount (USD)</th>
-                                                <th t-if="show_shilling">Amount (Shillings)</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr t-foreach="[pm for pm in payment_methods if pm['sale_date'] == day['sale_date']]" t-as="payment">
-                                                <td><t t-esc="payment['payment_method']"/></td>
-                                                <td class="text-right"><t t-esc="payment['transaction_count']"/></td>
-                                                <td t-if="show_usd" class="text-right">
-                                                    $<t t-esc="'{:,.2f}'.format(payment['amount_usd'] or 0)"/>
-                                                </td>
-                                                <td t-if="show_shilling" class="text-right">
-                                                    <t t-esc="'{:,.2f}'.format(payment['amount_shillings'] or 0)"/>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-
-                                    <!-- Salesperson Performance (if applicable) -->
-                                    <t t-if="not salesperson_id">
-                                        <h5 class="mt-3">Salesperson Performance</h5>
-                                        <table class="table table-sm table-bordered">
-                                            <thead class="bg-warning text-dark">
-                                                <tr>
-                                                    <th>Salesperson</th>
-                                                    <th>Orders</th>
-                                                    <th t-if="show_usd">Revenue (USD)</th>
-                                                    <th t-if="show_shilling">Revenue (Shillings)</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr t-foreach="[sp for sp in salesperson_performance if sp['sale_date'] == day['sale_date']]" t-as="sp">
-                                                    <td><t t-esc="sp['salesperson']"/></td>
-                                                    <td class="text-right"><t t-esc="sp['orders']"/></td>
-                                                    <td t-if="show_usd" class="text-right">
-                                                        $<t t-esc="'{:,.2f}'.format(sp['revenue_usd'] or 0)"/>
-                                                    </td>
-                                                    <td t-if="show_shilling" class="text-right">
-                                                        <t t-esc="'{:,.2f}'.format(sp['revenue_shillings'] or 0)"/>
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </t>
-                                </div>
-                            </t>
+                                </t>
+                            </div>
                         </t>
+                    </t>
 
-                        <!-- Grand Totals -->
-                        <div class="mt-4">
-                            <h4>Grand Totals</h4>
-                            <table class="table table-sm table-bordered">
-                                <tbody>
-                                    <tr class="bg-light font-weight-bold">
-                                        <td>Total Orders</td>
-                                        <td class="text-right">
-                                            <t t-esc="sum(d['order_count'] for d in daily_summary)"/>
-                                        </td>
-                                    </tr>
-                                    <tr class="bg-light font-weight-bold" t-if="show_usd">
-                                        <td>Total Revenue (USD)</td>
-                                        <td class="text-right">
-                                            $<t t-esc="'{:,.2f}'.format(sum(d['revenue_usd'] or 0 for d in daily_summary))"/>
-                                        </td>
-                                    </tr>
-                                    <tr class="bg-light font-weight-bold" t-if="show_shilling">
-                                        <td>Total Revenue (Shillings)</td>
-                                        <td class="text-right">
-                                            <t t-esc="'{:,.2f}'.format(sum(d['revenue_shillings'] or 0 for d in daily_summary))"/>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                    <!-- Grand Totals -->
+                    <div class="mt-4">
+                        <h4>Grand Totals</h4>
+                        <table class="table table-sm table-bordered">
+                            <tbody>
+                                <tr class="bg-light font-weight-bold">
+                                    <td>Total Orders</td>
+                                    <td class="text-right">
+                                        <t t-esc="sum(d['order_count'] for d in daily_summary)"/>
+                                    </td>
+                                </tr>
+                                <tr class="bg-light font-weight-bold" t-if="show_usd">
+                                    <td>Total Revenue (USD)</td>
+                                    <td class="text-right">
+                                        $<t t-esc="'{:,.2f}'.format(sum(d['revenue_usd'] or 0 for d in daily_summary))"/>
+                                    </td>
+                                </tr>
+                                <tr class="bg-light font-weight-bold" t-if="show_shilling">
+                                    <td>Total Revenue (Shillings)</td>
+                                    <td class="text-right">
+                                        <t t-esc="'{:,.2f}'.format(sum(d['revenue_shillings'] or 0 for d in daily_summary))"/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
-                </t>
+                </div>
             </t>
         </t>
     </template>
