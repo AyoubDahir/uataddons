@@ -145,17 +145,37 @@ class DailySalesReportWizard(models.TransientModel):
 
     def generate_pdf_report(self):
         """Generate PDF report"""
+        import logging
+        _logger = logging.getLogger(__name__)
+        
+        daily_summary = self._get_daily_summary_data()
+        products_breakdown = self._get_products_breakdown_data()
+        payment_methods = self._get_payment_methods_data()
+        salesperson_performance = self._get_salesperson_performance_data()
+        
+        _logger.info("=" * 50)
+        _logger.info("DAILY SALES REPORT DEBUG")
+        _logger.info(f"Date Range: {self.start_date} to {self.end_date}")
+        _logger.info(f"Salesperson: {self.salesperson_id.name if self.salesperson_id else 'All'}")
+        _logger.info(f"Daily Summary Records: {len(daily_summary)}")
+        _logger.info(f"Products Records: {len(products_breakdown)}")
+        _logger.info(f"Salesperson Performance Records: {len(salesperson_performance)}")
+        if daily_summary:
+            _logger.info(f"First Daily Record: {daily_summary[0]}")
+        _logger.info("=" * 50)
+        
         data = {
             'start_date': self.start_date,
             'end_date': self.end_date,
+            'company_id': self.company_id.id,
             'salesperson_id': self.salesperson_id.id if self.salesperson_id else None,
             'salesperson_name': self.salesperson_id.name if self.salesperson_id else 'All Salespeople',
             'report_type': self.report_type,
             'currency_display': self.currency_display,
-            'daily_summary': self._get_daily_summary_data(),
-            'products_breakdown': self._get_products_breakdown_data(),
-            'payment_methods': self._get_payment_methods_data(),
-            'salesperson_performance': self._get_salesperson_performance_data(),
+            'daily_summary': daily_summary,
+            'products_breakdown': products_breakdown,
+            'payment_methods': payment_methods,
+            'salesperson_performance': salesperson_performance,
         }
         
         return self.env.ref('idil.action_report_daily_sales').report_action(self, data=data)
