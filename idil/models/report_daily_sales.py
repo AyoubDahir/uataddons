@@ -62,15 +62,15 @@ class DailySalesReportWizard(models.TransientModel):
         SELECT 
             DATE(so.order_date) as sale_date,
             COUNT(DISTINCT so.id) as order_count,
-            SUM(so.grand_total / NULLIF(so.rate, 0)) as revenue_usd,
-            SUM(so.grand_total) as revenue_shillings,
-            AVG(so.grand_total / NULLIF(so.rate, 0)) as avg_order_usd,
-            AVG(so.grand_total) as avg_order_shillings
+            SUM(so.order_total / NULLIF(so.rate, 0)) as revenue_usd,
+            SUM(so.order_total) as revenue_shillings,
+            AVG(so.order_total / NULLIF(so.rate, 0)) as avg_order_usd,
+            AVG(so.order_total) as avg_order_shillings
         FROM idil_sale_order so
         WHERE so.state = 'confirmed'
           AND so.order_date BETWEEN %(start)s AND %(end)s
           AND so.company_id = %(company_id)s
-          AND (%(salesperson_id)s IS NULL OR so.user_id = %(salesperson_id)s)
+          AND (%(salesperson_id)s IS NULL OR so.sales_person_id = %(salesperson_id)s)
         GROUP BY DATE(so.order_date)
         ORDER BY sale_date
         """
@@ -100,7 +100,7 @@ class DailySalesReportWizard(models.TransientModel):
         WHERE so.state = 'confirmed'
           AND so.order_date BETWEEN %(start)s AND %(end)s
           AND so.company_id = %(company_id)s
-          AND (%(salesperson_id)s IS NULL OR so.user_id = %(salesperson_id)s)
+          AND (%(salesperson_id)s IS NULL OR so.sales_person_id = %(salesperson_id)s)
         GROUP BY DATE(so.order_date), p.name
         ORDER BY sale_date, revenue_usd DESC
         """
@@ -122,13 +122,13 @@ class DailySalesReportWizard(models.TransientModel):
             DATE(so.order_date) as sale_date,
             COALESCE(so.payment_method, 'Not Specified') as payment_method,
             COUNT(*) as transaction_count,
-            SUM(so.grand_total / NULLIF(so.rate, 0)) as amount_usd,
-            SUM(so.grand_total) as amount_shillings
+            SUM(so.order_total / NULLIF(so.rate, 0)) as amount_usd,
+            SUM(so.order_total) as amount_shillings
         FROM idil_sale_order so
         WHERE so.state = 'confirmed'
           AND so.order_date BETWEEN %(start)s AND %(end)s
           AND so.company_id = %(company_id)s
-          AND (%(salesperson_id)s IS NULL OR so.user_id = %(salesperson_id)s)
+          AND (%(salesperson_id)s IS NULL OR so.sales_person_id = %(salesperson_id)s)
         GROUP BY DATE(so.order_date), so.payment_method
         ORDER BY sale_date, amount_usd DESC
         """
@@ -148,17 +148,17 @@ class DailySalesReportWizard(models.TransientModel):
         sql = """
         SELECT 
             DATE(so.order_date) as sale_date,
-            COALESCE(u.name, 'Unknown') as salesperson,
+            COALESCE(sp.name, 'Unknown') as salesperson,
             COUNT(so.id) as orders,
-            SUM(so.grand_total / NULLIF(so.rate, 0)) as revenue_usd,
-            SUM(so.grand_total) as revenue_shillings
+            SUM(so.order_total / NULLIF(so.rate, 0)) as revenue_usd,
+            SUM(so.order_total) as revenue_shillings
         FROM idil_sale_order so
-        LEFT JOIN res_users u ON so.user_id = u.id
+        LEFT JOIN idil_sales_sales_personnel sp ON so.sales_person_id = sp.id
         WHERE so.state = 'confirmed'
           AND so.order_date BETWEEN %(start)s AND %(end)s
           AND so.company_id = %(company_id)s
-          AND (%(salesperson_id)s IS NULL OR so.user_id = %(salesperson_id)s)
-        GROUP BY DATE(so.order_date), u.name
+          AND (%(salesperson_id)s IS NULL OR so.sales_person_id = %(salesperson_id)s)
+        GROUP BY DATE(so.order_date), sp.name
         ORDER BY sale_date, revenue_usd DESC
         """
 
