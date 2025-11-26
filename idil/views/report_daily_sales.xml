@@ -17,6 +17,12 @@
                         <field name="salesperson_id" options="{'no_create': True}" 
                                invisible="sales_source != 'salesperson'" 
                                required="sales_source == 'salesperson'"/>
+                        <field name="employee_id" options="{'no_create': True}" 
+                               invisible="sales_source != 'staff'" 
+                               required="sales_source == 'staff'"/>
+                        <field name="customer_id" options="{'no_create': True}" 
+                               invisible="sales_source != 'customer'" 
+                               required="sales_source == 'customer'"/>
                         <field name="report_type"/>
                         <field name="currency_display"/>
                     </group>

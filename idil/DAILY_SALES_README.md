@@ -37,15 +37,18 @@ The Daily Sales Report provides comprehensive sales analytics with flexible filt
 - **End Date**: Last day of the period
 - Example: `01/11/2025` to `25/11/2025`
 
-**Sales Source Filter (NEW):**
-- **All Sales**: Combines data from Salespeople, Customers, and Staff
+**Sales Source Filter:**
+- **All Sales**: Combines data from all sales channels (Salespeople, Customers, and Staff)
 - **Salesperson Sales**: Only sales made by sales personnel
 - **Customer Sales**: Direct customer sales orders
-- **Staff Sales**: Internal staff sales
+- **Staff Sales**: Internal employee sales
 
-**Salesperson Filter:**
-- Only appears when **Salesperson Sales** is selected above
-- Select a **specific salesperson** to view only their sales
+**Person Filter (Dynamic):**
+This field changes based on your Sales Source selection:
+- When **Salesperson Sales** is selected → Shows **Salesperson** dropdown (filter by specific salesperson)
+- When **Customer Sales** is selected → Shows **Customer** dropdown (filter by specific customer)
+- When **Staff Sales** is selected → Shows **Staff Member** dropdown (filter by specific employee)
+- When **All Sales** is selected → Person filter is hidden (shows all data)
 
 **Report Type:**
 - **Summary**: High-level totals per day (faster, compact)
@@ -162,10 +165,11 @@ Individual salesperson and sales source performance by day
 
 ## Common Use Cases
 
-### **Weekly Sales Review**
+### **Weekly Sales Review (All Channels)**
 **Filters:**
 - Date: Last 7 days
-- Source: All Sales
+- Source: **All Sales**
+- Person: *(Hidden - shows all)*
 - Type: Summary
 - Currency: USD
 
@@ -173,26 +177,39 @@ Individual salesperson and sales source performance by day
 
 ---
 
-### **Salesperson Performance Review**
+### **Individual Salesperson Performance**
 **Filters:**
 - Date: This month
-- Source: Salesperson Sales
-- Salesperson: John Doe
+- Source: **Salesperson Sales**
+- Person: **John Doe** *(Salesperson dropdown appears)*
 - Type: Detailed
 - Currency: USD
 
-**Result:** Complete view of John's sales activity
+**Result:** Complete view of John's sales activity with products breakdown
 
 ---
 
-### **Direct Customer Sales Analysis**
+### **Specific Customer Analysis**
 **Filters:**
 - Date: Last 30 days
-- Source: Customer Sales
+- Source: **Customer Sales**
+- Person: **ABC Trading Co.** *(Customer dropdown appears)*
+- Type: Detailed
+- Currency: Both
+
+**Result:** Analyze sales made directly to ABC Trading Co., including products purchased
+
+---
+
+### **Staff Member Sales Tracking**
+**Filters:**
+- Date: This month
+- Source: **Staff Sales**
+- Person: **Sarah Ahmed** *(Staff dropdown appears)*
 - Type: Detailed
 - Currency: USD
 
-**Result:** Analyze sales made directly to customers (bypassing salespeople)
+**Result:** Track internal sales made by staff member Sarah Ahmed
 
 ---
 
@@ -354,6 +371,12 @@ A: No limit, but very large date ranges will take longer to generate.
 
 ## Version History
 
+- **v1.2** (2025-11-26): Dynamic Person Filter
+  - Added **dynamic Person filter** that changes based on Sales Source
+  - Salesperson dropdown for Salesperson Sales
+  - Customer dropdown for Customer Sales  
+  - Staff Member dropdown for Staff Sales
+  - Changed radio buttons to dropdown selects for cleaner UI
 - **v1.1** (2025-11-26): Unified Report Update
   - Added **Sales Source** filter (Salesperson, Customer, Staff)
   - Unified data from `idil_sale_order`, `idil_customer_sale_order`, and `idil_staff_sales`

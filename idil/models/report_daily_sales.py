@@ -27,9 +27,22 @@ class DailySalesReportWizard(models.TransientModel):
 
     salesperson_id = fields.Many2one(
         'idil.sales.sales_personnel',
-        string='Salesperson',
-        help='Select a specific salesperson. Only applicable for Salesperson Sales.'
+        string='Person',
+        help='Select a specific salesperson.'
     )
+    
+    employee_id = fields.Many2one(
+        'idil.employee',
+        string='Person',
+        help='Select a specific staff member.'
+    )
+    
+    customer_id = fields.Many2one(
+        'idil.customer.registration',
+        string='Person',
+        help='Select a specific customer.'
+    )
+    
     report_type = fields.Selection([
         ('summary', 'Summary'),
         ('detailed', 'Detailed')
@@ -63,6 +76,8 @@ class DailySalesReportWizard(models.TransientModel):
             'end': self.end_date,
             'company_id': self.company_id.id,
             'salesperson_id': self.salesperson_id.id if self.salesperson_id else None,
+            'employee_id': self.employee_id.id if self.employee_id else None,
+            'customer_id': self.customer_id.id if self.customer_id else None,
             'source': self.sales_source
         }
 
@@ -100,7 +115,7 @@ class DailySalesReportWizard(models.TransientModel):
             WHERE state = 'confirmed'
               AND order_date BETWEEN %(start)s AND %(end)s
               AND company_id = %(company_id)s
-              AND %(salesperson_id)s IS NULL
+              AND (%(customer_id)s IS NULL OR customer_id = %(customer_id)s)
               AND (%(source)s IN ('all', 'customer'))
 
             UNION ALL
@@ -115,7 +130,7 @@ class DailySalesReportWizard(models.TransientModel):
             WHERE state = 'confirmed'
               AND sales_date BETWEEN %(start)s AND %(end)s
               AND company_id = %(company_id)s
-              AND %(salesperson_id)s IS NULL
+              AND (%(employee_id)s IS NULL OR employee_id = %(employee_id)s)
               AND (%(source)s IN ('all', 'staff'))
         ) as combined_sales
         GROUP BY DATE(sale_date)
@@ -132,6 +147,8 @@ class DailySalesReportWizard(models.TransientModel):
             'end': self.end_date,
             'company_id': self.company_id.id,
             'salesperson_id': self.salesperson_id.id if self.salesperson_id else None,
+            'employee_id': self.employee_id.id if self.employee_id else None,
+            'customer_id': self.customer_id.id if self.customer_id else None,
             'source': self.sales_source
         }
 
@@ -174,7 +191,7 @@ class DailySalesReportWizard(models.TransientModel):
             WHERE so.state = 'confirmed'
               AND so.order_date BETWEEN %(start)s AND %(end)s
               AND so.company_id = %(company_id)s
-              AND %(salesperson_id)s IS NULL
+              AND (%(customer_id)s IS NULL OR so.customer_id = %(customer_id)s)
               AND (%(source)s IN ('all', 'customer'))
 
             UNION ALL
@@ -192,7 +209,7 @@ class DailySalesReportWizard(models.TransientModel):
             WHERE so.state = 'confirmed'
               AND so.sales_date BETWEEN %(start)s AND %(end)s
               AND so.company_id = %(company_id)s
-              AND %(salesperson_id)s IS NULL
+              AND (%(employee_id)s IS NULL OR so.employee_id = %(employee_id)s)
               AND (%(source)s IN ('all', 'staff'))
         ) as combined_products
         GROUP BY DATE(sale_date), product_name
@@ -215,6 +232,8 @@ class DailySalesReportWizard(models.TransientModel):
             'end': self.end_date,
             'company_id': self.company_id.id,
             'salesperson_id': self.salesperson_id.id if self.salesperson_id else None,
+            'employee_id': self.employee_id.id if self.employee_id else None,
+            'customer_id': self.customer_id.id if self.customer_id else None,
             'source': self.sales_source
         }
 
@@ -254,7 +273,7 @@ class DailySalesReportWizard(models.TransientModel):
             WHERE state = 'confirmed'
               AND order_date BETWEEN %(start)s AND %(end)s
               AND company_id = %(company_id)s
-              AND %(salesperson_id)s IS NULL
+              AND (%(customer_id)s IS NULL OR customer_id = %(customer_id)s)
               AND (%(source)s IN ('all', 'customer'))
 
             UNION ALL
@@ -270,7 +289,7 @@ class DailySalesReportWizard(models.TransientModel):
             WHERE state = 'confirmed'
               AND sales_date BETWEEN %(start)s AND %(end)s
               AND company_id = %(company_id)s
-              AND %(salesperson_id)s IS NULL
+              AND (%(employee_id)s IS NULL OR employee_id = %(employee_id)s)
               AND (%(source)s IN ('all', 'staff'))
         ) as combined_performance
         GROUP BY DATE(sale_date), salesperson
