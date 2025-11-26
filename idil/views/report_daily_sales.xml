@@ -15,7 +15,8 @@
                     <group>
                         <field name="sales_source" widget="radio"/>
                         <field name="salesperson_id" options="{'no_create': True}" 
-                               attrs="{'invisible': [('sales_source', '!=', 'salesperson')], 'required': [('sales_source', '=', 'salesperson')]}"/>
+                               invisible="sales_source != 'salesperson'" 
+                               required="sales_source == 'salesperson'"/>
                         <field name="report_type" widget="radio"/>
                         <field name="currency_display"/>
                     </group>
