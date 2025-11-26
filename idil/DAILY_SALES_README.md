@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Daily Sales Report provides comprehensive sales analytics with flexible filtering options, allowing you to analyze sales performance by date, salesperson, products, payment methods, and more.
+The Daily Sales Report provides comprehensive sales analytics with flexible filtering options, allowing you to analyze sales performance by date, sales source (Salesperson, Customer, Staff), products, payment methods, and more. It unifies data from all sales channels into a single view.
 
 ## Features
 
@@ -10,11 +10,12 @@ The Daily Sales Report provides comprehensive sales analytics with flexible filt
 - **Daily Summary**: Revenue, order count, average order value
 - **Products Breakdown**: Which products were sold and how much
 - **Payment Methods**: Cash, credit, and other payment method tracking
-- **Salesperson Performance**: Individual salesperson metrics
+- **Sales Performance**: Breakdown by Salesperson, Customer Sales, or Staff Sales
 
 ### **Flexible Filtering**
 - **Date Range**: Select any period for analysis
-- **Salesperson Filter**: View all salespeople or filter by individual
+- **Sales Source Filter**: Filter by **All Sales**, **Salesperson Sales**, **Customer Sales**, or **Staff Sales**
+- **Salesperson Filter**: View specific salesperson (only available when "Salesperson Sales" is selected)
 - **Report Type**: Choose between Summary or Detailed view
 - **Currency Display**: Show in USD, Shillings, or both
 
@@ -36,13 +37,19 @@ The Daily Sales Report provides comprehensive sales analytics with flexible filt
 - **End Date**: Last day of the period
 - Example: `01/11/2025` to `25/11/2025`
 
+**Sales Source Filter (NEW):**
+- **All Sales**: Combines data from Salespeople, Customers, and Staff
+- **Salesperson Sales**: Only sales made by sales personnel
+- **Customer Sales**: Direct customer sales orders
+- **Staff Sales**: Internal staff sales
+
 **Salesperson Filter:**
-- Leave **empty** for all salespeople
+- Only appears when **Salesperson Sales** is selected above
 - Select a **specific salesperson** to view only their sales
 
 **Report Type:**
 - **Summary**: High-level totals per day (faster, compact)
-- **Detailed**: Full breakdown with products, payments, and salespeople (comprehensive)
+- **Detailed**: Full breakdown with products, payments, and performance (comprehensive)
 
 **Currency Display:**
 - **USD Only**: All amounts in US Dollars
@@ -109,20 +116,18 @@ Shows how customers paid:
 
 ---
 
-### **4. Salesperson Performance** (Detailed Mode Only)
+### **4. Sales Performance** (Detailed Mode Only)
 
-Shows individual salesperson metrics:
+Shows performance breakdown by source:
 
 | Column | Description |
 |--------|-------------|
-| **Salesperson** | Employee name |
+| **Salesperson/Source** | Employee name, "Customer Sales", or "Staff Sales" |
 | **Orders** | Number of sales made |
 | **Revenue (USD)** | Total sales in USD |
 | **Revenue (Shillings)** | Total sales in local currency |
 
-**Use Case:** Evaluate team performance and set targets
-
-**Note:** This section only appears when "All Salespeople" is selected (not filtered to one person)
+**Use Case:** Compare performance across different sales channels
 
 ---
 
@@ -147,7 +152,7 @@ Every product sold, every day, with quantities and revenue
 Payment method breakdown by day
 
 ### **Sheet 4: Salespeople**
-Individual salesperson performance by day
+Individual salesperson and sales source performance by day
 
 **Benefits:**
 ✅ Sort and filter data your own way  
@@ -160,28 +165,18 @@ Individual salesperson performance by day
 ### **Weekly Sales Review**
 **Filters:**
 - Date: Last 7 days
-- Salesperson: All
+- Source: All Sales
 - Type: Summary
 - Currency: USD
 
-**Result:** Quick overview of weekly performance
+**Result:** Quick overview of total weekly performance across all channels
 
 ---
 
-### **Month-End Report for Accounting**
-**Filters:**
-- Date: 01/11/2025 - 30/11/2025
-- Salesperson: All
-- Type: Detailed
-- Currency: Both
-
-**Output:** Excel export for detailed analysis
-
----
-
-### **Individual Performance Review**
+### **Salesperson Performance Review**
 **Filters:**
 - Date: This month
+- Source: Salesperson Sales
 - Salesperson: John Doe
 - Type: Detailed
 - Currency: USD
@@ -190,13 +185,16 @@ Individual salesperson performance by day
 
 ---
 
-### **Product Demand Analysis**
+### **Direct Customer Sales Analysis**
 **Filters:**
 - Date: Last 30 days
+- Source: Customer Sales
 - Type: Detailed
 - Currency: USD
 
-**Focus:** Products Breakdown section to see demand trends
+**Result:** Analyze sales made directly to customers (bypassing salespeople)
+
+---
 
 ## Understanding the Data
 
@@ -218,7 +216,7 @@ Only sales orders with `state = 'confirmed'` are included. Draft or cancelled or
 
 ### **Salesperson Assignment**
 
-The report uses the `user_id` field from the sales order to determine which salesperson made the sale.
+The report uses the `user_id` field from the sales order to determine which salesperson made the sale. For Customer and Staff sales, they are grouped under their respective categories.
 
 ## Tips & Best Practices
 
@@ -233,7 +231,7 @@ The report uses the `user_id` field from the sales order to determine which sale
 | Frequency | Purpose | Settings |
 |-----------|---------|----------|
 | **Daily** | Quick check | Yesterday's date, Summary, USD |
-| **Weekly** | Team meeting | Last 7 days, Detailed, All Salespeople |
+| **Weekly** | Team meeting | Last 7 days, Detailed, All Sales |
 | **Monthly** | Accounting | Full month, Detailed, Both currencies, Excel |
 | **Quarterly** | Performance review | 3 months, Summary, By salesperson |
 
@@ -249,7 +247,7 @@ The report uses the `user_id` field from the sales order to determine which sale
 **Solution:** 
 - Check if orders exist for the period
 - Verify order state is "confirmed"
-- Try "All Salespeople" filter
+- Try "All Sales" filter
 
 ---
 
@@ -294,8 +292,10 @@ This is normal if:
 ## Data Sources
 
 The report pulls from:
-- `idil_sale_order` - Order headers with totals and dates
-- `idil_sale_order_line` - Individual line items for products
+- `idil_sale_order` - Salesperson Sales
+- `idil_customer_sale_order` - Customer Sales
+- `idil_staff_sales` - Staff Sales
+- `idil_sale_order_line` / `idil_customer_sale_order_line` / `idil_staff_sales_line` - Product Lines
 - `my_product_product` - Product names
 - `res_users` - Salesperson names
 
@@ -318,17 +318,22 @@ For technical users, here's what the report queries:
 ### Daily Summary Query
 ```sql
 SELECT 
-    DATE(so.order_date) as sale_date,
-    COUNT(DISTINCT so.id) as order_count,
-    SUM(so.grand_total / NULLIF(so.rate, 0)) as revenue_usd,
-    SUM(so.grand_total) as revenue_shillings
-FROM idil_sale_order so
-WHERE so.state = 'confirmed'
-  AND so.order_date BETWEEN :start AND :end
-GROUP BY DATE(so.order_date)
+    DATE(sale_date) as sale_date,
+    COUNT(id) as order_count,
+    SUM(amount_usd) as revenue_usd,
+    SUM(amount_shillings) as revenue_shillings
+FROM (
+    SELECT ... FROM idil_sale_order
+    UNION ALL
+    SELECT ... FROM idil_customer_sale_order
+    UNION ALL
+    SELECT ... FROM idil_staff_sales
+) as combined_sales
+WHERE ...
+GROUP BY DATE(sale_date)
 ```
 
-The report uses **4 optimized SQL queries** to fetch all data in one pass, ensuring fast performance.
+The report uses **UNION ALL** queries to aggregate data from all three sales tables in one pass, ensuring fast performance and complete coverage.
 
 ## Frequently Asked Questions
 
@@ -349,6 +354,10 @@ A: No limit, but very large date ranges will take longer to generate.
 
 ## Version History
 
+- **v1.1** (2025-11-26): Unified Report Update
+  - Added **Sales Source** filter (Salesperson, Customer, Staff)
+  - Unified data from `idil_sale_order`, `idil_customer_sale_order`, and `idil_staff_sales`
+  - Updated performance section to show all sales sources
 - **v1.0** (2025-11-25): Initial implementation
   - Daily summary with revenue and order count
   - Products, payment methods, and salesperson breakdowns
@@ -360,4 +369,4 @@ A: No limit, but very large date ranges will take longer to generate.
 
 **Module**: idil (BizCore ERP)  
 **Author**: Antigravity AI  
-**Last Updated**: 2025-11-25
+**Last Updated**: 2025-11-26
