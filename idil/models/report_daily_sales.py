@@ -18,10 +18,17 @@ class DailySalesReportWizard(models.TransientModel):
         required=True,
         default=fields.Date.context_today
     )
+    sales_source = fields.Selection([
+        ('all', 'All Sales'),
+        ('salesperson', 'Salesperson Sales'),
+        ('customer', 'Customer Sales'),
+        ('staff', 'Staff Sales')
+    ], string='Sales Source', default='all', required=True)
+
     salesperson_id = fields.Many2one(
         'idil.sales.sales_personnel',
         string='Salesperson',
-        help='Leave empty for all salespeople'
+        help='Select a specific salesperson. Only applicable for Salesperson Sales.'
     )
     report_type = fields.Selection([
         ('summary', 'Summary'),
@@ -55,7 +62,8 @@ class DailySalesReportWizard(models.TransientModel):
             'start': self.start_date,
             'end': self.end_date,
             'company_id': self.company_id.id,
-            'salesperson_id': self.salesperson_id.id if self.salesperson_id else None
+            'salesperson_id': self.salesperson_id.id if self.salesperson_id else None,
+            'source': self.sales_source
         }
 
         sql = """
@@ -78,6 +86,7 @@ class DailySalesReportWizard(models.TransientModel):
               AND order_date BETWEEN %(start)s AND %(end)s
               AND company_id = %(company_id)s
               AND (%(salesperson_id)s IS NULL OR sales_person_id = %(salesperson_id)s)
+              AND (%(source)s IN ('all', 'salesperson'))
 
             UNION ALL
 
@@ -92,6 +101,7 @@ class DailySalesReportWizard(models.TransientModel):
               AND order_date BETWEEN %(start)s AND %(end)s
               AND company_id = %(company_id)s
               AND %(salesperson_id)s IS NULL
+              AND (%(source)s IN ('all', 'customer'))
 
             UNION ALL
 
@@ -106,6 +116,7 @@ class DailySalesReportWizard(models.TransientModel):
               AND sales_date BETWEEN %(start)s AND %(end)s
               AND company_id = %(company_id)s
               AND %(salesperson_id)s IS NULL
+              AND (%(source)s IN ('all', 'staff'))
         ) as combined_sales
         GROUP BY DATE(sale_date)
         ORDER BY sale_date
@@ -120,7 +131,8 @@ class DailySalesReportWizard(models.TransientModel):
             'start': self.start_date,
             'end': self.end_date,
             'company_id': self.company_id.id,
-            'salesperson_id': self.salesperson_id.id if self.salesperson_id else None
+            'salesperson_id': self.salesperson_id.id if self.salesperson_id else None,
+            'source': self.sales_source
         }
 
         sql = """
@@ -145,6 +157,7 @@ class DailySalesReportWizard(models.TransientModel):
               AND so.order_date BETWEEN %(start)s AND %(end)s
               AND so.company_id = %(company_id)s
               AND (%(salesperson_id)s IS NULL OR so.sales_person_id = %(salesperson_id)s)
+              AND (%(source)s IN ('all', 'salesperson'))
 
             UNION ALL
 
@@ -162,6 +175,7 @@ class DailySalesReportWizard(models.TransientModel):
               AND so.order_date BETWEEN %(start)s AND %(end)s
               AND so.company_id = %(company_id)s
               AND %(salesperson_id)s IS NULL
+              AND (%(source)s IN ('all', 'customer'))
 
             UNION ALL
 
@@ -179,6 +193,7 @@ class DailySalesReportWizard(models.TransientModel):
               AND so.sales_date BETWEEN %(start)s AND %(end)s
               AND so.company_id = %(company_id)s
               AND %(salesperson_id)s IS NULL
+              AND (%(source)s IN ('all', 'staff'))
         ) as combined_products
         GROUP BY DATE(sale_date), product_name
         ORDER BY sale_date, revenue_usd DESC
@@ -199,7 +214,8 @@ class DailySalesReportWizard(models.TransientModel):
             'start': self.start_date,
             'end': self.end_date,
             'company_id': self.company_id.id,
-            'salesperson_id': self.salesperson_id.id if self.salesperson_id else None
+            'salesperson_id': self.salesperson_id.id if self.salesperson_id else None,
+            'source': self.sales_source
         }
 
         sql = """
@@ -223,6 +239,7 @@ class DailySalesReportWizard(models.TransientModel):
               AND so.order_date BETWEEN %(start)s AND %(end)s
               AND so.company_id = %(company_id)s
               AND (%(salesperson_id)s IS NULL OR so.sales_person_id = %(salesperson_id)s)
+              AND (%(source)s IN ('all', 'salesperson'))
 
             UNION ALL
 
@@ -238,6 +255,7 @@ class DailySalesReportWizard(models.TransientModel):
               AND order_date BETWEEN %(start)s AND %(end)s
               AND company_id = %(company_id)s
               AND %(salesperson_id)s IS NULL
+              AND (%(source)s IN ('all', 'customer'))
 
             UNION ALL
 
@@ -253,6 +271,7 @@ class DailySalesReportWizard(models.TransientModel):
               AND sales_date BETWEEN %(start)s AND %(end)s
               AND company_id = %(company_id)s
               AND %(salesperson_id)s IS NULL
+              AND (%(source)s IN ('all', 'staff'))
         ) as combined_performance
         GROUP BY DATE(sale_date), salesperson
         ORDER BY sale_date, revenue_usd DESC
