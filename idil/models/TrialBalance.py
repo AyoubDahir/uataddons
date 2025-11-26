@@ -13,11 +13,17 @@ class TrialBalanceWizard(models.TransientModel):
     _description = 'Trial Balance Wizard'
 
     report_currency_id = fields.Many2one('res.currency', string='Report Currency', required=True)
+    start_date = fields.Date(string='Start Date')
+    end_date = fields.Date(string='End Date')
 
     def action_compute_trial_balance(self):
         self.ensure_one()
-        action = self.env['idil.transaction_bookingline'].compute_trial_balance(self.report_currency_id)
-        action['``context```'] = {'default_name': f'Trial Balance for {self.report_currency_id.name}'}
+        action = self.env['idil.transaction_bookingline'].compute_trial_balance(
+            self.report_currency_id, self.start_date, self.end_date
+        )
+        action['context'] = {
+            'default_name': f'Trial Balance for {self.report_currency_id.name}'
+        }
         return action
 
 

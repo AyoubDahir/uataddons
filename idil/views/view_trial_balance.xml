@@ -22,7 +22,13 @@
         <field name="arch" type="xml">
             <form string="Trial Balance ( Select Report Currency)">
                 <group>
-                    <field name="report_currency_id" required="1"/>
+                    <group>
+                        <field name="report_currency_id"/>
+                    </group>
+                    <group>
+                        <field name="start_date"/>
+                        <field name="end_date"/>
+                    </group>
                     <footer>
                         <button string="View" type="object" name="action_compute_trial_balance" class="btn-primary"/>
                         <button string="Cancel" class="btn-secondary" special="cancel"/>

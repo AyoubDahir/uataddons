@@ -601,9 +601,8 @@ class TransactionBookingline(models.Model):
                 line.account_display = ""
 
     @api.model
-    def compute_trial_balance(self, report_currency_id):
-        self.env.cr.execute(
-            """
+    def compute_trial_balance(self, report_currency_id, start_date=None, end_date=None):
+        query = """
                 SELECT
                     tb.account_number,
                     ca.currency_id,
@@ -616,15 +615,26 @@ class TransactionBookingline(models.Model):
                 JOIN idil_chart_account_header ch ON cb.header_id = ch.id
                 WHERE
                     ca.currency_id = %s  -- Filter by selected report currency
+        """
+        params = [report_currency_id.id]
+
+        if start_date:
+            query += " AND tb.transaction_date >= %s"
+            params.append(start_date)
+        if end_date:
+            query += " AND tb.transaction_date <= %s"
+            params.append(end_date)
+
+        query += """
                 GROUP BY
                     tb.account_number, ca.currency_id, ch.code
                 HAVING
                     SUM(tb.dr_amount) - SUM(tb.cr_amount) <> 0
                 ORDER BY
                     ch.code
-            """,
-            (report_currency_id.id,),
-        )
+            """
+        
+        self.env.cr.execute(query, tuple(params))
         result = self.env.cr.dictfetchall()
 
         total_dr_balance = 0
@@ -792,10 +802,12 @@ class TransactionBookingline(models.Model):
     #         "target": "new",
     #     }
     def compute_company_trial_balance(
-        self, report_currency_id, company_id, as_of_date, exact_day=False
+        self, report_currency_id, company_id, as_of_date, exact_day=False, start_date=None
     ):
         # --- normalize to a pure date (no timezone issues) ---
         as_of_date = fields.Date.to_date(as_of_date)
+        if start_date:
+            start_date = fields.Date.to_date(start_date)
 
         Currency = self.env["res.currency"]
         Account = self.env["idil.chart.account"]
@@ -812,9 +824,8 @@ class TransactionBookingline(models.Model):
 
         # --- fetch raw lines using ONLY transaction_date ---
         comparator = "=" if exact_day else "<="
-        # NOTE: include tb.rate in select
-        self.env.cr.execute(
-            f"""
+        
+        query = """
             SELECT
                 tb.account_number,
                 tb.dr_amount,
@@ -825,11 +836,18 @@ class TransactionBookingline(models.Model):
             FROM idil_transaction_bookingline tb
             JOIN idil_chart_account ca ON tb.account_number = ca.id
             WHERE tb.company_id = %s
-            AND tb.transaction_date {comparator} %s::date
             AND ca.name != 'Exchange Clearing Account'
-        """,
-            (company_id.id, as_of_date),
-        )
+        """
+        params = [company_id.id]
+
+        if start_date:
+            query += " AND tb.transaction_date >= %s AND tb.transaction_date <= %s"
+            params.extend([start_date, as_of_date])
+        else:
+            query += f" AND tb.transaction_date {comparator} %s::date"
+            params.append(as_of_date)
+
+        self.env.cr.execute(query, tuple(params))
         rows = self.env.cr.dictfetchall()
 
         # --- aggregate in report currency, converting at tdate (transaction_date)
@@ -1108,13 +1126,14 @@ class CompanyTrialBalanceWizard(models.TransientModel):
     _description = "Company Trial Balance Wizard"
 
     company_id = fields.Many2one("res.company", string="Company", required=True)
+    start_date = fields.Date(string="Start Date")
     as_of_date = fields.Date(string="As of Date", required=True)
 
     def action_compute_company_trial_balance(self):
         self.ensure_one()
         usd_currency = self.env["res.currency"].search([("name", "=", "USD")], limit=1)
         action = self.env["idil.transaction_bookingline"].compute_company_trial_balance(
-            usd_currency, self.company_id, self.as_of_date
+            usd_currency, self.company_id, self.as_of_date, start_date=self.start_date
         )
         action["context"] = {
             "default_name": f"Company Trial Balance for {self.company_id.name} as of {self.as_of_date}"
