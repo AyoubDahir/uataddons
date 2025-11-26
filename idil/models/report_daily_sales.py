@@ -50,7 +50,7 @@ class DailySalesReportWizard(models.TransientModel):
                     record.start_date, record.end_date = record.end_date, record.start_date
 
     def _get_daily_summary_data(self):
-        """Get daily summary: revenue, order count, avg order value"""
+        """Get daily summary: revenue, order count, avg order value (Unified)"""
         params = {
             'start': self.start_date,
             'end': self.end_date,
@@ -60,18 +60,54 @@ class DailySalesReportWizard(models.TransientModel):
 
         sql = """
         SELECT 
-            DATE(so.order_date) as sale_date,
-            COUNT(DISTINCT so.id) as order_count,
-            SUM(so.order_total / NULLIF(so.rate, 0)) as revenue_usd,
-            SUM(so.order_total) as revenue_shillings,
-            AVG(so.order_total / NULLIF(so.rate, 0)) as avg_order_usd,
-            AVG(so.order_total) as avg_order_shillings
-        FROM idil_sale_order so
-        WHERE so.state = 'confirmed'
-          AND so.order_date BETWEEN %(start)s AND %(end)s
-          AND so.company_id = %(company_id)s
-          AND (%(salesperson_id)s IS NULL OR so.sales_person_id = %(salesperson_id)s)
-        GROUP BY DATE(so.order_date)
+            DATE(sale_date) as sale_date,
+            COUNT(id) as order_count,
+            SUM(amount_usd) as revenue_usd,
+            SUM(amount_shillings) as revenue_shillings,
+            AVG(amount_usd) as avg_order_usd,
+            AVG(amount_shillings) as avg_order_shillings
+        FROM (
+            -- Salesperson Sales
+            SELECT 
+                id,
+                order_date as sale_date,
+                (order_total / NULLIF(rate, 0)) as amount_usd,
+                order_total as amount_shillings
+            FROM idil_sale_order 
+            WHERE state = 'confirmed'
+              AND order_date BETWEEN %(start)s AND %(end)s
+              AND company_id = %(company_id)s
+              AND (%(salesperson_id)s IS NULL OR sales_person_id = %(salesperson_id)s)
+
+            UNION ALL
+
+            -- Customer Sales
+            SELECT 
+                id,
+                order_date as sale_date,
+                (order_total / NULLIF(rate, 0)) as amount_usd,
+                order_total as amount_shillings
+            FROM idil_customer_sale_order
+            WHERE state = 'confirmed'
+              AND order_date BETWEEN %(start)s AND %(end)s
+              AND company_id = %(company_id)s
+              AND %(salesperson_id)s IS NULL
+
+            UNION ALL
+
+            -- Staff Sales
+            SELECT 
+                id,
+                sales_date as sale_date,
+                (total_amount / NULLIF(rate, 0)) as amount_usd,
+                total_amount as amount_shillings
+            FROM idil_staff_sales
+            WHERE state = 'confirmed'
+              AND sales_date BETWEEN %(start)s AND %(end)s
+              AND company_id = %(company_id)s
+              AND %(salesperson_id)s IS NULL
+        ) as combined_sales
+        GROUP BY DATE(sale_date)
         ORDER BY sale_date
         """
 
@@ -79,7 +115,7 @@ class DailySalesReportWizard(models.TransientModel):
         return self.env.cr.dictfetchall()
 
     def _get_products_breakdown_data(self):
-        """Get products sold per day"""
+        """Get products sold per day (Unified)"""
         params = {
             'start': self.start_date,
             'end': self.end_date,
@@ -89,19 +125,62 @@ class DailySalesReportWizard(models.TransientModel):
 
         sql = """
         SELECT 
-            DATE(so.order_date) as sale_date,
-            p.name as product_name,
-            SUM(sol.quantity) as qty_sold,
-            SUM(sol.quantity * sol.price_unit / NULLIF(so.rate, 0)) as revenue_usd,
-            SUM(sol.quantity * sol.price_unit) as revenue_shillings
-        FROM idil_sale_order_line sol
-        JOIN idil_sale_order so ON sol.order_id = so.id
-        JOIN my_product_product p ON sol.product_id = p.id
-        WHERE so.state = 'confirmed'
-          AND so.order_date BETWEEN %(start)s AND %(end)s
-          AND so.company_id = %(company_id)s
-          AND (%(salesperson_id)s IS NULL OR so.sales_person_id = %(salesperson_id)s)
-        GROUP BY DATE(so.order_date), p.name
+            DATE(sale_date) as sale_date,
+            product_name,
+            SUM(qty_sold) as qty_sold,
+            SUM(revenue_usd) as revenue_usd,
+            SUM(revenue_shillings) as revenue_shillings
+        FROM (
+            -- Salesperson Sales
+            SELECT 
+                so.order_date as sale_date,
+                p.name as product_name,
+                sol.quantity as qty_sold,
+                (sol.quantity * sol.price_unit / NULLIF(so.rate, 0)) as revenue_usd,
+                (sol.quantity * sol.price_unit) as revenue_shillings
+            FROM idil_sale_order_line sol
+            JOIN idil_sale_order so ON sol.order_id = so.id
+            JOIN my_product_product p ON sol.product_id = p.id
+            WHERE so.state = 'confirmed'
+              AND so.order_date BETWEEN %(start)s AND %(end)s
+              AND so.company_id = %(company_id)s
+              AND (%(salesperson_id)s IS NULL OR so.sales_person_id = %(salesperson_id)s)
+
+            UNION ALL
+
+            -- Customer Sales
+            SELECT 
+                so.order_date as sale_date,
+                p.name as product_name,
+                sol.quantity as qty_sold,
+                (sol.subtotal / NULLIF(so.rate, 0)) as revenue_usd,
+                sol.subtotal as revenue_shillings
+            FROM idil_customer_sale_order_line sol
+            JOIN idil_customer_sale_order so ON sol.order_id = so.id
+            JOIN my_product_product p ON sol.product_id = p.id
+            WHERE so.state = 'confirmed'
+              AND so.order_date BETWEEN %(start)s AND %(end)s
+              AND so.company_id = %(company_id)s
+              AND %(salesperson_id)s IS NULL
+
+            UNION ALL
+
+            -- Staff Sales
+            SELECT 
+                so.sales_date as sale_date,
+                p.name as product_name,
+                sol.quantity as qty_sold,
+                (sol.total / NULLIF(so.rate, 0)) as revenue_usd,
+                sol.total as revenue_shillings
+            FROM idil_staff_sales_line sol
+            JOIN idil_staff_sales so ON sol.sales_id = so.id
+            JOIN my_product_product p ON sol.product_id = p.id
+            WHERE so.state = 'confirmed'
+              AND so.sales_date BETWEEN %(start)s AND %(end)s
+              AND so.company_id = %(company_id)s
+              AND %(salesperson_id)s IS NULL
+        ) as combined_products
+        GROUP BY DATE(sale_date), product_name
         ORDER BY sale_date, revenue_usd DESC
         """
 
@@ -115,7 +194,7 @@ class DailySalesReportWizard(models.TransientModel):
         return []
 
     def _get_salesperson_performance_data(self):
-        """Get salesperson performance per day"""
+        """Get salesperson/source performance per day (Unified)"""
         params = {
             'start': self.start_date,
             'end': self.end_date,
@@ -125,18 +204,57 @@ class DailySalesReportWizard(models.TransientModel):
 
         sql = """
         SELECT 
-            DATE(so.order_date) as sale_date,
-            COALESCE(sp.name, 'Unknown') as salesperson,
-            COUNT(so.id) as orders,
-            SUM(so.order_total / NULLIF(so.rate, 0)) as revenue_usd,
-            SUM(so.order_total) as revenue_shillings
-        FROM idil_sale_order so
-        LEFT JOIN idil_sales_sales_personnel sp ON so.sales_person_id = sp.id
-        WHERE so.state = 'confirmed'
-          AND so.order_date BETWEEN %(start)s AND %(end)s
-          AND so.company_id = %(company_id)s
-          AND (%(salesperson_id)s IS NULL OR so.sales_person_id = %(salesperson_id)s)
-        GROUP BY DATE(so.order_date), sp.name
+            DATE(sale_date) as sale_date,
+            salesperson,
+            COUNT(id) as orders,
+            SUM(revenue_usd) as revenue_usd,
+            SUM(revenue_shillings) as revenue_shillings
+        FROM (
+            -- Salesperson Sales
+            SELECT 
+                so.id,
+                so.order_date as sale_date,
+                COALESCE(sp.name, 'Unknown') as salesperson,
+                (so.order_total / NULLIF(so.rate, 0)) as revenue_usd,
+                so.order_total as revenue_shillings
+            FROM idil_sale_order so
+            LEFT JOIN idil_sales_sales_personnel sp ON so.sales_person_id = sp.id
+            WHERE so.state = 'confirmed'
+              AND so.order_date BETWEEN %(start)s AND %(end)s
+              AND so.company_id = %(company_id)s
+              AND (%(salesperson_id)s IS NULL OR so.sales_person_id = %(salesperson_id)s)
+
+            UNION ALL
+
+            -- Customer Sales
+            SELECT 
+                id,
+                order_date as sale_date,
+                'Customer Sales' as salesperson,
+                (order_total / NULLIF(rate, 0)) as revenue_usd,
+                order_total as revenue_shillings
+            FROM idil_customer_sale_order
+            WHERE state = 'confirmed'
+              AND order_date BETWEEN %(start)s AND %(end)s
+              AND company_id = %(company_id)s
+              AND %(salesperson_id)s IS NULL
+
+            UNION ALL
+
+            -- Staff Sales
+            SELECT 
+                id,
+                sales_date as sale_date,
+                'Staff Sales' as salesperson,
+                (total_amount / NULLIF(rate, 0)) as revenue_usd,
+                total_amount as revenue_shillings
+            FROM idil_staff_sales
+            WHERE state = 'confirmed'
+              AND sales_date BETWEEN %(start)s AND %(end)s
+              AND company_id = %(company_id)s
+              AND %(salesperson_id)s IS NULL
+        ) as combined_performance
+        GROUP BY DATE(sale_date), salesperson
         ORDER BY sale_date, revenue_usd DESC
         """
 
