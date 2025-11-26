@@ -166,8 +166,8 @@ class DailySalesReportWizard(models.TransientModel):
                 so.order_date as sale_date,
                 p.name as product_name,
                 sol.quantity as qty_sold,
-                (sol.subtotal / NULLIF(so.rate, 0)) as revenue_usd,
-                sol.subtotal as revenue_shillings
+                (sol.quantity * sol.price_unit / NULLIF(so.rate, 0)) as revenue_usd,
+                (sol.quantity * sol.price_unit) as revenue_shillings
             FROM idil_customer_sale_order_line sol
             JOIN idil_customer_sale_order so ON sol.order_id = so.id
             JOIN my_product_product p ON sol.product_id = p.id

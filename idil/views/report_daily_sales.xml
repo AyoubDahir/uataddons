@@ -13,11 +13,11 @@
                         <field name="company_id" groups="base.group_multi_company"/>
                     </group>
                     <group>
-                        <field name="sales_source" widget="radio"/>
+                        <field name="sales_source"/>
                         <field name="salesperson_id" options="{'no_create': True}" 
                                invisible="sales_source != 'salesperson'" 
                                required="sales_source == 'salesperson'"/>
-                        <field name="report_type" widget="radio"/>
+                        <field name="report_type"/>
                         <field name="currency_display"/>
                     </group>
                 </group>
