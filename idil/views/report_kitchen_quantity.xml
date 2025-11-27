@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Wizard Form View -->
+    <record id="view_kitchen_report_wizard_form" model="ir.ui.view">
+        <field name="name">idil.kitchen.report.wizard.form</field>
+        <field name="model">idil.kitchen.report.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Kitchen Quantity Report">
+                <group>
+                    <group>
+                        <field name="start_date"/>
+                        <field name="end_date"/>
+                    </group>
+                    <group>
+                        <field name="salesperson_id" options="{'no_create': True}"/>
+                    </group>
+                </group>
+                <footer>
+                    <button string="Print Report" type="object" name="action_print_report" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Wizard Action -->
+    <record id="action_kitchen_report_wizard" model="ir.actions.act_window">
+        <field name="name">Kitchen Quantity Report</field>
+        <field name="res_model">idil.kitchen.report.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Menu Item -->
+    <menuitem id="menu_kitchen_report"
+              name="Kitchen Quantity Report"
+              parent="idil.menu_sales"
+              action="action_kitchen_report_wizard"
+              sequence="50"/>
+
+    <!-- Report Action -->
+    <record id="action_report_kitchen_quantity" model="ir.actions.report">
+        <field name="name">Kitchen Quantity Report</field>
+        <field name="model">idil.kitchen.report.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">idil.report_kitchen_quantity_template</field>
+        <field name="report_file">idil.report_kitchen_quantity_template</field>
+        <field name="binding_model_id" ref="model_idil_kitchen_report_wizard"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <!-- QWeb Report Template -->
+    <template id="report_kitchen_quantity_template">
+        <t t-call="web.html_container">
+            <t t-call="web.external_layout">
+                <div class="page">
+                    <div class="text-center mb-4">
+                        <h2>Kitchen Quantity Report</h2>
+                        <p>
+                            <strong>Date Range:</strong> <span t-esc="data['start_date']"/> to <span t-esc="data['end_date']"/>
+                            <br/>
+                            <strong>Sales Team:</strong> <span t-esc="data['salesperson_name']"/>
+                        </p>
+                    </div>
+
+                    <table class="table table-sm table-bordered">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Product</th>
+                                <th class="text-right">Total Quantity</th>
+                                <th class="text-center">UoM</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="data['products']" t-as="product">
+                                <td><span t-esc="product['product_name']"/></td>
+                                <td class="text-right">
+                                    <span t-esc="product['quantity']" t-options='{"widget": "float", "precision": 2}'/>
+                                </td>
+                                <td class="text-center"><span t-esc="product['uom']"/></td>
+                            </tr>
+                            <tr t-if="not data['products']">
+                                <td colspan="3" class="text-center">No orders found for the selected criteria.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </t>
+        </t>
+    </template>
+</odoo>

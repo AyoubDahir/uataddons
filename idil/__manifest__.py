@@ -128,8 +128,9 @@
         # "views/model_export_wizard.xml",
         "views/menu_hr.xml",
         "views/view_all_sales.xml",
+        "views/report_kitchen_quantity.xml",
         "views/menu.xml",
         "views/inventory_dashboard.xml",
-        "views/sales_dashboard.xml",
-    ],
+        "views/sales_dashboard.xml"
+    ]
 }

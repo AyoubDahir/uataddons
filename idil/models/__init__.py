@@ -73,3 +73,4 @@ from . import dashboard_stats
 from . import report_cashflow
 from . import report_daily_sales
 from . import view_all_sales
+from . import report_kitchen_quantity
