@@ -46,6 +46,27 @@
                              style="margin-bottom: 16px; font-size: 0.9em;">
                             <i class="fa fa-check-circle text-success"/> Commissions are payable on the same day as the sale.
                         </div>
+
+                        <group string="Discount Settings" colspan="2">
+                            <field name="discount_payment_schedule"/>
+                            <field name="discount_payment_day" 
+                                   string="Payment Day of Month (1-31)"
+                                   invisible="discount_payment_schedule == 'daily'"
+                                   required="discount_payment_schedule == 'monthly'"
+                                   placeholder="e.g., 1 for 1st of month, 15 for 15th"/>
+                        </group>
+                        
+                        <div class="text-muted" colspan="2"
+                             invisible="discount_payment_schedule == 'daily'"
+                             style="margin-bottom: 16px; font-size: 0.9em;">
+                            <i class="fa fa-info-circle"/> Discounts will be processed on day <field name="discount_payment_day" readonly="1" class="oe_inline" style="font-weight: bold;"/> of each month.
+                        </div>
+                        
+                        <div class="text-muted" colspan="2"
+                             invisible="discount_payment_schedule == 'monthly'"
+                             style="margin-bottom: 16px; font-size: 0.9em;">
+                            <i class="fa fa-check-circle text-success"/> Discounts are processed on the same day as the sale.
+                        </div>
                     </group>
 
                     <notebook>
