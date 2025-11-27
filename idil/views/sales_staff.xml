@@ -24,34 +24,31 @@
                             <field name="currency_id"/>
                             <field name="account_receivable_id"/>
                         </group>
-                    </group>
-
-                    <!-- Commission Settings Section -->
-                    <group string="Commission Settings" col="1">
-                        <field name="commission_payment_schedule"/>
                         
-                        <field name="commission_payment_day" 
-                               string="Payment Day of Month (1-31)"
-                               invisible="commission_payment_schedule == 'daily'"
-                               required="commission_payment_schedule == 'monthly'"
-                               placeholder="e.g., 1 for 1st of month, 15 for 15th"/>
+                        <group string="Commission Settings" colspan="2">
+                            <field name="commission_payment_schedule"/>
+                            <field name="commission_payment_day" 
+                                   string="Payment Day of Month (1-31)"
+                                   invisible="commission_payment_schedule == 'daily'"
+                                   required="commission_payment_schedule == 'monthly'"
+                                   placeholder="e.g., 1 for 1st of month, 15 for 15th"/>
+                        </group>
                         
-                        <div class="text-muted" 
+                        <div class="text-muted" colspan="2"
                              invisible="commission_payment_schedule == 'daily'"
-                             style="margin-top: 8px; font-size: 0.9em;">
+                             style="margin-bottom: 16px; font-size: 0.9em;">
                             <i class="fa fa-info-circle"/> Commissions will be paid on day <field name="commission_payment_day" readonly="1" class="oe_inline" style="font-weight: bold;"/> of each month.
-                            <br/>Example: Sale on Nov 10 → Due on Dec <field name="commission_payment_day" readonly="1" class="oe_inline" style="font-weight: bold;"/>
+                            Example: Sale on Nov 10 → Due on Dec <field name="commission_payment_day" readonly="1" class="oe_inline" style="font-weight: bold;"/>
                         </div>
                         
-                        <div class="text-muted" 
+                        <div class="text-muted" colspan="2"
                              invisible="commission_payment_schedule == 'monthly'"
-                             style="margin-top: 8px; font-size: 0.9em;">
+                             style="margin-bottom: 16px; font-size: 0.9em;">
                             <i class="fa fa-check-circle text-success"/> Commissions are payable on the same day as the sale.
                         </div>
                     </group>
 
-                    <group>
-                        <notebook>
+                    <notebook>
                             <!-- Other tabs -->
                             <page string="Transactions">
                                 <field name="transaction_ids" readonly="1">
