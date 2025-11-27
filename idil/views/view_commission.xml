@@ -4,11 +4,16 @@
         <field name="name">idil.commission.tree</field>
         <field name="model">idil.commission</field>
         <field name="arch" type="xml">
-            <tree string="Commissions" create="false">
+            <tree string="Commissions" create="false" 
+                  decoration-success="is_payable == True" 
+                  decoration-muted="payment_status == 'paid'">
                 <field name="date"/>
                 <field name="name"/>
                 <field name="manufacturing_order_id"/>
                 <field name="employee_id"/>
+                <field name="payment_schedule"/>
+                <field name="due_date"/>
+                <field name="is_payable"/>
                 <field name="currency_id"/>
                 <field name="commission_amount" sum="Total"/>
                 <field name="commission_paid" sum="Total"/>
@@ -56,6 +61,9 @@
                         <group>
                             <field name="payment_status"/>
                             <field name="date"/>
+                            <field name="payment_schedule"/>
+                            <field name="due_date"/>
+                            <field name="is_payable"/>
                         </group>
 
                     </group>
@@ -78,12 +86,96 @@
         </field>
     </record>
 
+    <!-- Commission Search View -->
+    <record id="view_search_commission" model="ir.ui.view">
+        <field name="name">idil.commission.search</field>
+        <field name="model">idil.commission</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="employee_id"/>
+                <field name="manufacturing_order_id"/>
+                <field name="payment_schedule"/>
+                
+                <!-- Smart Filters -->
+                <filter name="filter_payable_now" 
+                        string="Payable Now" 
+                        domain="[('is_payable', '=', True)]"
+                        help="Commissions that are due for payment today or earlier"/>
+                
+                <filter name="filter_daily_schedule" 
+                        string="Daily Schedule" 
+                        domain="[('payment_schedule', '=', 'daily')]"/>
+                
+                <filter name="filter_monthly_schedule" 
+                        string="Monthly Schedule" 
+                        domain="[('payment_schedule', '=', 'monthly')]"/>
+                
+                <separator/>
+                
+                <filter name="filter_pending" 
+                        string="Pending Payment" 
+                        domain="[('payment_status', '=', 'pending')]"/>
+                
+                <filter name="filter_partial_paid" 
+                        string="Partially Paid" 
+                        domain="[('payment_status', '=', 'partial_paid')]"/>
+                
+                <filter name="filter_paid" 
+                        string="Paid" 
+                        domain="[('payment_status', '=', 'paid')]"/>
+                
+                <separator/>
+                
+                <filter name="filter_this_month" 
+                        string="Due This Month" 
+                        domain="[('due_date', '&gt;=', (context_today() - relativedelta(day=1)).strftime('%Y-%m-%d')),
+                                ('due_date', '&lt;=', (context_today() + relativedelta(day=31)).strftime('%Y-%m-%d'))]"/>
+                
+                <!-- Group By -->
+                <group expand="0" string="Group By">
+                    <filter name="group_by_schedule" 
+                            string="Payment Schedule" 
+                            context="{'group_by': 'payment_schedule'}"/>
+                    <filter name="group_by_employee" 
+                            string="Employee" 
+                            context="{'group_by': 'employee_id'}"/>
+                    <filter name="group_by_due_date" 
+                            string="Due Date" 
+                            context="{'group_by': 'due_date'}"/>
+                    <filter name="group_by_status" 
+                            string="Payment Status" 
+                            context="{'group_by': 'payment_status'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
     <!-- Action to Open Commission View -->
     <record id="action_commissions" model="ir.actions.act_window">
         <field name="name">Commissions</field>
         <field name="res_model">idil.commission</field>
         <field name="view_mode">tree,form</field>
         <field name="view_id" ref="view_tree_commission"/>
+        <field name="search_view_id" ref="view_search_commission"/>
+    </record>
+
+    <!-- Action for Daily Commissions - Payable Today -->
+    <record id="action_commission_daily_payable" model="ir.actions.act_window">
+        <field name="name">Daily Commissions - Payable Today</field>
+        <field name="res_model">idil.commission</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[('payment_schedule', '=', 'daily'), ('is_payable', '=', True)]</field>
+        <field name="context">{'search_default_filter_payable_now': 1}</field>
+    </record>
+
+    <!-- Action for Monthly Commissions - Due This Month -->
+    <record id="action_commission_monthly_payable" model="ir.actions.act_window">
+        <field name="name">Monthly Commissions - Due This Month</field>
+        <field name="res_model">idil.commission</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[('payment_schedule', '=', 'monthly'), ('is_payable', '=', True)]</field>
+        <field name="context">{'search_default_filter_payable_now': 1}</field>
     </record>
 
     <!-- Commission Payment Tree View -->

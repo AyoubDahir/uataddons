@@ -43,6 +43,37 @@ class SalesPersonnel(models.Model):
         store=False,  # Set to True only if you want to store it permanently
     )
 
+    # Commission Payment Settings
+    commission_payment_schedule = fields.Selection(
+        [
+            ("daily", "Daily Payment"),
+            ("monthly", "Monthly Payment"),
+        ],
+        string="Commission Payment Schedule",
+        default="monthly",
+        required=True,
+        help="Determines when this salesperson's commissions become payable:\n"
+        "- Daily: Commissions are payable on the same day as the sale\n"
+        "- Monthly: Commissions are payable on a specific day each month",
+    )
+
+    commission_payment_day = fields.Integer(
+        string="Payment Day of Month",
+        default=1,
+        help="For monthly schedule: day of month when commission is paid (1-31). "
+        "Example: Set to 1 for payment on the 1st of each month",
+    )
+
+    @api.constrains("commission_payment_day", "commission_payment_schedule")
+    def _check_payment_day(self):
+        """Validate payment day is between 1 and 31"""
+        for record in self:
+            if record.commission_payment_schedule == "monthly":
+                if not (1 <= record.commission_payment_day <= 31):
+                    raise ValidationError(
+                        "Payment day must be between 1 and 31"
+                    )
+
     @api.depends("transaction_ids.amount", "transaction_ids.transaction_type")
     def _compute_due_amount(self):
         for person in self:

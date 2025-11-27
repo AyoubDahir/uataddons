@@ -84,6 +84,97 @@ class Commission(models.Model):
     )
     is_paid = fields.Boolean(string="Paid", default=False)
 
+    # Payment Schedule Fields
+    payment_schedule = fields.Selection(
+        related="employee_id.commission_payment_schedule",
+        store=True,
+        string="Payment Schedule",
+        readonly=True,
+    )
+
+    due_date = fields.Date(
+        string="Due Date",
+        compute="_compute_due_date",
+        store=True,
+        help="Date when commission becomes payable based on employee's payment schedule",
+    )
+
+    is_payable = fields.Boolean(
+        string="Is Payable",
+        compute="_compute_is_payable",
+        search="_search_is_payable",
+        help="True if commission is due for payment today or earlier",
+    )
+
+    @api.depends("date", "employee_id.commission_payment_schedule", "employee_id.commission_payment_day")
+    def _compute_due_date(self):
+        """Calculate due date based on employee's payment schedule"""
+        for commission in self:
+            if not commission.employee_id or not commission.date:
+                commission.due_date = commission.date
+                continue
+
+            if commission.employee_id.commission_payment_schedule == "daily":
+                # Due same day as transaction
+                commission.due_date = commission.date
+            else:  # monthly
+                # Due on specified day of next applicable month
+                from datetime import date as dt_date
+                from dateutil.relativedelta import relativedelta
+
+                transaction_date = fields.Date.from_string(commission.date)
+                payment_day = commission.employee_id.commission_payment_day or 1
+
+                # Ensure payment day is valid (1-31)
+                payment_day = max(1, min(31, payment_day))
+
+                # Calculate next payment date
+                if transaction_date.day < payment_day:
+                    # Payment is in the same month
+                    try:
+                        due_date = transaction_date.replace(day=payment_day)
+                    except ValueError:
+                        # Handle months with fewer days (e.g., Feb 30)
+                        due_date = (transaction_date.replace(day=1) + relativedelta(months=1, days=-1))
+                else:
+                    # Payment is in the next month
+                    try:
+                        next_month = transaction_date + relativedelta(months=1)
+                        due_date = next_month.replace(day=payment_day)
+                    except ValueError:
+                        # Handle months with fewer days
+                        next_month = transaction_date + relativedelta(months=1)
+                        due_date = (next_month.replace(day=1) + relativedelta(months=1, days=-1))
+
+                commission.due_date = due_date
+
+    @api.depends("due_date", "payment_status")
+    def _compute_is_payable(self):
+        """Check if commission is due for payment"""
+        today = fields.Date.today()
+        for commission in self:
+            commission.is_payable = (
+                commission.payment_status in ["pending", "partial_paid"]
+                and commission.due_date
+                and commission.due_date <= today
+            )
+
+    def _search_is_payable(self, operator, value):
+        """Allow searching for payable commissions"""
+        today = fields.Date.today()
+        if operator == "=" and value:
+            return [
+                ("payment_status", "in", ["pending", "partial_paid"]),
+                ("due_date", "<=", today),
+            ]
+        else:
+            return [
+                "|",
+                ("payment_status", "=", "paid"),
+                ("due_date", ">", today),
+            ]
+
+
     def pay_commission(self):
         if self.is_paid:
             raise ValidationError("This commission has already been paid.")
