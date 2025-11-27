@@ -344,7 +344,7 @@ textarea {
     padding: 10px 20px !important;
 }
 
-// 13. Date Picker Fixes (Comprehensive)
+// 13. Date Picker Fixes (Comprehensive & Modernized)
 // -------------------------------------------------------------------------
 body {
 
@@ -354,20 +354,21 @@ body {
     .datepicker-dropdown {
         background-color: #ffffff !important;
         background: #ffffff !important;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
-        border: 1px solid rgba(0, 0, 0, 0.05) !important;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2) !important; // Deeper shadow
+        border: 1px solid rgba(0, 0, 0, 0.08) !important;
         border-radius: 16px !important;
-        padding: 16px !important;
-        color: #1e293b !important; // Slate-800
+        padding: 0 !important; // Remove padding to let header touch edges
+        color: #1e293b !important;
         width: auto !important;
-        min-width: 300px;
+        min-width: 320px;
         z-index: 9999 !important;
+        overflow: hidden; // Ensure header radius is respected
+        font-family: 'Inter', sans-serif !important;
 
         &.dropdown-menu {
             display: block;
-            margin: 2px 0;
-            padding: 16px;
-            width: 19rem;
+            margin: 4px 0;
+            width: 20rem;
             background-color: #ffffff !important;
 
             &:before,
@@ -376,88 +377,133 @@ body {
             }
         }
 
-        // Header
+        // Header - Dark Theme for Contrast
         thead tr:first-child th,
         .datepicker-switch,
         .picker-switch {
-            background-color: #ffffff !important;
-            color: #1e293b !important;
+            background-color: #374151 !important; // Brand Primary (Dark Gray)
+            color: #ffffff !important;
             font-size: 1rem !important;
             font-weight: 600 !important;
+            padding: 16px 0 !important; // Taller header
+            border-radius: 0 !important;
 
             &:hover {
-                background-color: #f1f5f9 !important;
+                background-color: #1f2937 !important; // Darker on hover
             }
         }
 
-        // Arrows
+        // Navigation Arrows in Header
         .prev,
         .next,
         .datepicker-prev,
-        .datepicker-next {
-            color: #64748b !important;
-            background-color: transparent !important;
+        ffffff .datepicker-next {
+            background-color: #ffffff !important;
+            color: #374151 !important;
+            border-radius: 0 !important;
 
             &:hover {
-                background-color: #f1f5f9 !important;
-                color: #1e293b !important;
+                background-color: #1f2937 !important;
             }
+
+            // Fix icon alignment if needed
+            i {
+                color: #ffffff !important;
+            }
+        }
+
+        // Day Names Header (Mo, Tu, We...)
+        thead tr:last-child th {
+            background-color: #f8fafc !important;
+            color: #64748b !important;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            padding: 12px 0 !important;
+            border-bottom: 1px solid #e2e8f0;
         }
 
         // Calendar Grid
         table {
             background-color: #ffffff !important;
+            margin: 0 !important;
+            width: 100% !important;
+            border-spacing: 0;
+            border-collapse: collapse;
 
             td {
-                height: 36px;
-                line-height: 36px;
-                width: 36px;
+                height: 40px;
+                line-height: 40px;
+                width: 40px;
+                padding: 4px !important;
 
                 &.day {
                     background-color: #ffffff !important;
-                    color: #334155 !important; // Slate-700
+                    color: #334155 !important;
                     font-weight: 500;
-                    border-radius: 8px;
+                    border-radius: 50% !important; // Circular selection
                     transition: all 0.2s ease;
+                    width: 36px !important;
+                    height: 36px !important;
+                    line-height: 36px !important;
+                    margin: 2px auto;
 
                     &:hover {
-                        background-color: #f1f5f9 !important; // Slate-100
-                        color: #0f172a !important; // Slate-900
+                        background-color: #f1f5f9 !important;
+                        color: #0f172a !important;
+                        transform: scale(1.1);
                     }
 
                     &.active,
                     &.active:hover {
                         background-color: #374151 !important; // Brand Primary
                         color: #ffffff !important;
-                        box-shadow: 0 4px 12px rgba(55, 65, 81, 0.3);
-                        text-shadow: none !important;
+                        box-shadow: 0 4px 10px rgba(55, 65, 81, 0.3);
+                        font-weight: 700;
                     }
 
-                    &.today:before {
-                        border-bottom-color: #374151 !important;
+                    &.today {
+                        position: relative;
+                        color: #374151 !important;
+                        font-weight: 700;
+
+                        &:before {
+                            content: '';
+                            position: absolute;
+                            bottom: 4px;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            width: 4px;
+                            height: 4px;
+                            background-color: #374151;
+                            border-radius: 50%;
+                            border: none !important;
+                        }
+
+                        &.active:before {
+                            background-color: #ffffff;
+                        }
+                    }
+
+                    &.old,
+                    &.new {
+                        color: #cbd5e1 !important; // Lighter text for other months
                     }
                 }
 
                 span {
                     border-radius: 8px;
+                    margin: 2px;
 
                     &.active {
                         background-color: #374151 !important;
                         color: #ffffff !important;
                     }
-                }
-            }
 
-            th {
-                background-color: #ffffff !important;
-                color: #64748b !important; // Slate-500
-                font-weight: 600;
-                text-transform: uppercase;
-                font-size: 0.75rem;
-                padding: 8px 0 !important;
-                height: 30px;
-                line-height: 30px;
-                border: none !important;
+                    &:hover {
+                        background-color: #f1f5f9 !important;
+                    }
+                }
             }
         }
     }
