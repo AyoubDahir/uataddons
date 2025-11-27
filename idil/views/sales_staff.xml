@@ -31,18 +31,18 @@
                         <group>
                             <field name="commission_payment_schedule" widget="radio"/>
                             <field name="commission_payment_day" 
-                                   attrs="{'invisible': [('commission_payment_schedule', '=', 'daily')],
-                                           'required': [('commission_payment_schedule', '=', 'monthly')]}"/>
+                                   invisible="commission_payment_schedule == 'daily'"
+                                   required="commission_payment_schedule == 'monthly'"/>
                         </group>
                         <group>
                             <div class="alert alert-info" role="alert" 
-                                 attrs="{'invisible': [('commission_payment_schedule', '=', 'daily')]}">
+                                 invisible="commission_payment_schedule == 'daily'">
                                 <p><strong>Monthly Payment Schedule</strong></p>
                                 <p>Commissions will be paid on day <field name="commission_payment_day" readonly="1" class="oe_inline"/> of each month</p>
                                 <p class="text-muted">Example: Sales on Nov 10 → Due on Dec <field name="commission_payment_day" readonly="1" class="oe_inline"/></p>
                             </div>
                             <div class="alert alert-success" role="alert" 
-                                 attrs="{'invisible': [('commission_payment_schedule', '=', 'monthly')]}">
+                                 invisible="commission_payment_schedule == 'monthly'">
                                 <p><strong>Daily Payment Schedule</strong></p>
                                 <p>Commissions are payable on the same day as the sale</p>
                                 <p class="text-muted">Example: Sale on Nov 27 → Due on Nov 27</p>
