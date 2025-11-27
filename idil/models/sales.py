@@ -1080,27 +1080,11 @@ class SaleOrderLine(models.Model):
                             }
                         )
 
-                        self.env["idil.salesperson.transaction"].create(
-                            {
-                                "sales_person_id": order.sales_person_id.id,
-                                "date": fields.Date.today(),
-                                "order_id": order.id,
-                                "transaction_type": "in",
-                                "amount": updated_line.commission_amount,
-                                "description": f"Sales Commission Amount of - Order Line for {updated_line.product_id.name} (Qty: {updated_line.quantity})",
-                            }
-                        )
-
-                        self.env["idil.salesperson.transaction"].create(
-                            {
-                                "sales_person_id": order.sales_person_id.id,
-                                "date": fields.Date.today(),
-                                "order_id": order.id,
-                                "transaction_type": "in",
-                                "amount": updated_line.discount_amount,
-                                "description": f"Sales Discount Amount of - Order Line for {updated_line.product_id.name} (Qty: {updated_line.quantity})",
-                            }
-                        )
+                        # Commission and Discount are now deferred and handled by idil.sales.commission and idil.sales.discount
+                        # We do NOT post them to transactions here anymore.
+                        # However, we might need to update the deferred records if the amount changes.
+                        # For now, we just stop the immediate posting to fix the bug.
+                        pass
 
                 return res
         except Exception as e:
