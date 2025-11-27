@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tree View -->
+    <record id="view_sales_discount_tree" model="ir.ui.view">
+        <field name="name">idil.sales.discount.tree</field>
+        <field name="model">idil.sales.discount</field>
+        <field name="arch" type="xml">
+            <tree string="Sales Discounts" 
+                  decoration-success="is_payable == True" 
+                  decoration-muted="state == 'processed'"
+                  create="false" edit="false">
+                <field name="date"/>
+                <field name="name"/>
+                <field name="sale_order_id"/>
+                <field name="sales_person_id"/>
+                <field name="payment_schedule"/>
+                <field name="due_date"/>
+                <field name="is_payable" invisible="1"/>
+                <field name="currency_id" invisible="1"/>
+                <field name="discount_amount" sum="Total Amount"/>
+                <field name="discount_processed" sum="Total Processed"/>
+                <field name="discount_remaining" sum="Total Remaining"/>
+                <field name="state" widget="badge" 
+                       decoration-success="state == 'processed'"
+                       decoration-warning="state == 'partial'"
+                       decoration-info="state == 'pending'"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_sales_discount_form" model="ir.ui.view">
+        <field name="name">idil.sales.discount.form</field>
+        <field name="model">idil.sales.discount</field>
+        <field name="arch" type="xml">
+            <form string="Sales Discount" create="false" edit="false">
+                <header>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Discount Details">
+                            <field name="sales_person_id"/>
+                            <field name="sale_order_id"/>
+                            <field name="date"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                        <group string="Processing Schedule">
+                            <field name="payment_schedule"/>
+                            <field name="due_date"/>
+                            <field name="is_payable"/>
+                        </group>
+                    </group>
+                    <group string="Amounts">
+                        <group>
+                            <field name="discount_amount"/>
+                            <field name="discount_processed"/>
+                            <field name="discount_remaining" class="oe_subtotal_footer_separator"/>
+                        </group>
+                        <group string="Process Discount" invisible="state == 'processed'">
+                            <field name="amount_to_process"/>
+                            <button name="process_discount" string="Process Discount" 
+                                    type="object" class="oe_highlight" 
+                                    invisible="amount_to_process &lt;= 0"/>
+                        </group>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Processing History">
+                            <field name="process_ids" readonly="1">
+                                <tree>
+                                    <field name="date"/>
+                                    <field name="amount"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_sales_discount_search" model="ir.ui.view">
+        <field name="name">idil.sales.discount.search</field>
+        <field name="model">idil.sales.discount</field>
+        <field name="arch" type="xml">
+            <search string="Search Sales Discounts">
+                <field name="name"/>
+                <field name="sales_person_id"/>
+                <field name="sale_order_id"/>
+                
+                <filter string="Processable Now" name="payable_now" 
+                        domain="[('is_payable', '=', True)]"/>
+                <filter string="Pending" name="pending" 
+                        domain="[('state', '=', 'pending')]"/>
+                <filter string="Processed" name="processed" 
+                        domain="[('state', '=', 'processed')]"/>
+                        
+                <separator/>
+                
+                <filter string="Daily Schedule" name="daily" 
+                        domain="[('payment_schedule', '=', 'daily')]"/>
+                <filter string="Monthly Schedule" name="monthly" 
+                        domain="[('payment_schedule', '=', 'monthly')]"/>
+                
+                <group expand="0" string="Group By">
+                    <filter string="Salesperson" name="group_salesperson" 
+                            context="{'group_by': 'sales_person_id'}"/>
+                    <filter string="Payment Schedule" name="group_schedule" 
+                            context="{'group_by': 'payment_schedule'}"/>
+                    <filter string="Due Date" name="group_due_date" 
+                            context="{'group_by': 'due_date'}"/>
+                    <filter string="Status" name="group_status" 
+                            context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Actions -->
+    <record id="action_sales_discount" model="ir.actions.act_window">
+        <field name="name">Sales Discounts</field>
+        <field name="res_model">idil.sales.discount</field>
+        <field name="view_mode">tree,form</field>
+        <field name="context">{'search_default_pending': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No sales discounts found
+            </p>
+            <p>
+                Sales discounts will appear here when sale orders are confirmed.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_sales_discount_payable" model="ir.actions.act_window">
+        <field name="name">Discounts Processable Now</field>
+        <field name="res_model">idil.sales.discount</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[('is_payable', '=', True)]</field>
+        <field name="context">{'search_default_group_salesperson': 1}</field>
+    </record>
+
+    <!-- Menus -->
+    
+    <menuitem id="menu_sales_discount_root" 
+              name="Discounts" 
+              parent="menu_sales" 
+              sequence="55"/>
+
+    <menuitem id="menu_sales_discount_all" 
+              name="All Discounts" 
+              parent="menu_sales_discount_root" 
+              action="action_sales_discount" 
+              sequence="10"/>
+
+    <menuitem id="menu_sales_discount_payable" 
+              name="Processable Now" 
+              parent="menu_sales_discount_root" 
+              action="action_sales_discount_payable" 
+              sequence="20"/>
+
+</odoo>

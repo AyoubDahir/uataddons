@@ -130,6 +130,8 @@
         "views/report_kitchen_quantity.xml",
         "views/menu.xml",
         "views/inventory_dashboard.xml",
-        "views/sales_dashboard.xml"
+        "views/sales_dashboard.xml",
+        "views/sales_commission.xml",
+        "views/sales_discount.xml"
     ]
 }

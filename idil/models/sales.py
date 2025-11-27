@@ -312,6 +312,8 @@ class SaleOrder(models.Model):
                 with self.env.cr.savepoint():
                     # post everything
                     order.post_salesperson_transactions_on_confirm()
+                    order._create_sales_commission_record()
+                    order._create_sales_discount_record()
                     order.create_receipt_on_confirm()
                     order.create_movements_on_confirm()
                     order.book_accounting_entry()
@@ -351,36 +353,39 @@ class SaleOrder(models.Model):
                     ),
                 }
             )
-            # Commission (negative out)
-            self.env["idil.salesperson.transaction"].create(
-                {
-                    "sales_person_id": self.sales_person_id.id,
-                    "sale_order_id": self.id,
-                    "date": self.order_date,
-                    "order_id": self.id,
-                    "transaction_type": "out",
-                    "amount": line.commission_amount * -1,
-                    "description": (
-                        f"Sales Commission Amount of - Order Line for  "
-                        f"{line.product_id.name} (Qty: {line.quantity})"
-                    ),
-                }
-            )
-            # Discount (negative out)
-            self.env["idil.salesperson.transaction"].create(
-                {
-                    "sales_person_id": self.sales_person_id.id,
-                    "sale_order_id": self.id,
-                    "date": self.order_date,
-                    "order_id": self.id,
-                    "transaction_type": "out",
-                    "amount": line.discount_amount * -1,
-                    "description": (
-                        f"Sales Discount Amount of - Order Line for  "
-                        f"{line.product_id.name} (Qty: {line.quantity})"
-                    ),
-                }
-            )
+            # Commission (negative out) - DEPRECATED: Now handled by idil.sales.commission
+            # Commission is no longer posted immediately to transactions
+            # It is tracked in idil.sales.commission and paid later based on schedule
+            pass
+            # Discount (negative out) - DEPRECATED: Now handled by idil.sales.discount
+            # Discount is no longer posted immediately to transactions
+            # It is tracked in idil.sales.discount and processed later based on schedule
+            pass
+
+    def _create_sales_commission_record(self):
+        """Create deferred commission record for salesperson"""
+        for order in self:
+            if order.commission_amount > 0:
+                self.env['idil.sales.commission'].create({
+                    'sale_order_id': order.id,
+                    'sales_person_id': order.sales_person_id.id,
+                    'date': order.order_date,
+                    'currency_id': order.currency_id.id,
+                    'commission_amount': order.commission_amount,
+                })
+
+    def _create_sales_discount_record(self):
+        """Create deferred discount record for salesperson"""
+        for order in self:
+            total_discount = sum(order.order_lines.mapped('discount_amount'))
+            if total_discount > 0:
+                self.env['idil.sales.discount'].create({
+                    'sale_order_id': order.id,
+                    'sales_person_id': order.sales_person_id.id,
+                    'date': order.order_date,
+                    'currency_id': order.currency_id.id,
+                    'discount_amount': total_discount,
+                })
 
     def precheck_before_confirm(self):
         self.ensure_one()

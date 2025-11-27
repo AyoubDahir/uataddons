@@ -74,6 +74,36 @@ class SalesPersonnel(models.Model):
                         "Payment day must be between 1 and 31"
                     )
 
+    # Discount Payment Settings
+    discount_payment_schedule = fields.Selection(
+        [
+            ("daily", "Daily Payment"),
+            ("monthly", "Monthly Payment"),
+        ],
+        string="Discount Payment Schedule",
+        default="monthly",
+        required=True,
+        help="Determines when this salesperson's discounts become payable/processable:\n"
+        "- Daily: Discounts are processed on the same day as the sale\n"
+        "- Monthly: Discounts are processed on a specific day each month",
+    )
+
+    discount_payment_day = fields.Integer(
+        string="Discount Payment Day",
+        default=1,
+        help="For monthly schedule: day of month when discount is processed (1-31).",
+    )
+
+    @api.constrains("discount_payment_day", "discount_payment_schedule")
+    def _check_discount_payment_day(self):
+        """Validate discount payment day is between 1 and 31"""
+        for record in self:
+            if record.discount_payment_schedule == "monthly":
+                if not (1 <= record.discount_payment_day <= 31):
+                    raise ValidationError(
+                        "Discount payment day must be between 1 and 31"
+                    )
+
     @api.depends("transaction_ids.amount", "transaction_ids.transaction_type")
     def _compute_due_amount(self):
         for person in self:
