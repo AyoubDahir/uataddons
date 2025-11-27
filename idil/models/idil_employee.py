@@ -84,6 +84,30 @@ class IdilEmployee(models.Model):
 
     commission = fields.Float(string="Commission Percentage", tracking=True)
 
+    # Commission Payment Schedule Settings
+    commission_payment_schedule = fields.Selection(
+        [
+            ("daily", "Daily Payment"),
+            ("monthly", "Monthly Payment"),
+        ],
+        string="Commission Payment Schedule",
+        default="monthly",
+        required=True,
+        help="Determines when this employee's commissions become payable:\n"
+        "- Daily: Commissions are payable on the same day as manufacturing\n"
+        "- Monthly: Commissions are payable on a specific day each month",
+        tracking=True,
+    )
+
+    commission_payment_day = fields.Integer(
+        string="Payment Day of Month",
+        default=1,
+        help="For monthly schedule: day of month when commission is paid (1-31). "
+        "Example: Set to 1 for payment on the 1st of each month",
+        tracking=True,
+    )
+
+
     # Salary and bonus information
     salary = fields.Monetary(
         string="Basic Salary", currency_field="currency_id", tracking=True
@@ -185,6 +209,16 @@ class IdilEmployee(models.Model):
     def _compute_total_compensation(self):
         for record in self:
             record.total_compensation = (record.salary or 0.0) + (record.bonus or 0.0)
+
+    @api.constrains("commission_payment_day", "commission_payment_schedule")
+    def _check_payment_day(self):
+        """Validate payment day is between 1 and 31"""
+        for record in self:
+            if record.commission_payment_schedule == "monthly":
+                if not (1 <= record.commission_payment_day <= 31):
+                    from odoo.exceptions import ValidationError
+
+                    raise ValidationError("Payment day must be between 1 and 31")
 
     @api.onchange("currency_id")
     def _onchange_currency_id(self):
