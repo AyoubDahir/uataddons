@@ -27,27 +27,27 @@
                     </group>
 
                     <!-- Commission Settings Section -->
-                    <group string="Commission Settings">
-                        <group>
-                            <field name="commission_payment_schedule" widget="radio"/>
-                            <field name="commission_payment_day" 
-                                   invisible="commission_payment_schedule == 'daily'"
-                                   required="commission_payment_schedule == 'monthly'"/>
-                        </group>
-                        <group>
-                            <div class="alert alert-info" role="alert" 
-                                 invisible="commission_payment_schedule == 'daily'">
-                                <p><strong>Monthly Payment Schedule</strong></p>
-                                <p>Commissions will be paid on day <field name="commission_payment_day" readonly="1" class="oe_inline"/> of each month</p>
-                                <p class="text-muted">Example: Sales on Nov 10 → Due on Dec <field name="commission_payment_day" readonly="1" class="oe_inline"/></p>
-                            </div>
-                            <div class="alert alert-success" role="alert" 
-                                 invisible="commission_payment_schedule == 'monthly'">
-                                <p><strong>Daily Payment Schedule</strong></p>
-                                <p>Commissions are payable on the same day as the sale</p>
-                                <p class="text-muted">Example: Sale on Nov 27 → Due on Nov 27</p>
-                            </div>
-                        </group>
+                    <group string="Commission Settings" col="1">
+                        <field name="commission_payment_schedule"/>
+                        
+                        <field name="commission_payment_day" 
+                               string="Payment Day of Month (1-31)"
+                               invisible="commission_payment_schedule == 'daily'"
+                               required="commission_payment_schedule == 'monthly'"
+                               placeholder="e.g., 1 for 1st of month, 15 for 15th"/>
+                        
+                        <div class="text-muted" 
+                             invisible="commission_payment_schedule == 'daily'"
+                             style="margin-top: 8px; font-size: 0.9em;">
+                            <i class="fa fa-info-circle"/> Commissions will be paid on day <field name="commission_payment_day" readonly="1" class="oe_inline" style="font-weight: bold;"/> of each month.
+                            <br/>Example: Sale on Nov 10 → Due on Dec <field name="commission_payment_day" readonly="1" class="oe_inline" style="font-weight: bold;"/>
+                        </div>
+                        
+                        <div class="text-muted" 
+                             invisible="commission_payment_schedule == 'monthly'"
+                             style="margin-top: 8px; font-size: 0.9em;">
+                            <i class="fa fa-check-circle text-success"/> Commissions are payable on the same day as the sale.
+                        </div>
                     </group>
 
                     <group>
