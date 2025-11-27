@@ -18,7 +18,6 @@
         "web.assets_backend": [
             "idil/static/src/css/kanban.css",
             "idil/static/src/scss/modern_ui.scss",
-            "idil/static/src/scss/volt_overrides.scss",
             "idil/static/src/js/volt.js",
             "idil/static/src/js/inventory_dashboard.js",
             "idil/static/src/xml/inventory_dashboard.xml",

@@ -212,21 +212,83 @@ h6 {
     }
 }
 
-// 7. Navbar Glassmorphism (Overrides volt_overrides if needed)
+// 7. Navbar (Clean White Theme - Consolidated from volt_overrides)
 // -------------------------------------------------------------------------
-.o_main_navbar {
-    background: rgba(255, 255, 255, 0.95) !important;
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
-    z-index: 1000 !important; // Ensure it's above everything
-    position: relative; // Establish stacking context
+.o_main_navbar,
+nav.o_main_navbar,
+header.o_main_navbar,
+.top_heading,
+#oe_main_menu_navbar {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    background-image: none !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+    height: 64px !important;
+    padding: 0 24px !important;
+    color: #1e293b !important; // Slate-800
+    z-index: 1000 !important;
+}
+
+// Remove gradients
+.o_main_navbar *,
+header *,
+.top_heading * {
+    background-image: none !important;
+}
+
+// Navbar Links & Buttons
+.o_main_navbar a,
+.o_main_navbar button,
+.o_main_navbar .o_menu_sections>li>a,
+.o_main_navbar .o_menu_systray .o_nav_entry,
+.o_main_navbar .o_menu_brand,
+.top_heading a,
+header a,
+.o_main_navbar .dropdown-toggle,
+.o_main_navbar .o_user_menu .dropdown-toggle {
+    color: #1e293b !important; // Slate-800
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    padding: 8px 16px !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    text-shadow: none !important;
+    transition: all 0.2s ease;
+
+    &:hover {
+        background-color: #f3f4f6 !important; // Slate-100
+        color: #0f172a !important; // Slate-900
+    }
+}
+
+// Active Menu Item
+.o_main_navbar .o_menu_sections>li.active>a,
+.o_main_navbar .o_menu_sections>li.show>a {
+    background-color: #e5e7eb !important; // Slate-200
+    color: #0f172a !important;
+    font-weight: 700 !important;
+}
+
+// Systray Icons
+.o_menu_systray .o_nav_entry {
+    color: #64748b !important; // Slate-500
+
+    &:hover {
+        background-color: #f3f4f6 !important;
+        color: #1e293b !important;
+    }
 }
 
 .dropdown-menu {
-    z-index: 1050 !important; // Above navbar and content
+    z-index: 1050 !important;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
     border: 1px solid rgba(0, 0, 0, 0.05) !important;
+    border-radius: 12px !important;
+}
+
+.o_user_menu .dropdown-item:hover {
+    background-color: #f3f4f6 !important;
 }
 
 // 8. Modal & Dialogs
@@ -377,19 +439,19 @@ body {
             }
         }
 
-        // Header - Dark Theme for Contrast
+        // Header - Clean White Theme
         thead tr:first-child th,
         .datepicker-switch,
         .picker-switch {
-            background-color: #374151 !important; // Brand Primary (Dark Gray)
-            color: #ffffff !important;
+            background-color: #ffffff !important; // White background
+            color: #1e293b !important; // Dark text
             font-size: 1rem !important;
             font-weight: 600 !important;
             padding: 16px 0 !important; // Taller header
             border-radius: 0 !important;
 
             &:hover {
-                background-color: #1f2937 !important; // Darker on hover
+                background-color: #f8fafc !important; // Light gray on hover
             }
         }
 
@@ -397,18 +459,19 @@ body {
         .prev,
         .next,
         .datepicker-prev,
-        ffffff .datepicker-next {
-            background-color: #ffffff !important;
-            color: #374151 !important;
+        .datepicker-next {
+            background-color: transparent !important;
+            color: #64748b !important; // Slate-500
             border-radius: 0 !important;
 
             &:hover {
-                background-color: #1f2937 !important;
+                background-color: #f1f5f9 !important;
+                color: #1e293b !important;
             }
 
             // Fix icon alignment if needed
             i {
-                color: #ffffff !important;
+                color: #64748b !important;
             }
         }
 
