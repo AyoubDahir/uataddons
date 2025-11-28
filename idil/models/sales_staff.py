@@ -77,7 +77,7 @@ class SalesPersonnel(models.Model):
     commission_payable_account_id = fields.Many2one(
         "idil.chart.account",
         string="Commission Payable Account",
-        domain="[('account_type', '=', 'payable'), ('currency_id', '=', currency_id)]",
+        domain="[('account_type', '=', 'payable')]",
         help="Liability account to track deferred commissions. "
              "Required when commission payment schedule is 'monthly'.",
     )
