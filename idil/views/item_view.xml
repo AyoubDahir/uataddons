@@ -13,7 +13,7 @@
                 <field name="unitmeasure_id" string="UOM" optional="show"/>
                 <field name="item_category_id" string="Category" optional="show"/>
                 <field name="quantity" string="QTY"/>
-                <field name="currency_id" string="Currency"/>
+                <field name="currency_id" string="Currency" optional="hide"/>
                 <field name="cost_price" string="Cost"/>
 
                 <field name="total_price" string="Total" widget="monetary"
@@ -21,13 +21,13 @@
 
 
                 <field name="min" string="Re-Order" optional="show"/>
-                <field name="purchase_account_id" string="COGS" optional="show"/>
+                <field name="purchase_account_id" string="COGS" optional="hide"/>
                 <field name="sales_account_id" string="Revenue" optional="hide"/>
-                <field name="asset_account_id" string="Inventory" optional="show"/>
+                <field name="asset_account_id" string="Inventory" optional="hide"/>
                 <field name="allergens" optional="hide"/>
                 <field name="purchase_date" string="Date" optional="show"/>
-                <field name="expiration_date" optional="show"/>
-                <field name="days_until_expiration" string="Expiration" optional="show"/>
+                <field name="expiration_date" optional="hide"/>
+                <field name="days_until_expiration" string="Expiration" optional="hide"/>
 
                 <field name="order_information" optional="hide"/>
                 <field name="bar_code" optional="hide"/>

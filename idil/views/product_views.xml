@@ -11,26 +11,24 @@
                 <tree string="view_product_tree" delete="False" decoration-danger="stock_quantity &lt; 10">
                    <field name="image_1920" widget="image" options="{'size': (20, 20)}"/>
                     <field name="name"/>
-                    <field name="internal_reference" optional="show"/>
+                    <field name="internal_reference" optional="hide"/>
                     
-                    <field name="rate_currency_id" optional="show"/>
-                    <field name="rate" optional="show"/>
+                    <field name="rate_currency_id" optional="hide"/>
+                    <field name="rate" optional="hide"/>
 
                     <field name="stock_quantity" readonly="1" optional="show"/>
                     <field name="category_id" optional="show"/>
                     <field name="detailed_type" optional="show"/>
-                    <field name="asset_account_id" optional="show"/>
+                    <field name="asset_account_id" optional="hide"/>
                     
                     <field name="sale_price" optional="show"/>
-                    <field name="usd_currency_id" optional="show"/>
+                    <field name="usd_currency_id" optional="hide"/>
                     <field name="total_value_usd" sum="total" optional="show"/>
-                    <field name="actual_cost" sum="total" widget="float" options="{'precision': 4}" optional="show" />
+                    <field name="actual_cost" sum="total" widget="float" options="{'precision': 4}" optional="hide" />
 
-                    <field name="is_commissionable" optional="show"/>
+                    <field name="is_commissionable" optional="hide"/>
 
-                    <field name="account_id" optional="show"/>
-
-
+                    <field name="account_id" optional="hide"/>
                 </tree>
             </field>
         </record>
@@ -48,94 +46,85 @@
                                 class="oe_highlight"/>
                     </header>
                     <sheet>
+                        <div class="oe_title">
+                            <h1>
+                                <field name="name" placeholder="Product Name"/>
+                            </h1>
+                        </div>
                         <group>
                             <group>
-                                <field name="name"/>
                                 <field name="internal_reference"/>
+                                <field name="detailed_type"/>
+                                <field name="category_id"/>
                             </group>
                             <group>
-                                <field name="image_1920" class="o_kanban_image_fill_left d-block"
-                                       widget="image" options="{'size': [200, 200], 'zoom': true, 'zoom_delay': 5}"
-                                       style="width: 200px; height: 200px;"/>
+                                <field name="image_1920" widget="image" options="{'size': [150, 150]}"/>
                             </group>
                         </group>
                         <notebook>
                             <!-- Inventory Information Page -->
                             <page string="Inventory Information">
                                 <group>
-                                    <field name="detailed_type"/>
-                                    <field name="category_id"/>
-                                    <field name="pos_categ_ids" widget="many2many_tags" string="POS Menu"/>
-                                    <field name="uom_id"/>
-                                    <field name="asset_currency_id"/>
-                                    <field name="asset_account_id"/>
-
-                                    <field name="is_quantity_discount"/>
-                                    <field name="discount_currency_id"/>
-                                    <field name="sales_discount_id"/>
-                                    <field name="discount"/>
-
+                                    <group>
+                                        <field name="uom_id"/>
+                                        <field name="pos_categ_ids" widget="many2many_tags" string="POS Menu"/>
+                                        <field name="asset_currency_id" groups="base.group_multi_currency"/>
+                                        <field name="asset_account_id"/>
+                                    </group>
+                                    <group>
+                                        <field name="is_quantity_discount"/>
+                                        <field name="discount_currency_id" invisible="not is_quantity_discount"/>
+                                        <field name="sales_discount_id" invisible="not is_quantity_discount"/>
+                                        <field name="discount" invisible="not is_quantity_discount"/>
+                                    </group>
                                 </group>
                             </page>
 
                             <!-- Sales Information Page -->
                             <page string="Sales Information">
-
                                 <group>
-                                    <field name="stock_quantity" readonly="1"/>
-
+                                    <group>
+                                        <field name="sale_price"/>
+                                        <field name="sales_currency_id" groups="base.group_multi_currency"/>
+                                        <field name="sales_account_id"/>
+                                        <field name="income_account_id"/>
+                                    </group>
+                                    <group>
+                                        <field name="stock_quantity" readonly="1"/>
+                                        <field name="is_sales_commissionable"/>
+                                        <field name="commission" invisible="not is_sales_commissionable"/>
+                                    </group>
                                 </group>
-
-                                <group>
-                                    <field name="sale_price"/>
-
-                                    <field name="income_account_id"/>
-                                </group>
-
-
-                                <group>
-                                    <field name="sales_currency_id"/>
-                                    <field name="sales_account_id"/>
-                                    <field name="is_sales_commissionable"/>
-                                    <field name="commission"/>
-
-                                </group>
-
-
                             </page>
 
                             <!-- Costing Information Page -->
                             <page string="Costing Information">
                                 <group>
-                                    <field name="bom_id"/>
-                                </group>
-                                <group>
-                                
-                                    <field name="is_cost_manual_purchase" />
-                                    <field name="cost"/>
-                                     
-                                    <field name="currency_cogs_id"/>
-                                    <field name="account_cogs_id"/>
-                                    <field name="account_adjustment_id"/>
-                                    <field name="purchase_description"/>
-                                </group>
-                            </page>
-                            <page string="Commission Information">
-                                <group>
-                                    <field name="currency_id"/>
-                                    <field name="is_commissionable"/>
-                                    <field name="account_id"/>
+                                    <group>
+                                        <field name="bom_id"/>
+                                        <field name="is_cost_manual_purchase" />
+                                        <field name="cost"/>
+                                    </group>
+                                    <group>
+                                        <field name="currency_cogs_id" groups="base.group_multi_currency"/>
+                                        <field name="account_cogs_id"/>
+                                        <field name="account_adjustment_id"/>
+                                        <field name="purchase_description"/>
+                                    </group>
                                 </group>
                             </page>
+                            
                             <page string="Movement History">
                                 <group>
-                                    <field name="start_date"/>
-                                    <field name="end_date"/>
+                                    <group>
+                                        <field name="start_date"/>
+                                    </group>
+                                    <group>
+                                        <field name="end_date"/>
+                                    </group>
                                 </group>
 
                                 <field name="movement_ids">
-
-                                     
                                     <tree create="false" delete="false" editable="false" limit="100">
                                         <field name="date" readonly="1"/>
                                         <field name="movement_type" readonly="1"/>
@@ -146,9 +135,6 @@
                                         <field name="customer_id" readonly="1"/>
                                         <field name="destination" readonly="1"/>
                                         <field name="employee_id" readonly="1"/>
-                                         
-
-
                                     </tree>
                                 </field>
                             </page>

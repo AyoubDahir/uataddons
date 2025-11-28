@@ -11,17 +11,17 @@
             <tree string="Purchase Orders" decoration-info="state in ('draft','pending')" decoration-success="state == 'confirmed'" decoration-danger="state == 'cancel'">
                 <field name="reffno" string="Ref No." readonly="1" class="o_td_center" />
                 <field name="vendor_id" />
-                <field name="payment_method" string="Payment Method" class="o_td_center"/>
-                <field name="account_number" class="o_td_center"/>
+                <field name="payment_method" string="Payment Method" class="o_td_center" optional="hide"/>
+                <field name="account_number" class="o_td_center" optional="hide"/>
                 <!-- Show monetary properly; if your model has currency_id, this will format amounts -->
                 
-                <field name="currency_amount_id"/>
+                <field name="currency_amount_id" optional="hide"/>
 
                 <field name="amount" sum="Total" widget="monetary" options="{'currency_field': 'currency_amount_id'}" class="o_td_right"/>
                 
 
                 <!-- Compact preview of lines count for quick scan -->
-                <field name="order_lines" string="Items" widget="one2many_count" class="o_td_center"/>
+                <field name="order_lines" string="Items" widget="one2many_count" class="o_td_center" optional="show"/>
                 <field name="purchase_date" class="o_td_center"/>
                 <field name="state"/>
 
