@@ -74,6 +74,23 @@ class SalesPersonnel(models.Model):
                         "Payment day must be between 1 and 31"
                     )
 
+    commission_payable_account_id = fields.Many2one(
+        "idil.chart.account",
+        string="Commission Payable Account",
+        domain="[('account_type', '=', 'payable'), ('currency_id', '=', currency_id)]",
+        help="Liability account to track deferred commissions. "
+             "Required when commission payment schedule is 'monthly'.",
+    )
+
+    @api.constrains("commission_payment_schedule", "commission_payable_account_id")
+    def _check_commission_payable_account(self):
+        """Ensure Commission Payable account is set for monthly schedules"""
+        for record in self:
+            if record.commission_payment_schedule == "monthly" and not record.commission_payable_account_id:
+                raise ValidationError(
+                    "Commission Payable Account is required when commission payment schedule is 'monthly'."
+                )
+
     # Discount Payment Settings
     discount_payment_schedule = fields.Selection(
         [

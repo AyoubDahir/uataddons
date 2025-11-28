@@ -37,6 +37,12 @@
                                            required="commission_payment_schedule == 'monthly'"
                                            placeholder="e.g., 1"/>
                                     
+                                    <field name="commission_payable_account_id"
+                                           string="Commission Payable Account"
+                                           invisible="commission_payment_schedule == 'daily'"
+                                           required="commission_payment_schedule == 'monthly'"
+                                           options="{'no_create': True}"/>
+                                    
                                     <div class="text-muted" colspan="2"
                                          invisible="commission_payment_schedule == 'daily'"
                                          style="font-size: 0.9em;">

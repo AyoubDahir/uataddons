@@ -682,11 +682,12 @@ class SaleOrder(models.Model):
                             }
                         )
 
-                        # DR Commission expense
+                        # Commission Accounting
                         if (
                             product.is_sales_commissionable
                             and line.commission_amount > 0
                         ):
+                            # DR Commission Expense (always recognize expense)
                             self.env["idil.transaction_bookingline"].create(
                                 {
                                     "transaction_booking_id": transaction_booking.id,
@@ -701,6 +702,33 @@ class SaleOrder(models.Model):
                                     "transaction_date": order.order_date,
                                 }
                             )
+                            
+                            # CR depends on payment schedule
+                            schedule = order.sales_person_id.commission_payment_schedule
+                            if schedule == 'monthly':
+                                # Deferred: Credit Commission Payable (liability)
+                                if not order.sales_person_id.commission_payable_account_id:
+                                    raise ValidationError(
+                                        f"Salesperson '{order.sales_person_id.name}' has monthly commission schedule "
+                                        "but no Commission Payable Account configured."
+                                    )
+                                
+                                self.env["idil.transaction_bookingline"].create(
+                                    {
+                                        "transaction_booking_id": transaction_booking.id,
+                                        "sale_order_id": order.id,
+                                        "description": f"Commission Payable - {product.name}",
+                                        "product_id": product.id,
+                                        "account_number": order.sales_person_id.commission_payable_account_id.id,
+                                        "transaction_type": "cr",
+                                        "dr_amount": 0,
+                                        "cr_amount": float(line.commission_amount),
+                                        "rate": order.rate,
+                                        "transaction_date": order.order_date,
+                                    }
+                                )
+                            # For 'daily' schedule, the commission is already accounted for by reducing
+                            # the Receivable (via subtotal), so no additional CR entry needed
 
                         # DR Discount expense
                         if line.discount_amount > 0:
@@ -987,14 +1015,25 @@ class SaleOrderLine(models.Model):
         for line in self:
             pass
 
-    @api.depends("quantity", "price_unit", "commission_amount")
+    @api.depends("quantity", "price_unit", "commission_amount", "order_id.sales_person_id.commission_payment_schedule")
     def _compute_subtotal(self):
         for line in self:
-            line.subtotal = (
-                (line.quantity * line.price_unit)
-                - (line.discount_quantity * line.price_unit)
-                - line.commission_amount
-            )
+            # Base amount before commission
+            base_amount = (line.quantity * line.price_unit) - (line.discount_quantity * line.price_unit)
+            
+            # Only subtract commission if it's paid immediately (daily schedule)
+            # For monthly/deferred commissions, salesperson must remit the full amount
+            if line.order_id and line.order_id.sales_person_id:
+                schedule = line.order_id.sales_person_id.commission_payment_schedule
+                if schedule == 'daily':
+                    # Immediate payment: salesperson keeps commission from the sale
+                    line.subtotal = base_amount - line.commission_amount
+                else:
+                    # Deferred payment: salesperson must remit full amount
+                    line.subtotal = base_amount
+            else:
+                # Fallback to old behavior if no salesperson
+                line.subtotal = base_amount - line.commission_amount
 
     @api.depends("quantity")
     def _compute_discount_quantity(self):
