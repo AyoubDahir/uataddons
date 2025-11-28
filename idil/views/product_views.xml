@@ -62,13 +62,12 @@
                             </group>
                         </group>
                         <notebook>
-                            <!-- Inventory Information Page -->
                             <page string="Inventory Information">
                                 <group>
                                     <group>
                                         <field name="uom_id"/>
                                         <field name="pos_categ_ids" widget="many2many_tags" string="POS Menu"/>
-                                        <field name="asset_currency_id" groups="base.group_multi_currency"/>
+                                        <field name="asset_currency_id"/>
                                         <field name="asset_account_id"/>
                                     </group>
                                     <group>
@@ -85,7 +84,7 @@
                                 <group>
                                     <group>
                                         <field name="sale_price"/>
-                                        <field name="sales_currency_id" groups="base.group_multi_currency"/>
+                                        <field name="sales_currency_id"/>
                                         <field name="sales_account_id"/>
                                         <field name="income_account_id"/>
                                     </group>
@@ -106,7 +105,7 @@
                                         <field name="cost"/>
                                     </group>
                                     <group>
-                                        <field name="currency_cogs_id" groups="base.group_multi_currency"/>
+                                        <field name="currency_cogs_id"/>
                                         <field name="account_cogs_id"/>
                                         <field name="account_adjustment_id"/>
                                         <field name="purchase_description"/>
