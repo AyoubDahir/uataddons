@@ -90,56 +90,61 @@
                 <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,cancel"/>
             </header>
                 <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                    </div>
                     <group>
-                        <field name="name"/>
-                        <field name="sales_person_id"/>
-                    </group>
-                   <group>
                         <group>
+                            <field name="sales_person_id" options="{'no_create': True}"/>
                             <field name="order_date"/>
-                            
-                            <field name="commission_amount"/>
-                            <field name="currency_id"/>
-                            <field name="rate"/>
-                            <field name="state" readonly="1"/>
+                            <field name="currency_id" groups="base.group_multi_currency"/>
                         </group>
-                        <group string="USD Totals">
-                            <field name="total_due_usd"/>
-                            <field name="total_commission_usd"/>
-                            <field name="total_discount_usd"/>
+                        <group>
+                            <field name="rate" groups="base.group_multi_currency"/>
+                            <field name="state" readonly="1"/>
+                            <field name="commission_amount" widget="monetary" options="{'currency_field': 'currency_id'}" readonly="1"/>
                         </group>
                     </group>
+                    
                     <notebook>
                         <page string="Order Lines">
-                            <field name="order_lines" widget="many2many_list">
+                            <field name="order_lines" widget="section_and_note_one2many" mode="tree">
                                 <tree editable="bottom" delete="false">
-                                    <field name="product_id"/>
-
-                                    <field name="quantity_Demand" readonly="1" force_save="1"
-                                           help="This represents the quantity originally requested or planned by the salesperson for the order. It is pre-filled based on the last confirmed order associated with the selected salesperson and is not editable here to preserve the initial demand for reference."/>
-
-
-                                    <field name="quantity"
-                                           help="Enter the actual quantity utilized in fulfilling this sales order. This field is editable, allowing you to adjust the quantity based on real consumption or order fulfillment requirements."/>
-
-                                    <field name="quantity_diff" readonly="1"
-                                           help="This field automatically calculates and displays the variance between the planned (Demand) and the actual quantity used. A positive value indicates a surplus in the planned quantity, while a negative value suggests a shortfall."/>
-                                    <field name="discount_quantity" readonly="1"/>
-                                    <field name="returned_quantity" readonly="1"/>
-
-                                    <field name="currency_id" readonly="1"/>
+                                    <field name="product_id" options="{'no_create': True}"/>
+                                    <field name="quantity_Demand" optional="show" readonly="1" force_save="1"/>
+                                    <field name="quantity"/>
+                                    <field name="quantity_diff" optional="hide" readonly="1"/>
+                                    <field name="discount_quantity" optional="hide" readonly="1"/>
+                                    <field name="returned_quantity" optional="hide" readonly="1"/>
+                                    <field name="currency_id" column_invisible="1"/>
                                     <field name="price_unit"/>
-
-                                    <field name="discount_amount" sum="Total" readonly="1"/>
-                                    
-                                    <field name="commission"/>
-                                    <field name="commission_amount" sum="Total" readonly="1"/>
-
-                                    <field name="subtotal" sum="Total" readonly="1"/>
-
-
+                                    <field name="discount_amount" sum="Total" optional="hide" readonly="1"/>
+                                    <field name="commission" optional="hide"/>
+                                    <field name="commission_amount" sum="Total" optional="hide" readonly="1"/>
+                                    <field name="subtotal" sum="Total" readonly="1" widget="monetary" options="{'currency_field': 'currency_id'}"/>
                                 </tree>
                             </field>
+                            
+                            <group name="note_group" col="6" class="mt-2 mt-md-0">
+                                <group colspan="4">
+                                    <!-- Placeholders for notes if needed -->
+                                </group>
+                                <group class="oe_subtotal_footer oe_right" colspan="2" name="sale_total">
+                                    <field name="total_due_usd" widget="monetary" options="{'currency_field': 'currency_id'}" string="Total USD"/>
+                                    <field name="order_total" widget="monetary" options="{'currency_field': 'currency_id'}" class="oe_subtotal_footer_separator"/>
+                                </group>
+                                <div class="oe_clear"/>
+                            </group>
+                        </page>
+                        <page string="Reporting">
+                             <group>
+                                <group string="USD Totals">
+                                    <field name="total_commission_usd"/>
+                                    <field name="total_discount_usd"/>
+                                </group>
+                             </group>
                         </page>
                     </notebook>
                 </sheet>
