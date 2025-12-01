@@ -419,6 +419,99 @@ textarea {
         .o_list_table {
             border: none !important;
         }
+
+// 13.b. Vanilla JS Datepicker (Bootstrap 5) – Modern style
+// -------------------------------------------------------------------------
+.datepicker-dropdown,
+.datepicker {
+  z-index: 2090 !important; // above dialogs
+}
+
+.datepicker-picker {
+  background-color: #ffffff !important;
+  border: 1px solid rgba(0,0,0,.06) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 40px rgba(0,0,0,.16) !important;
+  overflow: hidden !important;
+}
+
+.datepicker-title {
+  background: #ffffff !important;
+  color: #1f2937 !important;
+  font-weight: 700 !important;
+  font-size: 1rem !important;
+  padding: .75rem 1rem !important;
+  border-bottom: 1px solid #eef2f7 !important;
+}
+
+.datepicker-header .datepicker-controls {
+  padding: .5rem .75rem !important;
+}
+.datepicker-controls .button {
+  border: 1px solid #e5e7eb !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  color: #374151 !important;
+  transition: all .15s ease !important;
+}
+.datepicker-controls .button:hover {
+  background: #f3f4f6 !important;
+  border-color: #d1d5db !important;
+}
+.datepicker-controls .view-switch {
+  font-weight: 700 !important;
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+.datepicker-main { padding: .5rem !important; }
+.datepicker-view .days-of-week { gap: .25rem; padding: .25rem .25rem .5rem; }
+.datepicker-view .dow {
+  color: #6b7280 !important; // Slate-500
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  font-size: .75rem !important;
+}
+
+/* Week numbers */
+.datepicker-view .week {
+  color: #9CA3AF !important;
+  font-weight: 700 !important;
+}
+
+/* Day cells */
+.datepicker-view .days .datepicker-cell,
+.datepicker-view.datepicker-grid .datepicker-cell {
+  height: 40px !important;
+  line-height: 40px !important;
+  width: 40px !important;
+  margin: 4px !important;
+  border-radius: 10px !important;
+  color: #374151 !important;
+  transition: transform .12s ease, background-color .12s ease, color .12s ease !important;
+}
+.datepicker-cell:hover { background: #f3f4f6 !important; transform: scale(1.04); }
+.datepicker-cell.disabled, .datepicker-cell.disabled:hover { color: #cbd5e1 !important; background: transparent !important; transform:none; }
+
+/* Today indicator */
+.datepicker-cell.today { position: relative; font-weight: 700; }
+.datepicker-cell.today::after {
+  content: "";
+  position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+  width: 6px; height: 6px; border-radius: 50%; background: #374151;
+}
+
+/* Selected / range */
+.datepicker-cell.selected,
+.datepicker-cell.range-start,
+.datepicker-cell.range-end {
+  background: #374151 !important; color: #fff !important; box-shadow: 0 6px 14px rgba(55,65,81,.25);
+}
+.datepicker-cell.range,
+.datepicker-cell.range:hover {
+  background: #e5e7eb !important; color: #111827 !important;
+}
+
     }
 
     .o_field_x2many_list_row_add {
