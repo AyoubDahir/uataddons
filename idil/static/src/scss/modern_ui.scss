@@ -83,6 +83,17 @@
 :root { --o-form-sheet-max-width: 100% !important; }
 
 
+/* Move chatter below the form and free the right column */
+.o_form_view .o_form_view_container {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+.o_form_view .o-aside {
+  grid-column: 1 / -1 !important;
+  grid-row: 2 !important;
+  max-width: 100% !important;
+}
+
+
 // Increase label size
 .o_form_view .o_form_label {
     font-size: 1rem !important; // 16px
