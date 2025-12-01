@@ -678,8 +678,49 @@ textarea {
 
 .datepicker-cell.today {
     position: relative;
-    font-weight: 700;
 }
+
+// 20. Layout fixes: remove left gap and keep Save visible
+// -------------------------------------------------------------------------
+// Collapse any reserved aside column and start the form at the very left
+.o_web_client .o_form_view .o_form_view_container {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  grid-auto-flow: row !important;
+  --o-aside-width: 0 !important;
+}
+// Remove unexpected left padding/margins on content and sheet containers
+.o_action_manager .o_content,
+.o_form_view .o_form_sheet_bg,
+.o_form_view .o_form_sheet,
+.o_form_view .o_form_nosheet {
+  padding-left: 0 !important;
+  margin-left: 0 !important;
+}
+
+// Ensure control panel never hides Save/Discard
+.o_control_panel {
+  overflow: visible !important;
+  position: sticky; /* keep actions visible while scrolling */
+  top: 64px; /* navbar height */
+  z-index: 1020;
+  background: #fff;
+}
+.o_control_panel .o_cp_top,
+.o_control_panel .o_cp_bottom,
+.o_control_panel .o_cp_searchview,
+.o_control_panel .o_cp_left,
+.o_control_panel .o_cp_right {
+  flex-wrap: wrap !important;
+}
+.o_control_panel .o_cp_buttons .btn {
+  padding: 6px 12px !important;
+  line-height: 1.2 !important;
+  font-size: 0.875rem !important;
+}
+
+// Make status buttons and Save/Discard coexist on one line when space allows
+.o_form_statusbar { flex-wrap: wrap !important; }
 
 .datepicker-cell.today::after {
     content: "";
