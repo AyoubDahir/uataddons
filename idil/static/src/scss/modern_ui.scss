@@ -61,6 +61,28 @@
   .o_action_manager .o_content { max-width: 100% !important; }
 }
 
+/* Remove builtin content max-widths and center gutters so content uses full width */
+.o_web_client .o_action_manager .o_view_controller,
+.o_web_client .o_action_manager .o_control_panel,
+.o_web_client .o_action_manager .o_content {
+  max-width: none !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+/* Ensure the sheet wrapper is not centered/narrowed */
+.o_form_view .o_form_sheet_bg {
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+}
+
+/* As a fallback, force the CSS variable globally */
+:root { --o-form-sheet-max-width: 100% !important; }
+
+
 // Increase label size
 .o_form_view .o_form_label {
     font-size: 1rem !important; // 16px
