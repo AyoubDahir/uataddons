@@ -1,5 +1,5 @@
 // -------------------------------------------------------------------------
-// Modern UI Overrides for BizCore - Premium Edition
+// Modern UI Overrides for BizCore - Premium Edition (Fixed Layout Version)
 // -------------------------------------------------------------------------
 
 // 1. Animations & Keyframes
@@ -34,7 +34,73 @@
     animation: fadeInUp 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
-// 2. Form Views & Sheets
+// 2. Full-width Forms & Chatter Below
+// -------------------------------------------------------------------------
+// Remove Odoo's internal max-width for sheets
+:root {
+    --o-form-sheet-max-width: 100% !important;
+}
+
+// Make sheet / nosheet regions full width
+.o_form_view .o_form_sheet_bg,
+.o_form_view .o_form_sheet,
+.o_form_view .o_form_nosheet {
+    max-width: none !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    box-sizing: border-box;
+}
+
+// Make the content container stretch on large screens
+@media (min-width: 1400px) {
+    .o_action_manager .o_content {
+        max-width: 100% !important;
+    }
+}
+
+// Remove builtin content max-widths and center gutters so content uses full width
+.o_web_client .o_action_manager .o_view_controller,
+.o_web_client .o_action_manager .o_control_panel,
+.o_web_client .o_action_manager .o_content {
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+}
+
+// Stack form renderer + chatter vertically (form first, chatter below)
+.o_form_view .o_form_view_container {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+// Ensure both form and chatter take full width
+.o_form_view .o_form_renderer,
+.o_form_view .o-mail-Chatter,
+.o_form_view .o_ChatterContainer,
+.o_form_view .o-aside {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+// Spacing before chatter
+.o_form_view .o-mail-Chatter,
+.o_form_view .o_ChatterContainer,
+.o_form_view .o-aside {
+    margin-top: 16px !important;
+}
+
+// Ensure the form sheet itself expands and doesn't shrink weirdly
+.o_form_view .o_form_renderer,
+.o_form_view .o_form_sheet_bg,
+.o_form_view .o_form_sheet,
+.o_form_view .o_form_nosheet {
+    min-width: 0 !important;
+}
+
+// 3. Form Views & Sheets (visual styling)
 // -------------------------------------------------------------------------
 .o_form_sheet {
     background: #ffffff !important;
@@ -51,135 +117,15 @@
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* Ensure Odoo 16+ CSS variable does not cap the sheet width */
-.o_form_view .o_form_sheet_bg, .o_form_view .o_form_sheet {
-    --o-form-sheet-max-width: 100%;
-}
-
-/* Make the content container stretch on large screens */
-@media (min-width: 1400px) {
-  .o_action_manager .o_content { max-width: 100% !important; }
-}
-
-/* Remove builtin content max-widths and center gutters so content uses full width */
-.o_web_client .o_action_manager .o_view_controller,
-.o_web_client .o_action_manager .o_control_panel,
-.o_web_client .o_action_manager .o_content {
-  max-width: none !important;
-  width: 100% !important;
-  margin: 0 !important;
-}
-
-
-/* Make ALL form layouts full width: sheeted, nosheet, and wizards */
-.o_web_client .o_view_controller .o_form_view,
-.o_web_client .o_action_manager .o_view_controller .o_form_view,
-.o_web_client .o_form_view .o_form_nosheet,
-.o_web_client .o_form_view .o_form_sheet_bg,
-.o_web_client .o_form_view .o_form_sheet {
-  max-width: none !important;
-  width: 100% !important;
-}
-
-/* Ensure the sheet wrapper is not centered/narrowed */
-.o_form_view .o_form_sheet_bg {
-  max-width: none !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-  padding-left: 16px !important;
-  padding-right: 16px !important;
-}
-
-/* Control Panel and content wrappers should stretch too */
-.o_web_client .o_control_panel,
-.o_web_client .o_action_manager .o_content,
-.o_web_client .o_action_manager .o_view_controller {
-  max-width: none !important;
-  width: 100% !important;
-}
-
-/* As a fallback, force the CSS variable globally */
-:root { --o-form-sheet-max-width: 100% !important; }
-
-
-/* Place chatter below for both modern and legacy chatter containers; avoid forcing display type */
-.o_form_view .o_form_view_container > .oe_chatter,
-.o_form_view .o_form_view_container > .o-aside,
-.o_form_view .o_form_view_container > .o-mail-Chatter,
-.o_form_view .o_form_view_container > .o_ChatterContainer {
-  grid-column: 1 / -1 !important;
-  grid-row: 2 !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  float: none !important;
-  clear: both !important;
-}
-/* Ensure renderer line stays first when the container is grid */
-.o_form_view .o_form_view_container > .o_form_renderer {
-  grid-column: 1 / -1 !important;
-  grid-row: 1 !important;
-}
-
-/* Move chatter below the form and free the right column */
-/* removed to avoid grid conflicts; allow Odoo to define columns */
-.o_form_view .o-aside,
-.o_form_view .o_ChatterContainer,
-.o_form_view .o-mail-Chatter { grid-column: 1 / -1 !important; grid-row: 2 !important; max-width: 100% !important; }
-
-/* Explicit placement: sheet first (row 1), chatter below (row 2) */
-/* Ensure sheet container is visible even if aside tries to float */
-.o_form_view .o_form_renderer { min-width: 0 !important; }
-.o_form_view .o_form_sheet_bg, .o_form_view .o_form_sheet, .o_form_view .o_form_nosheet { min-width: 0 !important; }
-
-.o_web_client .o_form_view .o_form_renderer > .o_form_sheet,
-.o_web_client .o_form_view .o_form_renderer > .o_form_nosheet,
-.o_web_client .o_form_view .o_form_renderer > .o_form_sheet_bg { grid-column: 1 / -1 !important; grid-row: 1 !important; }
-.o_web_client .o_form_view .o_form_renderer > .o-aside,
-.o_web_client .o_form_view .o_form_renderer > .o_ChatterContainer,
-.o_web_client .o_form_view .o_form_renderer > .o-mail-Chatter,
-.o_web_client .o_form_view .o_form_renderer > [class*="Chatter"],
-.o_web_client .o_form_view .o_form_renderer > [class*="chatter"],
-.o_web_client .o_form_view .o_form_renderer > [class*="aside"] {
-  grid-column: 1 / -1 !important;
-  grid-row: 2 !important;
-  width: 100% !important;
-  max-width: 100% !important;
-}
-
-.o_form_view .o-aside {
-  grid-column: 1 / -1 !important;
-  grid-row: 2 !important;
-  max-width: 100% !important;
-  width: 100% !important;
-}
-
-/* If any legacy grid names are used */
-.o_web_client .o_form_view .o_form_view_body,
-.o_web_client .o_form_view .o_form_sheet_container {
-  grid-template-columns: minmax(0, 1fr) !important;
-}
-
-/* Ensure the form sheet itself expands */
-.o_form_view .o_form_sheet, .o_form_view .o_form_nosheet { width: 100% !important; max-width: none !important; }
-
-
-/* Wizard/nosheet specific containers */
-.o_web_client .modal .o_form_nosheet,
-.o_web_client .o_form_view .o_form_nosheet { width: 100% !important; max-width: none !important; }
-
-/* Kill any residual max-widths on wrappers */
-.o_web_client .o_content, .o_web_client .o_view_controller { max-width: none !important; }
-
-
 // Increase label size
 .o_form_view .o_form_label {
     font-size: 1rem !important; // 16px
     font-weight: 600 !important;
-    color: #475569; // Slate-600
+    color: #475569;
     margin-bottom: 8px !important;
 }
 
-// 3. List Views
+// 4. List Views
 // -------------------------------------------------------------------------
 .o_list_view .o_list_table {
     background: #ffffff !important;
@@ -190,7 +136,7 @@
     margin-bottom: 20px !important;
 
     thead {
-        background: #f8fafc; // Slate-50
+        background: #f8fafc;
 
         th {
             border-bottom: 1px solid #e2e8f0 !important;
@@ -198,7 +144,7 @@
             font-size: 0.7rem;
             font-weight: 600;
             letter-spacing: 0.08em;
-            color: #64748b; // Slate-500
+            color: #64748b;
             padding: 16px 20px !important;
         }
     }
@@ -209,7 +155,7 @@
         td {
             padding: 16px 20px !important;
             border-top: 1px solid #f1f5f9 !important;
-            color: #334155; // Slate-700
+            color: #334155;
             font-weight: 500;
         }
 
@@ -223,7 +169,7 @@
     }
 }
 
-// 4. Modern Buttons
+// 5. Modern Buttons
 // -------------------------------------------------------------------------
 .btn {
     border-radius: 10px !important;
@@ -240,7 +186,7 @@
 }
 
 .btn-primary {
-    background: #374151 !important; // Dark Gray
+    background: #374151 !important;
     border: 1px solid #374151 !important;
     box-shadow: 0 4px 12px rgba(55, 65, 81, 0.25);
 
@@ -267,13 +213,13 @@
     }
 }
 
-// 5. Typography & Inputs
+// 6. Typography & Inputs
 // -------------------------------------------------------------------------
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
     -webkit-font-smoothing: antialiased;
-    color: #1e293b; // Slate-800
-    font-size: 15px !important; // Base font size increase
+    color: #1e293b;
+    font-size: 15px !important;
 }
 
 h1,
@@ -284,29 +230,28 @@ h5,
 h6 {
     font-weight: 700 !important;
     letter-spacing: -0.02em;
-    color: #0f172a; // Slate-900
+    color: #0f172a;
 }
 
 // Larger Inputs
 .o_field_widget {
-
     input,
     select,
     textarea {
         border-radius: 12px !important;
-        border: 1px solid #cbd5e1 !important; // Slightly darker border
-        padding: 14px 20px !important; // Larger padding
-        font-size: 1rem !important; // 16px text
+        border: 1px solid #cbd5e1 !important;
+        padding: 14px 20px !important;
+        font-size: 1rem !important;
         transition: all 0.2s ease;
         background: #f8fafc;
         font-weight: 500;
-        color: #1e293b; // Darker text
-        min-height: 48px !important; // Taller inputs
+        color: #1e293b;
+        min-height: 48px !important;
 
         &:focus {
             background: #ffffff;
-            border-color: #64748b !important; // Slate-500
-            box-shadow: 0 0 0 4px rgba(55, 65, 81, 0.15) !important; // Stronger focus ring
+            border-color: #64748b !important;
+            box-shadow: 0 0 0 4px rgba(55, 65, 81, 0.15) !important;
             outline: none;
         }
 
@@ -316,7 +261,7 @@ h6 {
     }
 }
 
-// 6. Kanban View Modernization
+// 7. Kanban View Modernization
 // -------------------------------------------------------------------------
 .o_kanban_view .o_kanban_record {
     border-radius: 16px !important;
@@ -327,13 +272,14 @@ h6 {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
     &:hover {
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+                    0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
         transform: translateY(-4px);
         z-index: 10;
     }
 }
 
-// 7. Navbar (Clean White Theme - Consolidated from volt_overrides)
+// 8. Navbar (Clean White Theme)
 // -------------------------------------------------------------------------
 .o_main_navbar,
 nav.o_main_navbar,
@@ -347,7 +293,7 @@ header.o_main_navbar,
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
     height: 64px !important;
     padding: 0 24px !important;
-    color: #1e293b !important; // Slate-800
+    color: #1e293b !important;
     z-index: 1000 !important;
 }
 
@@ -361,14 +307,14 @@ header *,
 // Navbar Links & Buttons
 .o_main_navbar a,
 .o_main_navbar button,
-.o_main_navbar .o_menu_sections>li>a,
+.o_main_navbar .o_menu_sections > li > a,
 .o_main_navbar .o_menu_systray .o_nav_entry,
 .o_main_navbar .o_menu_brand,
 .top_heading a,
 header a,
 .o_main_navbar .dropdown-toggle,
 .o_main_navbar .o_user_menu .dropdown-toggle {
-    color: #1e293b !important; // Slate-800
+    color: #1e293b !important;
     font-size: 14px !important;
     font-weight: 600 !important;
     padding: 8px 16px !important;
@@ -378,22 +324,22 @@ header a,
     transition: all 0.2s ease;
 
     &:hover {
-        background-color: #f3f4f6 !important; // Slate-100
-        color: #0f172a !important; // Slate-900
+        background-color: #f3f4f6 !important;
+        color: #0f172a !important;
     }
 }
 
 // Active Menu Item
-.o_main_navbar .o_menu_sections>li.active>a,
-.o_main_navbar .o_menu_sections>li.show>a {
-    background-color: #e5e7eb !important; // Slate-200
+.o_main_navbar .o_menu_sections > li.active > a,
+.o_main_navbar .o_menu_sections > li.show > a {
+    background-color: #e5e7eb !important;
     color: #0f172a !important;
     font-weight: 700 !important;
 }
 
 // Systray Icons
 .o_menu_systray .o_nav_entry {
-    color: #64748b !important; // Slate-500
+    color: #64748b !important;
 
     &:hover {
         background-color: #f3f4f6 !important;
@@ -412,7 +358,7 @@ header a,
     background-color: #f3f4f6 !important;
 }
 
-// 8. Modal & Dialogs
+// 9. Modal & Dialogs
 // -------------------------------------------------------------------------
 .modal-content {
     border-radius: 24px !important;
@@ -432,7 +378,7 @@ header a,
     background: #f8fafc;
 }
 
-// 9. Notebooks & Tabs (Fixing the "Items" tab look)
+// 10. Notebooks & Tabs
 // -------------------------------------------------------------------------
 .o_notebook_headers {
     border-bottom: 2px solid #f1f5f9 !important;
@@ -456,7 +402,7 @@ header a,
                 transition: all 0.2s ease;
 
                 &.active {
-                    color: #374151 !important; // Dark Gray
+                    color: #374151 !important;
                     border-bottom: 2px solid #374151 !important;
                 }
 
@@ -469,7 +415,7 @@ header a,
     }
 }
 
-// 10. Fix Textareas & Internal Notes
+// 11. Textareas & Internal Notes
 // -------------------------------------------------------------------------
 .o_field_text,
 textarea {
@@ -479,160 +425,23 @@ textarea {
     line-height: 1.6 !important;
 }
 
-// Specific fix for the "Internal Notes" placeholder issue
+// Specific fix for inner groups
 .o_group.o_inner_group {
     width: 100% !important;
-    display: block !important; // Prevent weird flex shrinking
+    display: block !important;
 }
 
-// 11. One2Many Lists (The "Items" table inside forms)
+// 12. One2Many Lists
 // -------------------------------------------------------------------------
 .o_field_one2many {
     .o_list_view {
-        box-shadow: none !important; // Remove double shadow inside forms
+        box-shadow: none !important;
         border: 1px solid #f1f5f9 !important;
         margin-top: 16px !important;
 
         .o_list_table {
             border: none !important;
         }
-
-// 13.b. Vanilla JS Datepicker (Bootstrap 5) – Modern style
-// -------------------------------------------------------------------------
-.datepicker-dropdown,
-.datepicker {
-  z-index: 2090 !important; // above dialogs
-}
-
-.datepicker-picker {
-  background-color: #ffffff !important;
-  border: 1px solid rgba(0,0,0,.06) !important;
-  border-radius: 16px !important;
-  box-shadow: 0 20px 40px rgba(0,0,0,.16) !important;
-  overflow: hidden !important;
-}
-
-.datepicker-title {
-  background: #ffffff !important;
-  color: #1f2937 !important;
-  font-weight: 700 !important;
-  font-size: 1rem !important;
-  padding: .75rem 1rem !important;
-  border-bottom: 1px solid #eef2f7 !important;
-}
-
-.datepicker-header .datepicker-controls {
-  padding: .5rem .75rem !important;
-}
-.datepicker-controls .button {
-  border: 1px solid #e5e7eb !important;
-  border-radius: 10px !important;
-  background: #fff !important;
-  color: #374151 !important;
-  transition: all .15s ease !important;
-}
-.datepicker-controls .button:hover {
-  background: #f3f4f6 !important;
-  border-color: #d1d5db !important;
-}
-.datepicker-controls .view-switch {
-  font-weight: 700 !important;
-  background: transparent !important;
-  border-color: transparent !important;
-}
-
-.datepicker-main { padding: .5rem !important; }
-.datepicker-view .days-of-week { gap: .25rem; padding: .25rem .25rem .5rem; }
-.datepicker-view .dow {
-  color: #6b7280 !important; // Slate-500
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  font-size: .75rem !important;
-}
-
-/* Week numbers */
-.datepicker-view .week {
-  color: #9CA3AF !important;
-  font-weight: 700 !important;
-}
-
-/* Day cells */
-.datepicker-view .days .datepicker-cell,
-.datepicker-view.datepicker-grid .datepicker-cell {
-  height: 40px !important;
-  line-height: 40px !important;
-  width: 40px !important;
-  margin: 4px !important;
-  border-radius: 10px !important;
-  color: #374151 !important;
-  transition: transform .12s ease, background-color .12s ease, color .12s ease !important;
-}
-.datepicker-cell:hover { background: #f3f4f6 !important; transform: scale(1.04); }
-.datepicker-cell.disabled, .datepicker-cell.disabled:hover { color: #cbd5e1 !important; background: transparent !important; transform:none; }
-
-/* Today indicator */
-.datepicker-cell.today { position: relative; font-weight: 700; }
-.datepicker-cell.today::after {
-  content: "";
-  position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
-  width: 6px; height: 6px; border-radius: 50%; background: #374151;
-}
-
-/* Selected / range */
-.datepicker-cell.selected,
-.datepicker-cell.range-start,
-.datepicker-cell.range-end {
-  background: #374151 !important; color: #fff !important; box-shadow: 0 6px 14px rgba(55,65,81,.25);
-}
-.datepicker-cell.range,
-.datepicker-cell.range:hover {
-  background: #e5e7eb !important; color: #111827 !important;
-}
-
-
-/* Force light background for datepicker (disable dark slate look) */
-.o_web_client .datepicker,
-.o_web_client .datepicker-dropdown,
-.o_web_client .datepicker-picker,
-.o_web_client .datepicker-main,
-.o_web_client .datepicker-view,
-.o_web_client .datepicker-view .days-of-week,
-.o_web_client .datepicker-view .days,
-.o_web_client .datepicker-view .dow,
-.o_web_client .datepicker-view .week,
-.o_web_client .datepicker-view .days .datepicker-cell {
-  background-color: #ffffff !important;
-  color: #111827 !important; /* ensure readable text */
-}
-
-
-/* Hard override of any dark palette left by theme libs */
-.o_web_client .datepicker .datepicker-grid,
-.o_web_client .datepicker .calendar-weeks,
-.o_web_client .datepicker .days-of-week,
-.o_web_client .datepicker .days,
-.o_web_client .datepicker .days .week,
-.o_web_client .datepicker .days .datepicker-cell:not(.selected):not(.range):not(.focused) {
-  background: #ffffff !important;
-  background-color: #ffffff !important;
-  color: #111827 !important;
-}
-
-/* Ensure modal background behind the grid remains light */
-.o_dialog_container .datepicker-dropdown { background: #ffffff !important; }
-
-
-/* Last-resort override: force all day cells to white unless explicitly selected/range */
-.o_web_client .datepicker .days .datepicker-cell { background-color: #ffffff !important; }
-.o_web_client .datepicker .days .datepicker-cell.selected,
-.o_web_client .datepicker .days .datepicker-cell.range,
-.o_web_client .datepicker .days .datepicker-cell.range-start,
-.o_web_client .datepicker .days .datepicker-cell.range-end { background-color: #374151 !important; color: #ffffff !important; }
-
-/* Remove any gradients/images that may produce dark tint */
-.o_web_client .datepicker *,
-.o_web_client .datepicker { background-image: none !important; }
-
     }
 
     .o_field_x2many_list_row_add {
@@ -655,7 +464,7 @@ textarea {
     }
 }
 
-// 12. Header Buttons (New, etc.)
+// 13. Header Buttons (New, etc.)
 // -------------------------------------------------------------------------
 .o_control_panel .o_cp_buttons .btn {
     text-transform: uppercase;
@@ -664,25 +473,191 @@ textarea {
     padding: 10px 20px !important;
 }
 
-// 13. Date Picker Fixes (Comprehensive & Modernized)
+// 14. Vanilla JS Datepicker (Bootstrap 5 style)
+// -------------------------------------------------------------------------
+.datepicker-dropdown,
+.datepicker {
+    z-index: 2090 !important;
+}
+
+.datepicker-picker {
+    background-color: #ffffff !important;
+    border: 1px solid rgba(0, 0, 0, .06) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, .16) !important;
+    overflow: hidden !important;
+}
+
+.datepicker-title {
+    background: #ffffff !important;
+    color: #1f2937 !important;
+    font-weight: 700 !important;
+    font-size: 1rem !important;
+    padding: .75rem 1rem !important;
+    border-bottom: 1px solid #eef2f7 !important;
+}
+
+.datepicker-header .datepicker-controls {
+    padding: .5rem .75rem !important;
+}
+
+.datepicker-controls .button {
+    border: 1px solid #e5e7eb !important;
+    border-radius: 10px !important;
+    background: #fff !important;
+    color: #374151 !important;
+    transition: all .15s ease !important;
+
+    &:hover {
+        background: #f3f4f6 !important;
+        border-color: #d1d5db !important;
+    }
+}
+
+.datepicker-controls .view-switch {
+    font-weight: 700 !important;
+    background: transparent !important;
+    border-color: transparent !important;
+}
+
+.datepicker-main {
+    padding: .5rem !important;
+}
+
+.datepicker-view .days-of-week {
+    gap: .25rem;
+    padding: .25rem .25rem .5rem;
+}
+
+.datepicker-view .dow {
+    color: #6b7280 !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    font-size: .75rem !important;
+}
+
+.datepicker-view .week {
+    color: #9CA3AF !important;
+    font-weight: 700 !important;
+}
+
+.datepicker-view .days .datepicker-cell,
+.datepicker-view.datepicker-grid .datepicker-cell {
+    height: 40px !important;
+    line-height: 40px !important;
+    width: 40px !important;
+    margin: 4px !important;
+    border-radius: 10px !important;
+    color: #374151 !important;
+    transition: transform .12s ease, background-color .12s ease, color .12s ease !important;
+}
+
+.datepicker-cell:hover {
+    background: #f3f4f6 !important;
+    transform: scale(1.04);
+}
+
+.datepicker-cell.disabled,
+.datepicker-cell.disabled:hover {
+    color: #cbd5e1 !important;
+    background: transparent !important;
+    transform: none;
+}
+
+.datepicker-cell.today {
+    position: relative;
+    font-weight: 700;
+}
+
+.datepicker-cell.today::after {
+    content: "";
+    position: absolute;
+    bottom: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #374151;
+}
+
+.datepicker-cell.selected,
+.datepicker-cell.range-start,
+.datepicker-cell.range-end {
+    background: #374151 !important;
+    color: #fff !important;
+    box-shadow: 0 6px 14px rgba(55, 65, 81, .25);
+}
+
+.datepicker-cell.range,
+.datepicker-cell.range:hover {
+    background: #e5e7eb !important;
+    color: #111827 !important;
+}
+
+// Force light background
+.o_web_client .datepicker,
+.o_web_client .datepicker-dropdown,
+.o_web_client .datepicker-picker,
+.o_web_client .datepicker-main,
+.o_web_client .datepicker-view,
+.o_web_client .datepicker-view .days-of-week,
+.o_web_client .datepicker-view .days,
+.o_web_client .datepicker-view .dow,
+.o_web_client .datepicker-view .week,
+.o_web_client .datepicker-view .days .datepicker-cell {
+    background-color: #ffffff !important;
+    color: #111827 !important;
+}
+
+.o_web_client .datepicker .datepicker-grid,
+.o_web_client .datepicker .calendar-weeks,
+.o_web_client .datepicker .days-of-week,
+.o_web_client .datepicker .days,
+.o_web_client .datepicker .days .week,
+.o_web_client .datepicker .days .datepicker-cell:not(.selected):not(.range):not(.focused) {
+    background: #ffffff !important;
+    color: #111827 !important;
+}
+
+.o_dialog_container .datepicker-dropdown {
+    background: #ffffff !important;
+}
+
+.o_web_client .datepicker .days .datepicker-cell {
+    background-color: #ffffff !important;
+}
+
+.o_web_client .datepicker .days .datepicker-cell.selected,
+.o_web_client .datepicker .days .datepicker-cell.range,
+.o_web_client .datepicker .days .datepicker-cell.range-start,
+.o_web_client .datepicker .days .datepicker-cell.range-end {
+    background-color: #374151 !important;
+    color: #ffffff !important;
+}
+
+.o_web_client .datepicker *,
+.o_web_client .datepicker {
+    background-image: none !important;
+}
+
+// 15. Bootstrap DateTimePicker (Odoo's bootstrap widget) – Light Theme
 // -------------------------------------------------------------------------
 body {
-
-    // Target Odoo's Bootstrap Datepicker
     .bootstrap-datetimepicker-widget,
     .datepicker,
     .datepicker-dropdown {
         background-color: #ffffff !important;
         background: #ffffff !important;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2) !important; // Deeper shadow
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2) !important;
         border: 1px solid rgba(0, 0, 0, 0.08) !important;
         border-radius: 16px !important;
-        padding: 0 !important; // Remove padding to let header touch edges
+        padding: 0 !important;
         color: #1e293b !important;
         width: auto !important;
         min-width: 320px;
         z-index: 9999 !important;
-        overflow: hidden; // Ensure header radius is respected
+        overflow: hidden;
         font-family: 'Inter', sans-serif !important;
 
         &.dropdown-menu {
@@ -697,29 +672,27 @@ body {
             }
         }
 
-        // Header - Clean White Theme
         thead tr:first-child th,
         .datepicker-switch,
         .picker-switch {
-            background-color: #ffffff !important; // White background
-            color: #1e293b !important; // Dark text
+            background-color: #ffffff !important;
+            color: #1e293b !important;
             font-size: 1rem !important;
             font-weight: 600 !important;
-            padding: 16px 0 !important; // Taller header
+            padding: 16px 0 !important;
             border-radius: 0 !important;
 
             &:hover {
-                background-color: #f8fafc !important; // Light gray on hover
+                background-color: #f8fafc !important;
             }
         }
 
-        // Navigation Arrows in Header
         .prev,
         .next,
         .datepicker-prev,
         .datepicker-next {
             background-color: transparent !important;
-            color: #64748b !important; // Slate-500
+            color: #64748b !important;
             border-radius: 0 !important;
 
             &:hover {
@@ -727,13 +700,11 @@ body {
                 color: #1e293b !important;
             }
 
-            // Fix icon alignment if needed
             i {
                 color: #64748b !important;
             }
         }
 
-        // Day Names Header (Mo, Tu, We...)
         thead tr:last-child th {
             background-color: #f8fafc !important;
             color: #64748b !important;
@@ -744,7 +715,6 @@ body {
             border-bottom: 1px solid #e2e8f0;
         }
 
-        // Calendar Grid
         table {
             background-color: #ffffff !important;
             margin: 0 !important;
@@ -762,7 +732,7 @@ body {
                     background-color: #ffffff !important;
                     color: #334155 !important;
                     font-weight: 500;
-                    border-radius: 50% !important; // Circular selection
+                    border-radius: 50% !important;
                     transition: all 0.2s ease;
                     width: 36px !important;
                     height: 36px !important;
@@ -777,7 +747,7 @@ body {
 
                     &.active,
                     &.active:hover {
-                        background-color: #374151 !important; // Brand Primary
+                        background-color: #374151 !important;
                         color: #ffffff !important;
                         box-shadow: 0 4px 10px rgba(55, 65, 81, 0.3);
                         font-weight: 700;
@@ -808,7 +778,7 @@ body {
 
                     &.old,
                     &.new {
-                        color: #cbd5e1 !important; // Lighter text for other months
+                        color: #cbd5e1 !important;
                     }
                 }
 
@@ -829,7 +799,6 @@ body {
         }
     }
 
-    // Specific fix for Volt's .datepicker-picker if used
     .datepicker-picker {
         background-color: #ffffff !important;
         color: #1e293b !important;
