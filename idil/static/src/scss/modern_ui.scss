@@ -169,6 +169,27 @@
   width: 100% !important;
 }
 
+/* Fallback: also target legacy _underscore aside and non-direct descendants */
+.o_form_view .o_form_view_container .o_aside,
+.o_form_view .o_form_view_container .o-aside,
+.o_form_view .o_form_view_container .oe_chatter,
+.o_form_view .o_form_view_container .o-mail-Chatter,
+.o_form_view .o_form_view_container .o_ChatterContainer {
+  grid-column: 1 / -1 !important;
+  grid-row: 2 !important;
+  order: 2 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  float: none !important;
+  clear: both !important;
+}
+/* Ensure renderer comes first even if not a direct child */
+.o_form_view .o_form_view_container .o_form_renderer {
+  grid-column: 1 / -1 !important;
+  grid-row: 1 !important;
+  order: 1 !important;
+}
+
 
 // 3. Form Views & Sheets (visual styling)
 // -------------------------------------------------------------------------
