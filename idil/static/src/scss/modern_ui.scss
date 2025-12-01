@@ -102,6 +102,13 @@
 :root { --o-form-sheet-max-width: 100% !important; }
 
 
+/* Ensure container children order: renderer first, chatter second */
+.o_form_view .o_form_view_container { display: grid !important; }
+.o_form_view .o_form_view_container > .o_form_renderer { grid-column: 1 / -1 !important; grid-row: 1 !important; order: 1 !important; }
+.o_form_view .o_form_view_container > .o-aside,
+.o_form_view .o_form_view_container > .o-mail-Chatter,
+.o_form_view .o_form_view_container > .o_ChatterContainer { grid-column: 1 / -1 !important; grid-row: 2 !important; order: 2 !important; width: 100% !important; max-width: 100% !important; }
+
 /* Move chatter below the form and free the right column */
 .o_form_view .o_form_view_container { grid-template-columns: minmax(0, 1fr) !important; }
 .o_form_view .o-aside,
