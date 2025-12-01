@@ -512,6 +512,22 @@ textarea {
   background: #e5e7eb !important; color: #111827 !important;
 }
 
+
+/* Force light background for datepicker (disable dark slate look) */
+.o_web_client .datepicker,
+.o_web_client .datepicker-dropdown,
+.o_web_client .datepicker-picker,
+.o_web_client .datepicker-main,
+.o_web_client .datepicker-view,
+.o_web_client .datepicker-view .days-of-week,
+.o_web_client .datepicker-view .days,
+.o_web_client .datepicker-view .dow,
+.o_web_client .datepicker-view .week,
+.o_web_client .datepicker-view .days .datepicker-cell {
+  background-color: #ffffff !important;
+  color: #111827 !important; /* ensure readable text */
+}
+
     }
 
     .o_field_x2many_list_row_add {
