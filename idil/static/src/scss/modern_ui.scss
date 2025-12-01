@@ -108,24 +108,21 @@
 .o_form_view .o_ChatterContainer,
 .o_form_view .o-mail-Chatter { grid-column: 1 / -1 !important; grid-row: 2 !important; max-width: 100% !important; }
 
-/* Stronger generic fallback for any form/chatter layout */
-.o_web_client .o_form_view .o_form_renderer {
-  grid-template-columns: minmax(0, 1fr) !important;
-  grid-auto-flow: row !important;
-}
-.o_web_client .o_form_view .o_form_renderer .o-aside,
-.o_web_client .o_form_view .o_form_renderer .o_ChatterContainer,
-.o_web_client .o_form_view .o_form_renderer .o-mail-Chatter,
-.o_web_client .o_form_view .o_form_renderer [class*="Chatter"],
-.o_web_client .o_form_view .o_form_renderer [class*="chatter"],
-.o_web_client .o_form_view .o_form_renderer [class*="aside"] {
+/* Explicit placement: sheet first (row 1), chatter below (row 2) */
+.o_web_client .o_form_view .o_form_renderer > .o_form_sheet,
+.o_web_client .o_form_view .o_form_renderer > .o_form_nosheet,
+.o_web_client .o_form_view .o_form_renderer > .o_form_sheet_bg { grid-column: 1 / -1 !important; grid-row: 1 !important; }
+.o_web_client .o_form_view .o_form_renderer > .o-aside,
+.o_web_client .o_form_view .o_form_renderer > .o_ChatterContainer,
+.o_web_client .o_form_view .o_form_renderer > .o-mail-Chatter,
+.o_web_client .o_form_view .o_form_renderer > [class*="Chatter"],
+.o_web_client .o_form_view .o_form_renderer > [class*="chatter"],
+.o_web_client .o_form_view .o_form_renderer > [class*="aside"] {
   grid-column: 1 / -1 !important;
   grid-row: 2 !important;
   width: 100% !important;
   max-width: 100% !important;
 }
-/* Neutralize any variable-based aside width */
-.o_web_client .o_form_view .o_form_renderer { --o-form-view-aside-width: 0 !important; }
 
 .o_form_view .o-aside {
   grid-column: 1 / -1 !important;
