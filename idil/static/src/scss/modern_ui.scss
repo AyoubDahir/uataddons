@@ -957,3 +957,79 @@ body {
         color: #1e293b !important;
     }
 }
+
+// 21. Modernized Form UI/UX polish
+// -------------------------------------------------------------------------
+:root {
+  --brand-primary: #374151;
+  --brand-primary-600: #1f2937;
+  --surface: #ffffff;
+  --muted: #64748b;
+  --ring: rgba(55, 65, 81, 0.15);
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --success: #16a34a;
+}
+
+/* Form layout spacing */
+.o_form_view .o_group { column-gap: 24px !important; row-gap: 12px !important; }
+.o_form_view .o_group .o_form_label {
+  min-width: 220px; text-align: right; padding-right: 16px; color: #334155;
+}
+
+/* Inputs: cleaner states */
+.o_field_widget input,
+.o_field_widget select,
+.o_field_widget textarea {
+  background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; transition: box-shadow .15s ease, border-color .15s ease;
+}
+.o_field_widget input:focus,
+.o_field_widget select:focus,
+.o_field_widget textarea:focus {
+  background: #fff; border-color: var(--brand-primary) !important; box-shadow: 0 0 0 4px var(--ring) !important;
+}
+.o_field_widget input:disabled,
+.o_field_widget select:disabled,
+.o_field_widget textarea:disabled,
+.o_field_widget .o_input.o_readonly_modifier {
+  background: #eef2f7 !important; color: #64748b !important;
+}
+/* Required and invalid */
+.o_required_modifier input,
+.o_required_modifier select,
+.o_required_modifier textarea {
+  border-color: var(--warning) !important; box-shadow: 0 0 0 3px rgba(245, 158, 11, .2) !important;
+}
+.o_field_invalid input,
+.o_field_invalid select,
+.o_field_invalid textarea {
+  border-color: var(--danger) !important; box-shadow: 0 0 0 3px rgba(239, 68, 68, .2) !important; background: #fff7f7 !important;
+}
+
+/* Section headers */
+.o_horizontal_separator {
+  background: #f8fafc; border: 1px solid #eef2f7; border-radius: 12px; padding: 8px 12px; font-weight: 700; color: #334155; margin: 16px 0 !important;
+}
+
+/* Notebook tabs -> pill style */
+.o_notebook_headers .nav-tabs .nav-link {
+  border: 1px solid #e5e7eb !important; border-bottom: none !important; background: #f8fafc !important; color: #475569 !important; border-radius: 9999px !important; margin-right: 8px; padding: 10px 16px !important;
+}
+.o_notebook_headers .nav-tabs .nav-link.active {
+  background: var(--brand-primary) !important; color: #fff !important; border-color: var(--brand-primary) !important;
+}
+
+/* Statusbar and header buttons to pills */
+.o_form_statusbar .btn, .o_control_panel .o_cp_buttons .btn { border-radius: 9999px !important; }
+
+/* One2many: sticky header + zebra + hover */
+.o_field_one2many .o_list_table thead th { position: sticky; top: 0; background: #f9fafb !important; z-index: 1; }
+.o_field_one2many .o_list_table tbody tr:nth-child(even) { background: #fcfcfd; }
+.o_field_one2many .o_list_table tbody tr:hover { background: #f6f7fb !important; }
+
+/* Better placeholders */
+::placeholder { color: #94a3b8; }
+
+/* Compact help/error messages */
+.text-danger, .o_invalid_tip { font-size: 0.85rem !important; }
+
