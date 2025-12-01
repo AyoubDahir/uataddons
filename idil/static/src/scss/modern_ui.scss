@@ -110,12 +110,16 @@
 .o_form_view .o_form_view_container > .o_ChatterContainer { grid-column: 1 / -1 !important; grid-row: 2 !important; order: 2 !important; width: 100% !important; max-width: 100% !important; }
 
 /* Move chatter below the form and free the right column */
-.o_form_view .o_form_view_container { grid-template-columns: minmax(0, 1fr) !important; }
+/* removed to avoid grid conflicts; allow Odoo to define columns */
 .o_form_view .o-aside,
 .o_form_view .o_ChatterContainer,
 .o_form_view .o-mail-Chatter { grid-column: 1 / -1 !important; grid-row: 2 !important; max-width: 100% !important; }
 
 /* Explicit placement: sheet first (row 1), chatter below (row 2) */
+/* Ensure sheet container is visible even if aside tries to float */
+.o_form_view .o_form_renderer { min-width: 0 !important; }
+.o_form_view .o_form_sheet_bg, .o_form_view .o_form_sheet, .o_form_view .o_form_nosheet { min-width: 0 !important; }
+
 .o_web_client .o_form_view .o_form_renderer > .o_form_sheet,
 .o_web_client .o_form_view .o_form_renderer > .o_form_nosheet,
 .o_web_client .o_form_view .o_form_renderer > .o_form_sheet_bg { grid-column: 1 / -1 !important; grid-row: 1 !important; }
