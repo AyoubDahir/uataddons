@@ -544,6 +544,18 @@ textarea {
 /* Ensure modal background behind the grid remains light */
 .o_dialog_container .datepicker-dropdown { background: #ffffff !important; }
 
+
+/* Last-resort override: force all day cells to white unless explicitly selected/range */
+.o_web_client .datepicker .days .datepicker-cell { background-color: #ffffff !important; }
+.o_web_client .datepicker .days .datepicker-cell.selected,
+.o_web_client .datepicker .days .datepicker-cell.range,
+.o_web_client .datepicker .days .datepicker-cell.range-start,
+.o_web_client .datepicker .days .datepicker-cell.range-end { background-color: #374151 !important; color: #ffffff !important; }
+
+/* Remove any gradients/images that may produce dark tint */
+.o_web_client .datepicker *,
+.o_web_client .datepicker { background-image: none !important; }
+
     }
 
     .o_field_x2many_list_row_add {
