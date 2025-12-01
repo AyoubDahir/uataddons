@@ -298,15 +298,32 @@
 }
 
 .btn-primary {
-    background: #374151 !important;
-    border: 1px solid #374151 !important;
-    box-shadow: 0 4px 12px rgba(55, 65, 81, 0.25);
+    background: #ffffff !important;
+    color: #1f2937 !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
 
     &:hover {
-        background: #1f2937 !important;
-        border-color: #1f2937 !important;
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(55, 65, 81, 0.35);
+        background: #ffffff !important; /* stay white */
+        color: #0f172a !important;
+        border-color: #cbd5e1 !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06) !important;
+        transform: none !important;
+    }
+
+    &:active,
+    &.active {
+        background: #ffffff !important;
+        border-color: #94a3b8 !important;
+        box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.06) inset !important;
+    }
+
+    &:disabled,
+    &.disabled {
+        background: #ffffff !important;
+        color: #94a3b8 !important;
+        border-color: #e5e7eb !important;
+        box-shadow: none !important;
     }
 }
 
@@ -1062,6 +1079,60 @@ body {
   text-align: left !important;
   min-width: auto !important;
   margin: 0 0 6px 0 !important;
+
+// 23. Banking-style polish (neutral, white CTAs, minimal chrome)
+// -------------------------------------------------------------------------
+/* Background and panel */
+body, .o_web_client { background: #f6f8fb !important; }
+.o_control_panel { background: #ffffff !important; border-bottom: 1px solid #eef2f7 !important; }
+
+/* Primary actions (Save/New) are always white with subtle border */
+.o_control_panel .o_cp_buttons .btn-primary,
+.o_cp_buttons .o_form_button_save.btn-primary,
+.o_cp_buttons .o_form_button_create.btn-primary,
+.o_form_button_save.btn,
+.o_form_button_create.btn {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #d1d5db !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04) !important;
+}
+.o_control_panel .o_cp_buttons .btn-primary:hover,
+.o_cp_buttons .o_form_button_save.btn-primary:hover,
+.o_cp_buttons .o_form_button_create.btn-primary:hover,
+.o_form_button_save.btn:hover,
+.o_form_button_create.btn:hover {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #94a3b8 !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,.06) !important;
+}
+
+/* Secondary buttons: outline neutral */
+.o_control_panel .o_cp_buttons .btn-secondary,
+.o_control_panel .btn-outline-secondary,
+.btn-secondary {
+  background: #ffffff !important;
+  color: #475569 !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: none !important;
+}
+
+/* Danger actions: soft look */
+.btn-danger { background: #fff !important; color: #b91c1c !important; border: 1px solid #fecaca !important; }
+.btn-danger:hover { border-color: #fca5a5 !important; }
+
+/* Inputs with cleaner banking-like chrome */
+.o_field_widget input,
+.o_field_widget select,
+.o_field_widget textarea { border-color: #e2e8f0 !important; background: #fbfdff !important; }
+.o_field_widget input:focus,
+.o_field_widget select:focus,
+.o_field_widget textarea:focus { border-color: #94a3b8 !important; box-shadow: 0 0 0 3px rgba(148, 163, 184, .25) !important; }
+
+/* Card sheet shadow/crisp border */
+.o_form_sheet { border: 1px solid #e7ecf2 !important; box-shadow: 0 8px 26px rgba(16, 24, 40, .06) !important; }
+
 }
 .o_form_view .o_group .o_field_widget { width: 100% !important; }
 
