@@ -528,6 +528,22 @@ textarea {
   color: #111827 !important; /* ensure readable text */
 }
 
+
+/* Hard override of any dark palette left by theme libs */
+.o_web_client .datepicker .datepicker-grid,
+.o_web_client .datepicker .calendar-weeks,
+.o_web_client .datepicker .days-of-week,
+.o_web_client .datepicker .days,
+.o_web_client .datepicker .days .week,
+.o_web_client .datepicker .days .datepicker-cell:not(.selected):not(.range):not(.focused) {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color: #111827 !important;
+}
+
+/* Ensure modal background behind the grid remains light */
+.o_dialog_container .datepicker-dropdown { background: #ffffff !important; }
+
     }
 
     .o_field_x2many_list_row_add {
