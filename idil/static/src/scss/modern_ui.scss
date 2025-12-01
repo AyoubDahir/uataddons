@@ -142,6 +142,13 @@
 }
 
 /* When container is flex: force stacking to full width */
+/* When container is grid: collapse to a single column so chatter goes below */
+.o_form_view .o_form_view_container {
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-auto-flow: row !important;
+  grid-template-areas: none !important;
+}
+
 .o_form_view .o_form_view_container { flex-wrap: wrap; }
 .o_form_view .o_form_view_container > .o_form_renderer,
 .o_form_view .o_form_view_container > .oe_chatter,
