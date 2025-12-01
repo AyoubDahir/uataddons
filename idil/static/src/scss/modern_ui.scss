@@ -1033,3 +1033,48 @@ body {
 /* Compact help/error messages */
 .text-danger, .o_invalid_tip { font-size: 0.85rem !important; }
 
+
+// 22. Stacked card-style forms (like the provided mockup)
+// -------------------------------------------------------------------------
+/* Centered, narrow form card */
+.o_form_sheet {
+  max-width: 640px !important;
+  width: 100% !important;
+  margin: 24px auto !important; /* center */
+  border-radius: 14px !important;
+  border: 1px solid #eef2f7 !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06) !important;
+  padding: 20px 24px !important;
+}
+
+/* Single column, labels above inputs */
+.o_form_view .o_group,
+.o_form_view .o_group.o_inner_group,
+.o_form_view .o_group_col_2,
+.o_form_view .o_group_col_3 {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  column-gap: 0 !important;
+  row-gap: 12px !important;
+}
+.o_form_view .o_group .o_form_label { /* label above input */
+  order: -1; /* ensure label appears before its field in flow */
+  text-align: left !important;
+  min-width: auto !important;
+  margin: 0 0 6px 0 !important;
+}
+.o_form_view .o_group .o_field_widget { width: 100% !important; }
+
+/* Inputs full width and consistent height */
+.o_field_widget input,
+.o_field_widget select,
+.o_field_widget textarea {
+  width: 100% !important;
+  min-height: 44px !important;
+}
+.o_field_widget textarea { min-height: 120px !important; }
+
+/* Required star clarity (no color change request; keep visible) */
+.o_form_label .o_required_modifier:after,
+.o_field_required:after { font-weight: 700; }
+
