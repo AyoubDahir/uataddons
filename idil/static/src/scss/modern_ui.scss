@@ -2,6 +2,20 @@
 // Modern UI Overrides for BizCore - Premium Edition (Fixed Layout Version)
 // -------------------------------------------------------------------------
 
+
+// 0. Disable Chatter Everywhere
+// -------------------------------------------------------------------------
+// Hide Odoo chatter (messages, followers, activities) on all forms
+.o_form_view .oe_chatter,
+.o_form_view .o-mail-Chatter,
+.o_form_view .o_ChatterContainer,
+.o_form_view .o-aside,
+.o-mail-Composer,
+.o-mail-Thread,
+.o-mail-Activity {
+  display: none !important;
+}
+
 // 1. Animations & Keyframes
 // -------------------------------------------------------------------------
 @keyframes fadeInUp {
