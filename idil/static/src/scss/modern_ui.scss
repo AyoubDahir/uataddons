@@ -100,6 +100,49 @@
     min-width: 0 !important;
 }
 
+/* Robust placement: sheet first, chatter below (works for grid, flex, block) */
+/* Container direct children */
+.o_form_view .o_form_view_container > .o_form_renderer {
+  grid-column: 1 / -1 !important;
+  grid-row: 1 !important;
+  order: 1 !important;
+}
+.o_form_view .o_form_view_container > .oe_chatter,
+.o_form_view .o_form_view_container > .o-aside,
+.o_form_view .o_form_view_container > .o-mail-Chatter,
+.o_form_view .o_form_view_container > .o_ChatterContainer {
+  grid-column: 1 / -1 !important;
+  grid-row: 2 !important;
+  order: 2 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  float: none !important;
+  clear: both !important;
+}
+/* If chatter is inside the renderer */
+.o_web_client .o_form_view .o_form_renderer > .o_form_sheet,
+.o_web_client .o_form_view .o_form_renderer > .o_form_nosheet,
+.o_web_client .o_form_view .o_form_renderer > .o_form_sheet_bg {
+  grid-column: 1 / -1 !important;
+  grid-row: 1 !important;
+}
+.o_web_client .o_form_view .o_form_renderer > .o-aside,
+.o_web_client .o_form_view .o_form_renderer > .o-mail-Chatter,
+.o_web_client .o_form_view .o_form_renderer > .o_ChatterContainer,
+.o_web_client .o_form_view .o_form_renderer > [class*="Chatter"],
+.o_web_client .o_form_view .o_form_renderer > [class*="chatter"],
+.o_web_client .o_form_view .o_form_renderer > [class*="aside"]{
+  grid-column: 1 / -1 !important;
+  grid-row: 2 !important;
+  order: 2 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  float: none !important;
+  clear: both !important;
+}
+
+}
+
 // 3. Form Views & Sheets (visual styling)
 // -------------------------------------------------------------------------
 .o_form_sheet {
