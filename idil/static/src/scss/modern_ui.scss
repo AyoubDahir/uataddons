@@ -102,12 +102,23 @@
 :root { --o-form-sheet-max-width: 100% !important; }
 
 
-/* Ensure container children order: renderer first, chatter second */
-.o_form_view .o_form_view_container { display: grid !important; }
-.o_form_view .o_form_view_container > .o_form_renderer { grid-column: 1 / -1 !important; grid-row: 1 !important; order: 1 !important; }
+/* Place chatter below for both modern and legacy chatter containers; avoid forcing display type */
+.o_form_view .o_form_view_container > .oe_chatter,
 .o_form_view .o_form_view_container > .o-aside,
 .o_form_view .o_form_view_container > .o-mail-Chatter,
-.o_form_view .o_form_view_container > .o_ChatterContainer { grid-column: 1 / -1 !important; grid-row: 2 !important; order: 2 !important; width: 100% !important; max-width: 100% !important; }
+.o_form_view .o_form_view_container > .o_ChatterContainer {
+  grid-column: 1 / -1 !important;
+  grid-row: 2 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  float: none !important;
+  clear: both !important;
+}
+/* Ensure renderer line stays first when the container is grid */
+.o_form_view .o_form_view_container > .o_form_renderer {
+  grid-column: 1 / -1 !important;
+  grid-row: 1 !important;
+}
 
 /* Move chatter below the form and free the right column */
 /* removed to avoid grid conflicts; allow Odoo to define columns */
