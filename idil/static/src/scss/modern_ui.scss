@@ -70,6 +70,17 @@
   margin: 0 !important;
 }
 
+
+/* Make ALL form layouts full width: sheeted, nosheet, and wizards */
+.o_web_client .o_view_controller .o_form_view,
+.o_web_client .o_action_manager .o_view_controller .o_form_view,
+.o_web_client .o_form_view .o_form_nosheet,
+.o_web_client .o_form_view .o_form_sheet_bg,
+.o_web_client .o_form_view .o_form_sheet {
+  max-width: none !important;
+  width: 100% !important;
+}
+
 /* Ensure the sheet wrapper is not centered/narrowed */
 .o_form_view .o_form_sheet_bg {
   max-width: none !important;
@@ -79,19 +90,36 @@
   padding-right: 16px !important;
 }
 
+/* Control Panel and content wrappers should stretch too */
+.o_web_client .o_control_panel,
+.o_web_client .o_action_manager .o_content,
+.o_web_client .o_action_manager .o_view_controller {
+  max-width: none !important;
+  width: 100% !important;
+}
+
 /* As a fallback, force the CSS variable globally */
 :root { --o-form-sheet-max-width: 100% !important; }
 
 
 /* Move chatter below the form and free the right column */
-.o_form_view .o_form_view_container {
-  grid-template-columns: minmax(0, 1fr) !important;
-}
+.o_form_view .o_form_view_container { grid-template-columns: minmax(0, 1fr) !important; }
+.o_form_view .o-aside,
+.o_form_view .o_ChatterContainer,
+.o_form_view .o-mail-Chatter { grid-column: 1 / -1 !important; grid-row: 2 !important; max-width: 100% !important; }
+
 .o_form_view .o-aside {
   grid-column: 1 / -1 !important;
   grid-row: 2 !important;
   max-width: 100% !important;
 }
+
+/* Wizard/nosheet specific containers */
+.o_web_client .modal .o_form_nosheet,
+.o_web_client .o_form_view .o_form_nosheet { width: 100% !important; max-width: none !important; }
+
+/* Kill any residual max-widths on wrappers */
+.o_web_client .o_content, .o_web_client .o_view_controller { max-width: none !important; }
 
 
 // Increase label size
