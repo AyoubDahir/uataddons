@@ -39,15 +39,26 @@
 .o_form_sheet {
     background: #ffffff !important;
     border: 1px solid rgba(255, 255, 255, 0.5) !important;
-    border-radius: 24px !important; // Larger radius
-    // Multi-layered shadow for depth
+    border-radius: 16px !important;
     box-shadow:
         0 20px 50px -12px rgba(0, 0, 0, 0.1),
         0 0 25px -5px rgba(0, 0, 0, 0.05) !important;
-    padding: 56px !important; // Increased padding
-    max-width: 92% !important; // Wider form (was 1200px)
-    margin: 32px auto !important;
+    padding: 24px 28px 32px !important;
+    width: 100% !important;
+    max-width: none !important;
+    box-sizing: border-box;
+    margin: 16px 0 !important;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Ensure Odoo 16+ CSS variable does not cap the sheet width */
+.o_form_view .o_form_sheet_bg, .o_form_view .o_form_sheet {
+    --o-form-sheet-max-width: 100%;
+}
+
+/* Make the content container stretch on large screens */
+@media (min-width: 1400px) {
+  .o_action_manager .o_content { max-width: 100% !important; }
 }
 
 // Increase label size
