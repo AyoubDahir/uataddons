@@ -3,19 +3,6 @@
 // -------------------------------------------------------------------------
 
 
-// 0. Disable Chatter Everywhere
-// -------------------------------------------------------------------------
-// Hide Odoo chatter (messages, followers, activities) on all forms
-.o_form_view .oe_chatter,
-.o_form_view .o-mail-Chatter,
-.o_form_view .o_ChatterContainer,
-.o_form_view .o-aside,
-.o-mail-Composer,
-.o-mail-Thread,
-.o-mail-Activity {
-    display: none !important;
-}
-
 // 1. Animations & Keyframes
 // -------------------------------------------------------------------------
 @keyframes fadeInUp {
@@ -47,6 +34,7 @@
 .o_action_manager {
     animation: fadeInUp 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
+
 
 // 2. Full-width Forms & Chatter Below
 // -------------------------------------------------------------------------
@@ -88,10 +76,12 @@
 .o_form_view .o_form_view_container {
     display: flex !important;
     flex-direction: column !important;
+    flex-wrap: nowrap !important;
 }
 
 // Ensure both form and chatter take full width
 .o_form_view .o_form_renderer,
+.o_form_view .oe_chatter,
 .o_form_view .o-mail-Chatter,
 .o_form_view .o_ChatterContainer,
 .o_form_view .o-aside {
@@ -100,6 +90,7 @@
 }
 
 // Spacing before chatter
+.o_form_view .oe_chatter,
 .o_form_view .o-mail-Chatter,
 .o_form_view .o_ChatterContainer,
 .o_form_view .o-aside {
@@ -114,111 +105,28 @@
     min-width: 0 !important;
 }
 
-/* Robust placement: sheet first, chatter below (works for grid, flex, block) */
-/* Container direct children */
-.o_form_view .o_form_view_container>.o_form_renderer {
-    grid-column: 1 / -1 !important;
-    grid-row: 1 !important;
+// In case chatter is a direct child next to renderer
+.o_form_view .o_form_view_container > .o_form_renderer {
     order: 1 !important;
 }
 
-.o_form_view .o_form_view_container>.oe_chatter,
-.o_form_view .o_form_view_container>.o-aside,
-.o_form_view .o_form_view_container>.o-mail-Chatter,
-.o_form_view .o_form_view_container>.o_ChatterContainer {
-    grid-column: 1 / -1 !important;
-    grid-row: 2 !important;
+.o_form_view .o_form_view_container > .oe_chatter,
+.o_form_view .o_form_view_container > .o-aside,
+.o_form_view .o_form_view_container > .o-mail-Chatter,
+.o_form_view .o_form_view_container > .o_ChatterContainer {
     order: 2 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    float: none !important;
-    clear: both !important;
 }
 
-/* If chatter is inside the renderer */
-.o_web_client .o_form_view .o_form_renderer>.o_form_sheet,
-.o_web_client .o_form_view .o_form_renderer>.o_form_nosheet,
-.o_web_client .o_form_view .o_form_renderer>.o_form_sheet_bg {
-    grid-column: 1 / -1 !important;
-    grid-row: 1 !important;
-}
-
-.o_web_client .o_form_view .o_form_renderer>.o-aside,
-.o_web_client .o_form_view .o_form_renderer>.o-mail-Chatter,
-.o_web_client .o_form_view .o_form_renderer>.o_ChatterContainer,
-.o_web_client .o_form_view .o_form_renderer>[class*="Chatter"],
-.o_web_client .o_form_view .o_form_renderer>[class*="chatter"],
-.o_web_client .o_form_view .o_form_renderer>[class*="aside"] {
-    grid-column: 1 / -1 !important;
-    grid-row: 2 !important;
-    order: 2 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    float: none !important;
-    clear: both !important;
-}
-
-/* When container is flex: force stacking to full width */
-/* When container is grid: collapse to a single column so chatter goes below */
-.o_form_view .o_form_view_container {
-    grid-template-columns: minmax(0, 1fr) !important;
-    grid-auto-flow: row !important;
-    grid-template-areas: none !important;
-}
-
-.o_form_view .o_form_view_container {
-    flex-wrap: wrap;
-}
-
-.o_form_view .o_form_view_container>.o_form_renderer,
-.o_form_view .o_form_view_container>.oe_chatter,
-.o_form_view .o_form_view_container>.o-aside,
-.o_form_view .o_form_view_container>.o-mail-Chatter,
-.o_form_view .o_form_view_container>.o_ChatterContainer {
-    flex: 0 0 100% !important;
-    max-width: 100% !important;
-    width: 100% !important;
-}
-
-/* When chatter is inside the renderer and renderer is flex: stack children */
-.o_web_client .o_form_view .o_form_renderer {
-    flex-wrap: wrap;
-}
-
-.o_web_client .o_form_view .o_form_renderer>.o_form_sheet,
-.o_web_client .o_form_view .o_form_renderer>.o_form_nosheet,
-.o_web_client .o_form_view .o_form_renderer>.o_form_sheet_bg,
-.o_web_client .o_form_view .o_form_renderer>.o-aside,
-.o_web_client .o_form_view .o_form_renderer>.o-mail-Chatter,
-.o_web_client .o_form_view .o_form_renderer>.o_ChatterContainer,
-.o_web_client .o_form_view .o_form_renderer>[class*="Chatter"],
-.o_web_client .o_form_view .o_form_renderer>[class*="chatter"],
-.o_web_client .o_form_view .o_form_renderer>[class*="aside"] {
-    flex: 0 0 100% !important;
-    max-width: 100% !important;
-    width: 100% !important;
-}
-
-/* Fallback: also target legacy _underscore aside and non-direct descendants */
+// Fallback for legacy selectors
 .o_form_view .o_form_view_container .o_aside,
 .o_form_view .o_form_view_container .o-aside,
 .o_form_view .o_form_view_container .oe_chatter,
 .o_form_view .o_form_view_container .o-mail-Chatter,
 .o_form_view .o_form_view_container .o_ChatterContainer {
-    grid-column: 1 / -1 !important;
-    grid-row: 2 !important;
-    order: 2 !important;
     width: 100% !important;
     max-width: 100% !important;
     float: none !important;
     clear: both !important;
-}
-
-/* Ensure renderer comes first even if not a direct child */
-.o_form_view .o_form_view_container .o_form_renderer {
-    grid-column: 1 / -1 !important;
-    grid-row: 1 !important;
-    order: 1 !important;
 }
 
 
@@ -239,13 +147,13 @@
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-// Increase label size
 .o_form_view .o_form_label {
     font-size: 1rem !important; // 16px
     font-weight: 600 !important;
     color: #475569;
     margin-bottom: 8px !important;
 }
+
 
 // 4. List Views
 // -------------------------------------------------------------------------
@@ -291,6 +199,7 @@
     }
 }
 
+
 // 5. Modern Buttons
 // -------------------------------------------------------------------------
 .btn {
@@ -315,7 +224,6 @@
 
     &:hover {
         background: #ffffff !important;
-        /* stay white */
         color: #0f172a !important;
         border-color: #cbd5e1 !important;
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06) !important;
@@ -352,6 +260,7 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }
 }
+
 
 // 6. Typography & Inputs
 // -------------------------------------------------------------------------
@@ -402,6 +311,7 @@ h6 {
     }
 }
 
+
 // 7. Kanban View Modernization
 // -------------------------------------------------------------------------
 .o_kanban_view .o_kanban_record {
@@ -419,6 +329,7 @@ h6 {
         z-index: 10;
     }
 }
+
 
 // 8. Navbar (Clean White Theme)
 // -------------------------------------------------------------------------
@@ -972,11 +883,10 @@ body {
                     }
                 }
 
-                ``` .datepicker-cell.range,
-                .datepicker-cell.range:hover {
-                    background: #e5e7eb !important;
-                    color: #111827 !important;
-                }
+            }
+        }
+        }
+    }
 
                 // Force light background
                 .o_web_client .datepicker,
