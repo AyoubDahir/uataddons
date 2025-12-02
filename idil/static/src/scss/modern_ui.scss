@@ -3,19 +3,6 @@
 // -------------------------------------------------------------------------
 
 
-// 0. Disable Chatter Everywhere
-// -------------------------------------------------------------------------
-// Hide Odoo chatter (messages, followers, activities) on all forms
-.o_form_view .oe_chatter,
-.o_form_view .o-mail-Chatter,
-.o_form_view .o_ChatterContainer,
-.o_form_view .o-aside,
-.o-mail-Composer,
-.o-mail-Thread,
-.o-mail-Activity {
-    display: none !important;
-}
-
 // 1. Animations & Keyframes
 // -------------------------------------------------------------------------
 @keyframes fadeInUp {
@@ -47,6 +34,7 @@
 .o_action_manager {
     animation: fadeInUp 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
+
 
 // 2. Full-width Forms & Chatter Below
 // -------------------------------------------------------------------------
@@ -88,10 +76,12 @@
 .o_form_view .o_form_view_container {
     display: flex !important;
     flex-direction: column !important;
+    flex-wrap: nowrap !important;
 }
 
 // Ensure both form and chatter take full width
 .o_form_view .o_form_renderer,
+.o_form_view .oe_chatter,
 .o_form_view .o-mail-Chatter,
 .o_form_view .o_ChatterContainer,
 .o_form_view .o-aside {
@@ -100,6 +90,7 @@
 }
 
 // Spacing before chatter
+.o_form_view .oe_chatter,
 .o_form_view .o-mail-Chatter,
 .o_form_view .o_ChatterContainer,
 .o_form_view .o-aside {
@@ -114,111 +105,28 @@
     min-width: 0 !important;
 }
 
-/* Robust placement: sheet first, chatter below (works for grid, flex, block) */
-/* Container direct children */
-.o_form_view .o_form_view_container>.o_form_renderer {
-    grid-column: 1 / -1 !important;
-    grid-row: 1 !important;
+// In case chatter is a direct child next to renderer
+.o_form_view .o_form_view_container > .o_form_renderer {
     order: 1 !important;
 }
 
-.o_form_view .o_form_view_container>.oe_chatter,
-.o_form_view .o_form_view_container>.o-aside,
-.o_form_view .o_form_view_container>.o-mail-Chatter,
-.o_form_view .o_form_view_container>.o_ChatterContainer {
-    grid-column: 1 / -1 !important;
-    grid-row: 2 !important;
+.o_form_view .o_form_view_container > .oe_chatter,
+.o_form_view .o_form_view_container > .o-aside,
+.o_form_view .o_form_view_container > .o-mail-Chatter,
+.o_form_view .o_form_view_container > .o_ChatterContainer {
     order: 2 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    float: none !important;
-    clear: both !important;
 }
 
-/* If chatter is inside the renderer */
-.o_web_client .o_form_view .o_form_renderer>.o_form_sheet,
-.o_web_client .o_form_view .o_form_renderer>.o_form_nosheet,
-.o_web_client .o_form_view .o_form_renderer>.o_form_sheet_bg {
-    grid-column: 1 / -1 !important;
-    grid-row: 1 !important;
-}
-
-.o_web_client .o_form_view .o_form_renderer>.o-aside,
-.o_web_client .o_form_view .o_form_renderer>.o-mail-Chatter,
-.o_web_client .o_form_view .o_form_renderer>.o_ChatterContainer,
-.o_web_client .o_form_view .o_form_renderer>[class*="Chatter"],
-.o_web_client .o_form_view .o_form_renderer>[class*="chatter"],
-.o_web_client .o_form_view .o_form_renderer>[class*="aside"] {
-    grid-column: 1 / -1 !important;
-    grid-row: 2 !important;
-    order: 2 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    float: none !important;
-    clear: both !important;
-}
-
-/* When container is flex: force stacking to full width */
-/* When container is grid: collapse to a single column so chatter goes below */
-.o_form_view .o_form_view_container {
-    grid-template-columns: minmax(0, 1fr) !important;
-    grid-auto-flow: row !important;
-    grid-template-areas: none !important;
-}
-
-.o_form_view .o_form_view_container {
-    flex-wrap: wrap;
-}
-
-.o_form_view .o_form_view_container>.o_form_renderer,
-.o_form_view .o_form_view_container>.oe_chatter,
-.o_form_view .o_form_view_container>.o-aside,
-.o_form_view .o_form_view_container>.o-mail-Chatter,
-.o_form_view .o_form_view_container>.o_ChatterContainer {
-    flex: 0 0 100% !important;
-    max-width: 100% !important;
-    width: 100% !important;
-}
-
-/* When chatter is inside the renderer and renderer is flex: stack children */
-.o_web_client .o_form_view .o_form_renderer {
-    flex-wrap: wrap;
-}
-
-.o_web_client .o_form_view .o_form_renderer>.o_form_sheet,
-.o_web_client .o_form_view .o_form_renderer>.o_form_nosheet,
-.o_web_client .o_form_view .o_form_renderer>.o_form_sheet_bg,
-.o_web_client .o_form_view .o_form_renderer>.o-aside,
-.o_web_client .o_form_view .o_form_renderer>.o-mail-Chatter,
-.o_web_client .o_form_view .o_form_renderer>.o_ChatterContainer,
-.o_web_client .o_form_view .o_form_renderer>[class*="Chatter"],
-.o_web_client .o_form_view .o_form_renderer>[class*="chatter"],
-.o_web_client .o_form_view .o_form_renderer>[class*="aside"] {
-    flex: 0 0 100% !important;
-    max-width: 100% !important;
-    width: 100% !important;
-}
-
-/* Fallback: also target legacy _underscore aside and non-direct descendants */
+// Fallback for legacy selectors
 .o_form_view .o_form_view_container .o_aside,
 .o_form_view .o_form_view_container .o-aside,
 .o_form_view .o_form_view_container .oe_chatter,
 .o_form_view .o_form_view_container .o-mail-Chatter,
 .o_form_view .o_form_view_container .o_ChatterContainer {
-    grid-column: 1 / -1 !important;
-    grid-row: 2 !important;
-    order: 2 !important;
     width: 100% !important;
     max-width: 100% !important;
     float: none !important;
     clear: both !important;
-}
-
-/* Ensure renderer comes first even if not a direct child */
-.o_form_view .o_form_view_container .o_form_renderer {
-    grid-column: 1 / -1 !important;
-    grid-row: 1 !important;
-    order: 1 !important;
 }
 
 
@@ -239,13 +147,13 @@
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-// Increase label size
 .o_form_view .o_form_label {
     font-size: 1rem !important; // 16px
     font-weight: 600 !important;
     color: #475569;
     margin-bottom: 8px !important;
 }
+
 
 // 4. List Views
 // -------------------------------------------------------------------------
@@ -291,6 +199,7 @@
     }
 }
 
+
 // 5. Modern Buttons
 // -------------------------------------------------------------------------
 .btn {
@@ -315,7 +224,6 @@
 
     &:hover {
         background: #ffffff !important;
-        /* stay white */
         color: #0f172a !important;
         border-color: #cbd5e1 !important;
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06) !important;
@@ -352,6 +260,7 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }
 }
+
 
 // 6. Typography & Inputs
 // -------------------------------------------------------------------------
@@ -402,6 +311,7 @@ h6 {
     }
 }
 
+
 // 7. Kanban View Modernization
 // -------------------------------------------------------------------------
 .o_kanban_view .o_kanban_record {
@@ -420,6 +330,7 @@ h6 {
     }
 }
 
+
 // 8. Navbar (Clean White Theme)
 // -------------------------------------------------------------------------
 .o_main_navbar,
@@ -431,778 +342,4 @@ header.o_main_navbar,
     background-color: #ffffff !important;
     background-image: none !important;
     border-bottom: 1px solid #e5e7eb !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
-    height: 64px !important;
-    padding: 0 24px !important;
-    color: #1e293b !important;
-    z-index: 1000 !important;
-}
-
-// Remove gradients
-.o_main_navbar *,
-header *,
-.top_heading * {
-    background-image: none !important;
-}
-
-// Navbar Links & Buttons
-.o_main_navbar a,
-.o_main_navbar button,
-.o_main_navbar .o_menu_sections>li>a,
-.o_main_navbar .o_menu_systray .o_nav_entry,
-.o_main_navbar .o_menu_brand,
-.top_heading a,
-header a,
-.o_main_navbar .dropdown-toggle,
-.o_main_navbar .o_user_menu .dropdown-toggle {
-    color: #1e293b !important;
-    font-size: 14px !important;
-    font-weight: 600 !important;
-    padding: 8px 16px !important;
-    border-radius: 8px !important;
-    background: transparent !important;
-    text-shadow: none !important;
-    transition: all 0.2s ease;
-
-    &:hover {
-        background-color: #f3f4f6 !important;
-        color: #0f172a !important;
-    }
-}
-
-// Active Menu Item
-.o_main_navbar .o_menu_sections>li.active>a,
-.o_main_navbar .o_menu_sections>li.show>a {
-    background-color: #e5e7eb !important;
-    color: #0f172a !important;
-    font-weight: 700 !important;
-}
-
-// Systray Icons
-.o_menu_systray .o_nav_entry {
-    color: #64748b !important;
-
-    &:hover {
-        background-color: #f3f4f6 !important;
-        color: #1e293b !important;
-    }
-}
-
-.dropdown-menu {
-    z-index: 1050 !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
-    border: 1px solid rgba(0, 0, 0, 0.05) !important;
-    border-radius: 12px !important;
-}
-
-.o_user_menu .dropdown-item:hover {
-    background-color: #f3f4f6 !important;
-}
-
-// 9. Modal & Dialogs
-// -------------------------------------------------------------------------
-.modal-content {
-    border-radius: 24px !important;
-    border: none !important;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
-    overflow: hidden;
-}
-
-.modal-header {
-    border-bottom: 1px solid #f1f5f9;
-    padding: 24px 32px;
-}
-
-.modal-footer {
-    border-top: 1px solid #f1f5f9;
-    padding: 20px 32px;
-    background: #f8fafc;
-}
-
-// 10. Notebooks & Tabs
-// -------------------------------------------------------------------------
-.o_notebook_headers {
-    border-bottom: 2px solid #f1f5f9 !important;
-    margin-left: -20px !important;
-    margin-right: -20px !important;
-    padding-left: 20px !important;
-
-    .nav-tabs {
-        border-bottom: none !important;
-
-        .nav-item {
-            margin-bottom: -2px;
-
-            .nav-link {
-                border: none !important;
-                color: #64748b !important;
-                font-weight: 600;
-                padding: 16px 24px !important;
-                background: transparent !important;
-                border-bottom: 2px solid transparent !important;
-                transition: all 0.2s ease;
-
-                &.active {
-                    color: #374151 !important;
-                    border-bottom: 2px solid #374151 !important;
-                }
-
-                &:hover {
-                    color: #374151 !important;
-                    background: #f8fafc !important;
-                }
-            }
-        }
-    }
-}
-
-// 11. Textareas & Internal Notes
-// -------------------------------------------------------------------------
-.o_field_text,
-textarea {
-    min-height: 120px !important;
-    width: 100% !important;
-    resize: vertical;
-    line-height: 1.6 !important;
-}
-
-// Specific fix for inner groups
-.o_group.o_inner_group {
-    width: 100% !important;
-    display: block !important;
-}
-
-// 12. One2Many Lists
-// -------------------------------------------------------------------------
-.o_field_one2many {
-    .o_list_view {
-        box-shadow: none !important;
-        border: 1px solid #f1f5f9 !important;
-        margin-top: 16px !important;
-
-        .o_list_table {
-            border: none !important;
-        }
-    }
-
-    .o_field_x2many_list_row_add {
-        a {
-            display: inline-block;
-            margin-top: 10px;
-            padding: 8px 16px;
-            background: #f1f5f9;
-            border-radius: 8px;
-            color: #475569;
-            font-weight: 600;
-            text-decoration: none;
-            transition: all 0.2s ease;
-
-            &:hover {
-                background: #e2e8f0;
-                color: #1e293b;
-            }
-        }
-    }
-}
-
-// 13. Header Buttons (New, etc.)
-// -------------------------------------------------------------------------
-.o_control_panel .o_cp_buttons .btn {
-    text-transform: uppercase;
-    font-size: 0.75rem !important;
-    letter-spacing: 0.05em;
-    padding: 10px 20px !important;
-}
-
-// 14. Vanilla JS Datepicker (Bootstrap 5 style)
-// -------------------------------------------------------------------------
-.datepicker-dropdown,
-.datepicker {
-    z-index: 2090 !important;
-}
-
-.datepicker-picker {
-    background-color: #ffffff !important;
-    border: 1px solid rgba(0, 0, 0, .06) !important;
-    border-radius: 16px !important;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, .16) !important;
-    overflow: hidden !important;
-}
-
-.datepicker-title {
-    background: #ffffff !important;
-    color: #1f2937 !important;
-    font-weight: 700 !important;
-    font-size: 1rem !important;
-    padding: .75rem 1rem !important;
-    border-bottom: 1px solid #eef2f7 !important;
-}
-
-.datepicker-header .datepicker-controls {
-    padding: .5rem .75rem !important;
-}
-
-.datepicker-controls .button {
-    border: 1px solid #e5e7eb !important;
-    border-radius: 10px !important;
-    background: #fff !important;
-    color: #374151 !important;
-    transition: all .15s ease !important;
-
-    &:hover {
-        background: #f3f4f6 !important;
-        border-color: #d1d5db !important;
-    }
-}
-
-.datepicker-controls .view-switch {
-    font-weight: 700 !important;
-    background: transparent !important;
-    border-color: transparent !important;
-}
-
-.datepicker-main {
-    padding: .5rem !important;
-}
-
-.datepicker-view .days-of-week {
-    gap: .25rem;
-    padding: .25rem .25rem .5rem;
-}
-
-.datepicker-view .dow {
-    color: #6b7280 !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    font-size: .75rem !important;
-}
-
-.datepicker-view .week {
-    color: #9CA3AF !important;
-    font-weight: 700 !important;
-}
-
-.datepicker-view .days .datepicker-cell,
-.datepicker-view.datepicker-grid .datepicker-cell {
-    height: 40px !important;
-    line-height: 40px !important;
-    width: 40px !important;
-    margin: 4px !important;
-    border-radius: 10px !important;
-    color: #374151 !important;
-    transition: transform .12s ease, background-color .12s ease, color .12s ease !important;
-}
-
-.datepicker-cell:hover {
-    background: #f3f4f6 !important;
-    transform: scale(1.04);
-}
-
-.datepicker-cell.disabled,
-.datepicker-cell.disabled:hover {
-    color: #cbd5e1 !important;
-    background: transparent !important;
-    transform: none;
-}
-
-.datepicker-cell.today {
-    position: relative;
-}
-
-// 20. Layout fixes: remove left gap and keep Save visible
-// -------------------------------------------------------------------------
-// Collapse any reserved aside column and start the form at the very left
-.o_web_client .o_form_view .o_form_view_container {
-    display: grid !important;
-    grid-template-columns: 1fr !important;
-    grid-auto-flow: row !important;
-    --o-aside-width: 0 !important;
-}
-
-// Remove unexpected left padding/margins on content and sheet containers
-.o_action_manager .o_content,
-.o_form_view .o_form_sheet_bg,
-.o_form_view .o_form_sheet,
-.o_form_view .o_form_nosheet {
-    padding-left: 0 !important;
-    margin-left: 0 !important;
-}
-
-// Ensure control panel never hides Save/Discard
-.o_control_panel {
-    overflow: visible !important;
-    position: sticky;
-    /* keep actions visible while scrolling */
-    top: 64px;
-    /* navbar height */
-    z-index: 1020;
-    background: #fff;
-}
-
-.o_control_panel .o_cp_top,
-.o_control_panel .o_cp_bottom,
-.o_control_panel .o_cp_searchview,
-.o_control_panel .o_cp_left,
-.o_control_panel .o_cp_right {
-    flex-wrap: wrap !important;
-}
-
-.o_control_panel .o_cp_buttons .btn {
-    padding: 6px 12px !important;
-    line-height: 1.2 !important;
-    font-size: 0.875rem !important;
-}
-
-// Make status buttons and Save/Discard coexist on one line when space allows
-.o_form_statusbar {
-    flex-wrap: wrap !important;
-}
-
-.datepicker-cell.today::after {
-    content: "";
-    position: absolute;
-    bottom: 6px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #374151;
-}
-
-.datepicker-cell.selected,
-.datepicker-cell.range-start,
-.datepicker-cell.range-end {
-    background: #374151 !important;
-    color: #fff !important;
-    box-shadow: 0 6px 14px rgba(55, 65, 81, .25);
-}
-
-.datepicker-cell.range,
-.datepicker-cell.range:hover {
-    background: #e5e7eb !important;
-    color: #111827 !important;
-}
-
-// Force light background
-.o_web_client .datepicker,
-.o_web_client .datepicker-dropdown,
-.o_web_client .datepicker-picker,
-.o_web_client .datepicker-main,
-.o_web_client .datepicker-view,
-.o_web_client .datepicker-view .days-of-week,
-.o_web_client .datepicker-view .days,
-.o_web_client .datepicker-view .dow,
-.o_web_client .datepicker-view .week,
-.o_web_client .datepicker-view .days .datepicker-cell {
-    background-color: #ffffff !important;
-    color: #111827 !important;
-}
-
-.o_web_client .datepicker .datepicker-grid,
-.o_web_client .datepicker .calendar-weeks,
-.o_web_client .datepicker .days-of-week,
-.o_web_client .datepicker .days,
-.o_web_client .datepicker .days .week,
-.o_web_client .datepicker .days .datepicker-cell:not(.selected):not(.range):not(.focused) {
-    background: #ffffff !important;
-    color: #111827 !important;
-}
-
-.o_dialog_container .datepicker-dropdown {
-    background: #ffffff !important;
-}
-
-.o_web_client .datepicker .days .datepicker-cell {
-    background-color: #ffffff !important;
-}
-
-.o_web_client .datepicker .days .datepicker-cell.selected,
-.o_web_client .datepicker .days .datepicker-cell.range,
-.o_web_client .datepicker .days .datepicker-cell.range-start,
-.o_web_client .datepicker .days .datepicker-cell.range-end {
-    background-color: #374151 !important;
-    color: #ffffff !important;
-}
-
-.o_web_client .datepicker *,
-.o_web_client .datepicker {
-    background-image: none !important;
-}
-
-// 15. Bootstrap DateTimePicker (Odoo's bootstrap widget) – Light Theme
-// -------------------------------------------------------------------------
-body {
-
-    .bootstrap-datetimepicker-widget,
-    .datepicker,
-    .datepicker-dropdown {
-        background-color: #ffffff !important;
-        background: #ffffff !important;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2) !important;
-        border: 1px solid rgba(0, 0, 0, 0.08) !important;
-        border-radius: 16px !important;
-        padding: 0 !important;
-        color: #1e293b !important;
-        width: auto !important;
-        min-width: 320px;
-        z-index: 9999 !important;
-        overflow: hidden;
-        font-family: 'Inter', sans-serif !important;
-
-        &.dropdown-menu {
-            display: block;
-            margin: 4px 0;
-            width: 20rem;
-            background-color: #ffffff !important;
-
-            &:before,
-            &:after {
-                display: none !important;
-            }
-        }
-
-        thead tr:first-child th,
-        .datepicker-switch,
-        .picker-switch {
-            background-color: #ffffff !important;
-            color: #1e293b !important;
-            font-size: 1rem !important;
-            font-weight: 600 !important;
-            padding: 16px 0 !important;
-            border-radius: 0 !important;
-
-            &:hover {
-                background-color: #f8fafc !important;
-            }
-        }
-
-        .prev,
-        .next,
-        .datepicker-prev,
-        .datepicker-next {
-            background-color: transparent !important;
-            color: #64748b !important;
-            border-radius: 0 !important;
-
-            &:hover {
-                background-color: #f1f5f9 !important;
-                color: #1e293b !important;
-            }
-
-            i {
-                color: #64748b !important;
-            }
-        }
-
-        thead tr:last-child th {
-            background-color: #f8fafc !important;
-            color: #64748b !important;
-            font-weight: 600;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            padding: 12px 0 !important;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        table {
-            background-color: #ffffff !important;
-            margin: 0 !important;
-            width: 100% !important;
-            border-spacing: 0;
-            border-collapse: collapse;
-
-            td {
-                height: 40px;
-                line-height: 40px;
-                width: 40px;
-                padding: 4px !important;
-
-                &.day {
-                    background-color: #ffffff !important;
-                    color: #334155 !important;
-                    font-weight: 500;
-                    border-radius: 50% !important;
-                    transition: all 0.2s ease;
-                    width: 36px !important;
-                    height: 36px !important;
-                    line-height: 36px !important;
-                    margin: 2px auto;
-
-                    &:hover {
-                        background-color: #f1f5f9 !important;
-                        color: #0f172a !important;
-                        transform: scale(1.1);
-                    }
-
-                    &.active,
-                    &.active:hover {
-                        background-color: #374151 !important;
-                        color: #ffffff !important;
-                        box-shadow: 0 4px 10px rgba(55, 65, 81, 0.3);
-                        font-weight: 700;
-                    }
-
-                    &.today {
-                        position: relative;
-                        color: #374151 !important;
-                        font-weight: 700;
-
-                        &:before {
-                            content: '';
-                            position: absolute;
-                            bottom: 4px;
-                            left: 50%;
-                            transform: translateX(-50%);
-                            width: 4px;
-                            height: 4px;
-                            background-color: #374151;
-                            border-radius: 50%;
-                            border: none !important;
-                        }
-
-                        &.active:before {
-                            background-color: #ffffff;
-                        }
-                    }
-
-                    &.old,
-                    &.new {
-                        color: #cbd5e1 !important;
-                    }
-                }
-
-                .datepicker-cell.range,
-                .datepicker-cell.range:hover {
-                    background: #e5e7eb !important;
-                    color: #111827 !important;
-                }
-
-                // Force light background
-                .o_web_client .datepicker,
-                .o_web_client .datepicker-dropdown,
-                .o_web_client .datepicker-picker,
-                .o_web_client .datepicker-main,
-                .o_web_client .datepicker-view,
-                .o_web_client .datepicker-view .days-of-week,
-                .o_web_client .datepicker-view .days,
-                .o_web_client .datepicker-view .dow,
-                .o_web_client .datepicker-view .week,
-                .o_web_client .datepicker-view .days .datepicker-cell {
-                    background-color: #ffffff !important;
-                    color: #111827 !important;
-                }
-
-                .o_web_client .datepicker .datepicker-grid,
-                .o_web_client .datepicker .calendar-weeks,
-                .o_web_client .datepicker .days-of-week,
-                .o_web_client .datepicker .days,
-                .o_web_client .datepicker .days .week,
-                .o_web_client .datepicker .days .datepicker-cell:not(.selected):not(.range):not(.focused) {
-                    background: #ffffff !important;
-                    color: #111827 !important;
-                }
-
-                .o_dialog_container .datepicker-dropdown {
-                    background: #ffffff !important;
-                }
-
-                .o_web_client .datepicker .days .datepicker-cell {
-                    background-color: #ffffff !important;
-                }
-
-                .o_web_client .datepicker .days .datepicker-cell.selected,
-                .o_web_client .datepicker .days .datepicker-cell.range,
-                .o_web_client .datepicker .days .datepicker-cell.range-start,
-                .o_web_client .datepicker .days .datepicker-cell.range-end {
-                    background-color: #374151 !important;
-                    color: #ffffff !important;
-                }
-
-                .o_web_client .datepicker *,
-                .o_web_client .datepicker {
-                    background-image: none !important;
-                }
-
-                // 15. Bootstrap DateTimePicker (Odoo's bootstrap widget) – Light Theme
-                // -------------------------------------------------------------------------
-                body {
-
-                    .bootstrap-datetimepicker-widget,
-                    .datepicker,
-                    .datepicker-dropdown {
-                        background-color: #ffffff !important;
-                        background: #ffffff !important;
-                        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2) !important;
-                        border: 1px solid rgba(0, 0, 0, 0.08) !important;
-                        border-radius: 16px !important;
-                        padding: 0 !important;
-                        color: #1e293b !important;
-                        width: auto !important;
-                        min-width: 320px;
-                        z-index: 9999 !important;
-                        overflow: hidden;
-                        font-family: 'Inter', sans-serif !important;
-
-                        &.dropdown-menu {
-                            display: block;
-                            margin: 4px 0;
-                            width: 20rem;
-                            background-color: #ffffff !important;
-
-                            &:before,
-                            &:after {
-                                display: none !important;
-                            }
-                        }
-
-                        thead tr:first-child th,
-                        .datepicker-switch,
-                        .picker-switch {
-                            background-color: #ffffff !important;
-                            color: #1e293b !important;
-                            font-size: 1rem !important;
-                            font-weight: 600 !important;
-                            padding: 16px 0 !important;
-                            border-radius: 0 !important;
-
-                            &:hover {
-                                background-color: #f8fafc !important;
-                            }
-                        }
-
-                        .prev,
-                        .next,
-                        .datepicker-prev,
-                        .datepicker-next {
-                            background-color: transparent !important;
-                            color: #64748b !important;
-                            border-radius: 0 !important;
-
-                            &:hover {
-                                background-color: #f1f5f9 !important;
-                                color: #1e293b !important;
-                            }
-
-                            i {
-                                color: #64748b !important;
-                            }
-                        }
-
-                        thead tr:last-child th {
-                            background-color: #f8fafc !important;
-                            color: #64748b !important;
-                            font-weight: 600;
-                            font-size: 0.75rem;
-                            text-transform: uppercase;
-                            padding: 12px 0 !important;
-                            border-bottom: 1px solid #e2e8f0;
-                        }
-
-                        table {
-                            background-color: #ffffff !important;
-                            margin: 0 !important;
-                            width: 100% !important;
-                            border-spacing: 0;
-                            border-collapse: collapse;
-
-                            td {
-                                height: 40px;
-                                line-height: 40px;
-                                width: 40px;
-                                padding: 4px !important;
-
-                                &.day {
-                                    background-color: #ffffff !important;
-                                    color: #334155 !important;
-                                    font-weight: 500;
-                                    border-radius: 50% !important;
-                                    transition: all 0.2s ease;
-                                    width: 36px !important;
-                                    height: 36px !important;
-                                    line-height: 36px !important;
-                                    margin: 2px auto;
-
-                                    &:hover {
-                                        background-color: #f1f5f9 !important;
-                                        color: #0f172a !important;
-                                        transform: scale(1.1);
-                                    }
-
-                                    &.active,
-                                    &.active:hover {
-                                        background-color: #374151 !important;
-                                        color: #ffffff !important;
-                                        box-shadow: 0 4px 10px rgba(55, 65, 81, 0.3);
-                                        font-weight: 700;
-                                    }
-
-                                    &.today {
-                                        position: relative;
-                                        color: #374151 !important;
-                                        font-weight: 700;
-
-                                        &:before {
-                                            content: '';
-                                            position: absolute;
-                                            bottom: 4px;
-                                            left: 50%;
-                                            transform: translateX(-50%);
-                                            width: 4px;
-                                            height: 4px;
-                                            background-color: #374151;
-                                            border-radius: 50%;
-                                            border: none !important;
-                                        }
-
-                                        &.active:before {
-                                            background-color: #ffffff;
-                                        }
-                                    }
-
-                                    &.old,
-                                    &.new {
-                                        color: #cbd5e1 !important;
-                                    }
-                                }
-
-                                span {
-                                    border-radius: 8px;
-                                    margin: 2px;
-
-                                    &.active {
-                                        background-color: #374151 !important;
-                                        color: #ffffff !important;
-                                    }
-
-                                    &:hover {
-                                        background-color: #f1f5f9 !important;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    .datepicker-picker {
-                        background-color: #ffffff !important;
-                        color: #1e293b !important;
-                    }
-                }
-
-                // 21. Kanban Spacing Fix
-                // -------------------------------------------------------------------------
-                /* Reduce top padding to bring kanban cards closer to header */
-                .o_kanban_view {
-                    padding-top: 0 !important;
-                }
-
-                .o_kanban_view .o_kanban_renderer {
-                    padding-top: 4px !important;
-                    margin-top: 0 !important;
-                }
-
-                .o_action_manager .o_control_panel {
-                    margin-bottom: 4px !important;
-                }
-
-                ```
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08
