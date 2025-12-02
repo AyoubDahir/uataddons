@@ -85,8 +85,14 @@
 .o_form_view .o-mail-Chatter,
 .o_form_view .o_ChatterContainer,
 .o_form_view .o-aside {
+    display: block !important;
     width: 100% !important;
     max-width: 100% !important;
+    float: none !important;
+    clear: both !important;
+    position: static !important;
+    grid-area: auto !important;
+    align-self: stretch !important;
 }
 
 // Spacing before chatter
@@ -115,6 +121,14 @@
 .o_form_view .o_form_view_container > .o-mail-Chatter,
 .o_form_view .o_form_view_container > .o_ChatterContainer {
     order: 2 !important;
+}
+
+.o_form_view .o_form_view_container > .o_form_renderer,
+.o_form_view .o_form_view_container > .oe_chatter,
+.o_form_view .o_form_view_container > .o-aside,
+.o_form_view .o_form_view_container > .o-mail-Chatter,
+.o_form_view .o_form_view_container > .o_ChatterContainer {
+    flex: 0 0 auto !important;
 }
 
 // Fallback for legacy selectors
@@ -624,9 +638,10 @@ textarea {
 // -------------------------------------------------------------------------
 // Collapse any reserved aside column and start the form at the very left
 .o_web_client .o_form_view .o_form_view_container {
-    display: grid !important;
-    grid-template-columns: 1fr !important;
-    grid-auto-flow: row !important;
+    display: flex !important;
+    flex-direction: column !important;
+    flex-wrap: nowrap !important;
+    gap: 16px !important;
     --o-aside-width: 0 !important;
 }
 
