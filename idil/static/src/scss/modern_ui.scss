@@ -1197,3 +1197,11 @@ body, .o_web_client { background: #f6f8fb !important; }
 .o_list_view, .o_kanban_view, .o_form_view { padding-top: 2px; }
 .o_kanban_view .o_kanban_renderer { padding-top: 6px; }
 
+
+/* 26. Kanban first-row spacing: reclaim header whitespace without overlap */
+.o_action_manager .o_control_panel { margin-top: 0 !important; }
+/* slightly reduce content top padding so first kanban row sits closer to the header */
+.o_action_manager .o_control_panel + .o_content { padding-top: 8px !important; }
+/* keep kanban renderer tight to the top */
+.o_kanban_view .o_kanban_renderer { padding-top: 2px !important; }
+
