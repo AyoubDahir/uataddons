@@ -1189,3 +1189,11 @@ body, .o_web_client { background: #f6f8fb !important; }
 /* Keep the header area visually separated from the form body */
 .o_form_view header { background: #ffffff !important; border-bottom: 1px solid #eef2f7 !important; }
 
+
+/* 25. Safe spacing below sticky control panel (prevents first row from hiding) */
+.o_action_manager .o_control_panel { padding-bottom: 10px !important; }
+.o_action_manager .o_control_panel + .o_content { padding-top: 14px !important; }
+/* Extra guards for specific views */
+.o_list_view, .o_kanban_view, .o_form_view { padding-top: 2px; }
+.o_kanban_view .o_kanban_renderer { padding-top: 6px; }
+
