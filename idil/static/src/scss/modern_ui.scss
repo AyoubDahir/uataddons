@@ -1192,6 +1192,202 @@ body {
                 // 21. Kanban Spacing Fix
                 // -------------------------------------------------------------------------
                 /* Reduce top padding to bring kanban cards closer to header */
+                .o_web_client .datepicker .days .week,
+                .o_web_client .datepicker .days .datepicker-cell:not(.selected):not(.range):not(.focused) {
+                    background: #ffffff !important;
+                    color: #111827 !important;
+                }
+
+                .o_dialog_container .datepicker-dropdown {
+                    background: #ffffff !important;
+                }
+
+                .o_web_client .datepicker .days .datepicker-cell {
+                    background-color: #ffffff !important;
+                }
+
+                .o_web_client .datepicker .days .datepicker-cell.selected,
+                .o_web_client .datepicker .days .datepicker-cell.range,
+                .o_web_client .datepicker .days .datepicker-cell.range-start,
+                .o_web_client .datepicker .days .datepicker-cell.range-end {
+                    background-color: #374151 !important;
+                    color: #ffffff !important;
+                }
+
+                .o_web_client .datepicker *,
+                .o_web_client .datepicker {
+                    background-image: none !important;
+                }
+
+                // 15. Bootstrap DateTimePicker (Odoo's bootstrap widget) – Light Theme
+                // -------------------------------------------------------------------------
+                body {
+
+                    .bootstrap-datetimepicker-widget,
+                    .datepicker,
+                    .datepicker-dropdown {
+                        background-color: #ffffff !important;
+                        background: #ffffff !important;
+                        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2) !important;
+                        border: 1px solid rgba(0, 0, 0, 0.08) !important;
+                        border-radius: 16px !important;
+                        padding: 0 !important;
+                        color: #1e293b !important;
+                        width: auto !important;
+                        min-width: 320px;
+                        z-index: 9999 !important;
+                        overflow: hidden;
+                        font-family: 'Inter', sans-serif !important;
+
+                        &.dropdown-menu {
+                            display: block;
+                            margin: 4px 0;
+                            width: 20rem;
+                            background-color: #ffffff !important;
+
+                            &:before,
+                            &:after {
+                                display: none !important;
+                            }
+                        }
+
+                        thead tr:first-child th,
+                        .datepicker-switch,
+                        .picker-switch {
+                            background-color: #ffffff !important;
+                            color: #1e293b !important;
+                            font-size: 1rem !important;
+                            font-weight: 600 !important;
+                            padding: 16px 0 !important;
+                            border-radius: 0 !important;
+
+                            &:hover {
+                                background-color: #f8fafc !important;
+                            }
+                        }
+
+                        .prev,
+                        .next,
+                        .datepicker-prev,
+                        .datepicker-next {
+                            background-color: transparent !important;
+                            color: #64748b !important;
+                            border-radius: 0 !important;
+
+                            &:hover {
+                                background-color: #f1f5f9 !important;
+                                color: #1e293b !important;
+                            }
+
+                            i {
+                                color: #64748b !important;
+                            }
+                        }
+
+                        thead tr:last-child th {
+                            background-color: #f8fafc !important;
+                            color: #64748b !important;
+                            font-weight: 600;
+                            font-size: 0.75rem;
+                            text-transform: uppercase;
+                            padding: 12px 0 !important;
+                            border-bottom: 1px solid #e2e8f0;
+                        }
+
+                        table {
+                            background-color: #ffffff !important;
+                            margin: 0 !important;
+                            width: 100% !important;
+                            border-spacing: 0;
+                            border-collapse: collapse;
+
+                            td {
+                                height: 40px;
+                                line-height: 40px;
+                                width: 40px;
+                                padding: 4px !important;
+
+                                &.day {
+                                    background-color: #ffffff !important;
+                                    color: #334155 !important;
+                                    font-weight: 500;
+                                    border-radius: 50% !important;
+                                    transition: all 0.2s ease;
+                                    width: 36px !important;
+                                    height: 36px !important;
+                                    line-height: 36px !important;
+                                    margin: 2px auto;
+
+                                    &:hover {
+                                        background-color: #f1f5f9 !important;
+                                        color: #0f172a !important;
+                                        transform: scale(1.1);
+                                    }
+
+                                    &.active,
+                                    &.active:hover {
+                                        background-color: #374151 !important;
+                                        color: #ffffff !important;
+                                        box-shadow: 0 4px 10px rgba(55, 65, 81, 0.3);
+                                        font-weight: 700;
+                                    }
+
+                                    &.today {
+                                        position: relative;
+                                        color: #374151 !important;
+                                        font-weight: 700;
+
+                                        &:before {
+                                            content: '';
+                                            position: absolute;
+                                            bottom: 4px;
+                                            left: 50%;
+                                            transform: translateX(-50%);
+                                            width: 4px;
+                                            height: 4px;
+                                            background-color: #374151;
+                                            border-radius: 50%;
+                                            border: none !important;
+                                        }
+
+                                        &.active:before {
+                                            background-color: #ffffff;
+                                        }
+                                    }
+
+                                    &.old,
+                                    &.new {
+                                        color: #cbd5e1 !important;
+                                    }
+                                }
+
+                                span {
+                                    border-radius: 8px;
+                                    margin: 2px;
+
+                                    &.active {
+                                        background-color: #374151 !important;
+                                        color: #ffffff !important;
+                                    }
+
+                                    &:hover {
+                                        background-color: #f1f5f9 !important;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                .datepicker-picker {
+                    background-color: #ffffff !important;
+                    color: #1e293b !important;
+                }
+
+
+                // 21. Kanban Spacing Fix
+                // -------------------------------------------------------------------------
+                /* Reduce top padding to bring kanban cards closer to header */
                 .o_kanban_view {
                     padding-top: 0 !important;
                 }
@@ -1204,5 +1400,3 @@ body {
                 .o_action_manager .o_control_panel {
                     margin-bottom: 4px !important;
                 }
-
-                ```
