@@ -13,7 +13,7 @@
 .o-mail-Composer,
 .o-mail-Thread,
 .o-mail-Activity {
-  display: none !important;
+    display: none !important;
 }
 
 // 1. Animations & Keyframes
@@ -116,78 +116,87 @@
 
 /* Robust placement: sheet first, chatter below (works for grid, flex, block) */
 /* Container direct children */
-.o_form_view .o_form_view_container > .o_form_renderer {
-  grid-column: 1 / -1 !important;
-  grid-row: 1 !important;
-  order: 1 !important;
+.o_form_view .o_form_view_container>.o_form_renderer {
+    grid-column: 1 / -1 !important;
+    grid-row: 1 !important;
+    order: 1 !important;
 }
-.o_form_view .o_form_view_container > .oe_chatter,
-.o_form_view .o_form_view_container > .o-aside,
-.o_form_view .o_form_view_container > .o-mail-Chatter,
-.o_form_view .o_form_view_container > .o_ChatterContainer {
-  grid-column: 1 / -1 !important;
-  grid-row: 2 !important;
-  order: 2 !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  float: none !important;
-  clear: both !important;
+
+.o_form_view .o_form_view_container>.oe_chatter,
+.o_form_view .o_form_view_container>.o-aside,
+.o_form_view .o_form_view_container>.o-mail-Chatter,
+.o_form_view .o_form_view_container>.o_ChatterContainer {
+    grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
+    order: 2 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    float: none !important;
+    clear: both !important;
 }
+
 /* If chatter is inside the renderer */
-.o_web_client .o_form_view .o_form_renderer > .o_form_sheet,
-.o_web_client .o_form_view .o_form_renderer > .o_form_nosheet,
-.o_web_client .o_form_view .o_form_renderer > .o_form_sheet_bg {
-  grid-column: 1 / -1 !important;
-  grid-row: 1 !important;
+.o_web_client .o_form_view .o_form_renderer>.o_form_sheet,
+.o_web_client .o_form_view .o_form_renderer>.o_form_nosheet,
+.o_web_client .o_form_view .o_form_renderer>.o_form_sheet_bg {
+    grid-column: 1 / -1 !important;
+    grid-row: 1 !important;
 }
-.o_web_client .o_form_view .o_form_renderer > .o-aside,
-.o_web_client .o_form_view .o_form_renderer > .o-mail-Chatter,
-.o_web_client .o_form_view .o_form_renderer > .o_ChatterContainer,
-.o_web_client .o_form_view .o_form_renderer > [class*="Chatter"],
-.o_web_client .o_form_view .o_form_renderer > [class*="chatter"],
-.o_web_client .o_form_view .o_form_renderer > [class*="aside"]{
-  grid-column: 1 / -1 !important;
-  grid-row: 2 !important;
-  order: 2 !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  float: none !important;
-  clear: both !important;
+
+.o_web_client .o_form_view .o_form_renderer>.o-aside,
+.o_web_client .o_form_view .o_form_renderer>.o-mail-Chatter,
+.o_web_client .o_form_view .o_form_renderer>.o_ChatterContainer,
+.o_web_client .o_form_view .o_form_renderer>[class*="Chatter"],
+.o_web_client .o_form_view .o_form_renderer>[class*="chatter"],
+.o_web_client .o_form_view .o_form_renderer>[class*="aside"] {
+    grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
+    order: 2 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    float: none !important;
+    clear: both !important;
 }
 
 /* When container is flex: force stacking to full width */
 /* When container is grid: collapse to a single column so chatter goes below */
 .o_form_view .o_form_view_container {
-  grid-template-columns: minmax(0, 1fr) !important;
-  grid-auto-flow: row !important;
-  grid-template-areas: none !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-auto-flow: row !important;
+    grid-template-areas: none !important;
 }
 
-.o_form_view .o_form_view_container { flex-wrap: wrap; }
-.o_form_view .o_form_view_container > .o_form_renderer,
-.o_form_view .o_form_view_container > .oe_chatter,
-.o_form_view .o_form_view_container > .o-aside,
-.o_form_view .o_form_view_container > .o-mail-Chatter,
-.o_form_view .o_form_view_container > .o_ChatterContainer {
-  flex: 0 0 100% !important;
-  max-width: 100% !important;
-  width: 100% !important;
+.o_form_view .o_form_view_container {
+    flex-wrap: wrap;
+}
+
+.o_form_view .o_form_view_container>.o_form_renderer,
+.o_form_view .o_form_view_container>.oe_chatter,
+.o_form_view .o_form_view_container>.o-aside,
+.o_form_view .o_form_view_container>.o-mail-Chatter,
+.o_form_view .o_form_view_container>.o_ChatterContainer {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+    width: 100% !important;
 }
 
 /* When chatter is inside the renderer and renderer is flex: stack children */
-.o_web_client .o_form_view .o_form_renderer { flex-wrap: wrap; }
-.o_web_client .o_form_view .o_form_renderer > .o_form_sheet,
-.o_web_client .o_form_view .o_form_renderer > .o_form_nosheet,
-.o_web_client .o_form_view .o_form_renderer > .o_form_sheet_bg,
-.o_web_client .o_form_view .o_form_renderer > .o-aside,
-.o_web_client .o_form_view .o_form_renderer > .o-mail-Chatter,
-.o_web_client .o_form_view .o_form_renderer > .o_ChatterContainer,
-.o_web_client .o_form_view .o_form_renderer > [class*="Chatter"],
-.o_web_client .o_form_view .o_form_renderer > [class*="chatter"],
-.o_web_client .o_form_view .o_form_renderer > [class*="aside"] {
-  flex: 0 0 100% !important;
-  max-width: 100% !important;
-  width: 100% !important;
+.o_web_client .o_form_view .o_form_renderer {
+    flex-wrap: wrap;
+}
+
+.o_web_client .o_form_view .o_form_renderer>.o_form_sheet,
+.o_web_client .o_form_view .o_form_renderer>.o_form_nosheet,
+.o_web_client .o_form_view .o_form_renderer>.o_form_sheet_bg,
+.o_web_client .o_form_view .o_form_renderer>.o-aside,
+.o_web_client .o_form_view .o_form_renderer>.o-mail-Chatter,
+.o_web_client .o_form_view .o_form_renderer>.o_ChatterContainer,
+.o_web_client .o_form_view .o_form_renderer>[class*="Chatter"],
+.o_web_client .o_form_view .o_form_renderer>[class*="chatter"],
+.o_web_client .o_form_view .o_form_renderer>[class*="aside"] {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+    width: 100% !important;
 }
 
 /* Fallback: also target legacy _underscore aside and non-direct descendants */
@@ -196,19 +205,20 @@
 .o_form_view .o_form_view_container .oe_chatter,
 .o_form_view .o_form_view_container .o-mail-Chatter,
 .o_form_view .o_form_view_container .o_ChatterContainer {
-  grid-column: 1 / -1 !important;
-  grid-row: 2 !important;
-  order: 2 !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  float: none !important;
-  clear: both !important;
+    grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
+    order: 2 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    float: none !important;
+    clear: both !important;
 }
+
 /* Ensure renderer comes first even if not a direct child */
 .o_form_view .o_form_view_container .o_form_renderer {
-  grid-column: 1 / -1 !important;
-  grid-row: 1 !important;
-  order: 1 !important;
+    grid-column: 1 / -1 !important;
+    grid-row: 1 !important;
+    order: 1 !important;
 }
 
 
@@ -304,7 +314,8 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
 
     &:hover {
-        background: #ffffff !important; /* stay white */
+        background: #ffffff !important;
+        /* stay white */
         color: #0f172a !important;
         border-color: #cbd5e1 !important;
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06) !important;
@@ -364,6 +375,7 @@ h6 {
 
 // Larger Inputs
 .o_field_widget {
+
     input,
     select,
     textarea {
@@ -402,7 +414,7 @@ h6 {
 
     &:hover {
         box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
-                    0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+            0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
         transform: translateY(-4px);
         z-index: 10;
     }
@@ -436,7 +448,7 @@ header *,
 // Navbar Links & Buttons
 .o_main_navbar a,
 .o_main_navbar button,
-.o_main_navbar .o_menu_sections > li > a,
+.o_main_navbar .o_menu_sections>li>a,
 .o_main_navbar .o_menu_systray .o_nav_entry,
 .o_main_navbar .o_menu_brand,
 .top_heading a,
@@ -459,8 +471,8 @@ header a,
 }
 
 // Active Menu Item
-.o_main_navbar .o_menu_sections > li.active > a,
-.o_main_navbar .o_menu_sections > li.show > a {
+.o_main_navbar .o_menu_sections>li.active>a,
+.o_main_navbar .o_menu_sections>li.show>a {
     background-color: #e5e7eb !important;
     color: #0f172a !important;
     font-weight: 700 !important;
@@ -701,43 +713,50 @@ textarea {
 // -------------------------------------------------------------------------
 // Collapse any reserved aside column and start the form at the very left
 .o_web_client .o_form_view .o_form_view_container {
-  display: grid !important;
-  grid-template-columns: 1fr !important;
-  grid-auto-flow: row !important;
-  --o-aside-width: 0 !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    grid-auto-flow: row !important;
+    --o-aside-width: 0 !important;
 }
+
 // Remove unexpected left padding/margins on content and sheet containers
 .o_action_manager .o_content,
 .o_form_view .o_form_sheet_bg,
 .o_form_view .o_form_sheet,
 .o_form_view .o_form_nosheet {
-  padding-left: 0 !important;
-  margin-left: 0 !important;
+    padding-left: 0 !important;
+    margin-left: 0 !important;
 }
 
 // Ensure control panel never hides Save/Discard
 .o_control_panel {
-  overflow: visible !important;
-  position: sticky; /* keep actions visible while scrolling */
-  top: 64px; /* navbar height */
-  z-index: 1020;
-  background: #fff;
+    overflow: visible !important;
+    position: sticky;
+    /* keep actions visible while scrolling */
+    top: 64px;
+    /* navbar height */
+    z-index: 1020;
+    background: #fff;
 }
+
 .o_control_panel .o_cp_top,
 .o_control_panel .o_cp_bottom,
 .o_control_panel .o_cp_searchview,
 .o_control_panel .o_cp_left,
 .o_control_panel .o_cp_right {
-  flex-wrap: wrap !important;
+    flex-wrap: wrap !important;
 }
+
 .o_control_panel .o_cp_buttons .btn {
-  padding: 6px 12px !important;
-  line-height: 1.2 !important;
-  font-size: 0.875rem !important;
+    padding: 6px 12px !important;
+    line-height: 1.2 !important;
+    font-size: 0.875rem !important;
 }
 
 // Make status buttons and Save/Discard coexist on one line when space allows
-.o_form_statusbar { flex-wrap: wrap !important; }
+.o_form_statusbar {
+    flex-wrap: wrap !important;
+}
 
 .datepicker-cell.today::after {
     content: "";
@@ -814,6 +833,7 @@ textarea {
 // 15. Bootstrap DateTimePicker (Odoo's bootstrap widget) – Light Theme
 // -------------------------------------------------------------------------
 body {
+
     .bootstrap-datetimepicker-widget,
     .datepicker,
     .datepicker-dropdown {
@@ -970,238 +990,163 @@ body {
     }
 
     .datepicker-picker {
-        background-color: #ffffff !important;
-        color: #1e293b !important;
+        margin-bottom: 20px;
     }
-}
 
-// 21. Modernized Form UI/UX polish
-// -------------------------------------------------------------------------
-:root {
-  --brand-primary: #374151;
-  --brand-primary-600: #1f2937;
-  --surface: #ffffff;
-  --muted: #64748b;
-  --ring: rgba(55, 65, 81, 0.15);
-  --danger: #ef4444;
-  --warning: #f59e0b;
-  --success: #16a34a;
-}
+    .o_notebook_headers .nav-tabs .nav-link {
+        border: 1px solid #e5e7eb !important;
+        background: #f8fafc !important;
+        color: #475569 !important;
+        border-radius: 9999px !important;
+        padding: 10px 20px !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease;
+    }
 
-/* Form layout spacing */
-.o_form_view .o_group { column-gap: 24px !important; row-gap: 12px !important; }
-.o_form_view .o_group .o_form_label {
-  min-width: 220px; text-align: right; padding-right: 16px; color: #334155;
-}
+    .o_notebook_headers .nav-tabs .nav-link.active {
+        background: var(--brand-primary) !important;
+        color: #ffffff !important;
+        border-color: var(--brand-primary) !important;
+        box-shadow: 0 4px 12px rgba(55, 65, 81, 0.2);
+    }
 
-/* Inputs: cleaner states */
-.o_field_widget input,
-.o_field_widget select,
-.o_field_widget textarea {
-  background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; transition: box-shadow .15s ease, border-color .15s ease;
-}
-.o_field_widget input:focus,
-.o_field_widget select:focus,
-.o_field_widget textarea:focus {
-  background: #fff; border-color: var(--brand-primary) !important; box-shadow: 0 0 0 4px var(--ring) !important;
-}
-.o_field_widget input:disabled,
-.o_field_widget select:disabled,
-.o_field_widget textarea:disabled,
-.o_field_widget .o_input.o_readonly_modifier {
-  background: #eef2f7 !important; color: #64748b !important;
-}
-/* Required and invalid */
-.o_required_modifier input,
-.o_required_modifier select,
-.o_required_modifier textarea {
-  border-color: var(--warning) !important; box-shadow: 0 0 0 3px rgba(245, 158, 11, .2) !important;
-}
-.o_field_invalid input,
-.o_field_invalid select,
-.o_field_invalid textarea {
-  border-color: var(--danger) !important; box-shadow: 0 0 0 3px rgba(239, 68, 68, .2) !important; background: #fff7f7 !important;
-}
+    .o_notebook_headers .nav-tabs .nav-link:hover:not(.active) {
+        background: #e2e8f0 !important;
+        border-color: #cbd5e1 !important;
+    }
 
-/* Section headers */
-.o_horizontal_separator {
-  background: #f8fafc; border: 1px solid #eef2f7; border-radius: 12px; padding: 8px 12px; font-weight: 700; color: #334155; margin: 16px 0 !important;
-}
+    /* Statusbar and header buttons: pills */
+    .o_form_statusbar .btn,
+    .o_control_panel .o_cp_buttons .btn {
+        border-radius: 9999px !important;
+        padding: 8px 18px !important;
+    }
 
-/* Notebook tabs -> pill style */
-.o_notebook_headers .nav-tabs .nav-link {
-  border: 1px solid #e5e7eb !important; border-bottom: none !important; background: #f8fafc !important; color: #475569 !important; border-radius: 9999px !important; margin-right: 8px; padding: 10px 16px !important;
-}
-.o_notebook_headers .nav-tabs .nav-link.active {
-  background: var(--brand-primary) !important; color: #fff !important; border-color: var(--brand-primary) !important;
-}
+    /* One2many tables: sticky header + zebra striping */
+    .o_field_one2many .o_list_table thead th {
+        position: sticky;
+        top: 0;
+        background: #f9fafb !important;
+        z-index: 10;
+        border-bottom: 2px solid #e2e8f0 !important;
+    }
 
-/* Statusbar and header buttons to pills */
-.o_form_statusbar .btn, .o_control_panel .o_cp_buttons .btn { border-radius: 9999px !important; }
+    .o_field_one2many .o_list_table tbody tr:nth-child(even) {
+        background: #fcfcfd;
+    }
 
-/* One2many: sticky header + zebra + hover */
-.o_field_one2many .o_list_table thead th { position: sticky; top: 0; background: #f9fafb !important; z-index: 1; }
-.o_field_one2many .o_list_table tbody tr:nth-child(even) { background: #fcfcfd; }
-.o_field_one2many .o_list_table tbody tr:hover { background: #f6f7fb !important; }
+    .o_field_one2many .o_list_table tbody tr:hover {
+        background: #f0f4f8 !important;
+    }
 
-/* Better placeholders */
-::placeholder { color: #94a3b8; }
+    /* Better placeholders */
+    ::placeholder {
+        color: #94a3b8;
+        font-weight: 400;
+    }
 
-/* Compact help/error messages */
-.text-danger, .o_invalid_tip { font-size: 0.85rem !important; }
+    /* Compact error messages */
+    .text-danger,
+    .o_invalid_tip {
+        font-size: 0.85rem !important;
+        margin-top: 6px !important;
+    }
 
+    /* Background polish */
+    body,
+    .o_web_client {
+        background: #f6f8fb !important;
+    }
 
-// 22. Stacked card-style forms (like the provided mockup)
-// -------------------------------------------------------------------------
-/* Centered, narrow form card */
-.o_form_sheet {
-  max-width: 640px !important;
-  width: 100% !important;
-  margin: 24px auto !important; /* center */
-  border-radius: 14px !important;
-  border: 1px solid #eef2f7 !important;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06) !important;
-  padding: 20px 24px !important;
-}
+    .o_control_panel {
+        background: #ffffff !important;
+        border-bottom: 1px solid #eef2f7 !important;
+    }
 
-/* Single column, labels above inputs */
-.o_form_view .o_group,
-.o_form_view .o_group.o_inner_group,
-.o_form_view .o_group_col_2,
-.o_form_view .o_group_col_3 {
-  display: grid !important;
-  grid-template-columns: 1fr !important;
-  column-gap: 0 !important;
-  row-gap: 12px !important;
-}
-.o_form_view .o_group .o_form_label { /* label above input */
-  order: -1; /* ensure label appears before its field in flow */
-  text-align: left !important;
-  min-width: auto !important;
-  margin: 0 0 6px 0 !important;
+    /* Form header separation */
+    .o_form_view header {
+        background: #ffffff !important;
+        border-bottom: 1px solid #eef2f7 !important;
+        padding-bottom: 12px !important;
+        margin-bottom: 16px !important;
+    }
 
-// 23. Banking-style polish (neutral, white CTAs, minimal chrome)
-// -------------------------------------------------------------------------
-/* Background and panel */
-body, .o_web_client { background: #f6f8fb !important; }
-.o_control_panel { background: #ffffff !important; border-bottom: 1px solid #eef2f7 !important; }
+    /* Action buttons visibility */
+    .o_form_view header .oe_highlight,
+    .o_form_statusbar .btn.oe_highlight,
+    .btn.oe_highlight {
+        background: var(--brand-primary) !important;
+        color: #ffffff !important;
+        border-color: var(--brand-primary) !important;
+        box-shadow: 0 2px 8px rgba(55, 65, 81, 0.18) !important;
+    }
 
-/* Primary actions (Save/New) are always white with subtle border */
-.o_control_panel .o_cp_buttons .btn-primary,
-.o_cp_buttons .o_form_button_save.btn-primary,
-.o_cp_buttons .o_form_button_create.btn-primary,
-.o_form_button_save.btn,
-.o_form_button_create.btn {
-  background: #ffffff !important;
-  color: #0f172a !important;
-  border: 1px solid #d1d5db !important;
-  box-shadow: 0 1px 2px rgba(0,0,0,.04) !important;
-}
-.o_control_panel .o_cp_buttons .btn-primary:hover,
-.o_cp_buttons .o_form_button_save.btn-primary:hover,
-.o_cp_buttons .o_form_button_create.btn-primary:hover,
-.o_form_button_save.btn:hover,
-.o_form_button_create.btn:hover {
-  background: #ffffff !important;
-  color: #0f172a !important;
-  border-color: #94a3b8 !important;
-  box-shadow: 0 2px 6px rgba(0,0,0,.06) !important;
-}
+    .o_form_view header .oe_highlight:hover,
+    .o_form_statusbar .btn.oe_highlight:hover,
+    .btn.oe_highlight:hover {
+        background: var(--brand-primary-600) !important;
+        border-color: var(--brand-primary-600) !important;
+        box-shadow: 0 4px 12px rgba(55, 65, 81, 0.25) !important;
+    }
 
-/* Secondary buttons: outline neutral */
-.o_control_panel .o_cp_buttons .btn-secondary,
-.o_control_panel .btn-outline-secondary,
-.btn-secondary {
-  background: #ffffff !important;
-  color: #475569 !important;
-  border: 1px solid #e2e8f0 !important;
-  box-shadow: none !important;
-}
+    /* Non-highlighted header buttons */
+    .o_form_statusbar .btn:not(.oe_highlight),
+    .o_statusbar_buttons .btn:not(.oe_highlight) {
+        border: 1px solid #cbd5e1 !important;
+        background: #ffffff !important;
+        color: #334155 !important;
+    }
 
-/* Danger actions: soft look */
-.btn-danger { background: #fff !important; color: #b91c1c !important; border: 1px solid #fecaca !important; }
-.btn-danger:hover { border-color: #fca5a5 !important; }
+    /* Primary action buttons (Save/New) */
+    .o_control_panel .o_cp_buttons .btn-primary,
+    .o_form_button_save.btn,
+    .o_form_button_create.btn {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        border: 1px solid #d1d5db !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+    }
 
-/* Inputs with cleaner banking-like chrome */
-.o_field_widget input,
-.o_field_widget select,
-.o_field_widget textarea { border-color: #e2e8f0 !important; background: #fbfdff !important; }
-.o_field_widget input:focus,
-.o_field_widget select:focus,
-.o_field_widget textarea:focus { border-color: #94a3b8 !important; box-shadow: 0 0 0 3px rgba(148, 163, 184, .25) !important; }
+    .o_control_panel .o_cp_buttons .btn-primary:hover,
+    .o_form_button_save.btn:hover,
+    .o_form_button_create.btn:hover {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        border-color: #94a3b8 !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06) !important;
+    }
 
-/* Card sheet shadow/crisp border */
-.o_form_sheet { border: 1px solid #e7ecf2 !important; box-shadow: 0 8px 26px rgba(16, 24, 40, .06) !important; }
-
-}
-.o_form_view .o_group .o_field_widget { width: 100% !important; }
-
-/* Inputs full width and consistent height */
-.o_field_widget input,
-.o_field_widget select,
-.o_field_widget textarea {
-  width: 100% !important;
-  min-height: 44px !important;
-}
-.o_field_widget textarea { min-height: 120px !important; }
-
-/* Required star clarity (no color change request; keep visible) */
-.o_form_label .o_required_modifier:after,
-.o_field_required:after { font-weight: 700; }
+    /* Disabled button clarity */
+    .btn.disabled,
+    .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
 
 
+    /* 25. Consolidated spacing: control panel & content areas */
+    .o_action_manager .o_control_panel {
+        padding-bottom: 8px !important;
+        margin-top: 0 !important;
+    }
 
-/* 24. Visibility & accessibility fixes for primary actions and statusbar */
-:root {
-  --action-primary: #374151; /* slate-700 */
-  --action-primary-hover: #1f2937; /* slate-900 */
-}
-/* Make highlight (primary/confirm) actions clearly visible on white UI */
-.o_form_view header .oe_highlight,
-.o_form_statusbar .btn.oe_highlight,
-.o_statusbar_buttons .btn.oe_highlight,
-.btn.oe_highlight {
-  background: var(--action-primary) !important;
-  color: #ffffff !important;
-  border-color: var(--action-primary) !important;
-  box-shadow: 0 2px 8px rgba(55, 65, 81, 0.18) !important;
-}
-.o_form_view header .oe_highlight:hover,
-.o_form_statusbar .btn.oe_highlight:hover,
-.o_statusbar_buttons .btn.oe_highlight:hover,
-.btn.oe_highlight:hover {
-  background: var(--action-primary-hover) !important;
-  border-color: var(--action-primary-hover) !important;
-}
-/* Ensure non-highlight header buttons are still visible on white */
-.o_form_statusbar .btn,
-.o_statusbar_buttons .btn {
-  border: 1px solid #cbd5e1 !important;
-  background: #ffffff !important;
-  color: #111827 !important;
-}
-/* Slightly stronger disabled look so visibility remains clear */
-.btn.disabled, .btn:disabled { opacity: .65; }
+    /* Tight spacing for all view types - kanban especially */
+    .o_action_manager .o_control_panel+.o_content {
+        padding-top: 4px !important;
+    }
 
-/* Make form sheet a bit wider for readability while keeping card look */
-.o_form_sheet { max-width: 960px !important; }
+    /* Kanban view: minimal top padding to bring cards closer */
+    .o_kanban_view {
+        padding-top: 0 !important;
+    }
 
-/* Keep the header area visually separated from the form body */
-.o_form_view header { background: #ffffff !important; border-bottom: 1px solid #eef2f7 !important; }
+    .o_kanban_view .o_kanban_renderer {
+        padding-top: 0 !important;
+        margin-top: 0 !important;
+    }
 
-
-/* 25. Safe spacing below sticky control panel (prevents first row from hiding) */
-.o_action_manager .o_control_panel { padding-bottom: 10px !important; }
-.o_action_manager .o_control_panel + .o_content { padding-top: 14px !important; }
-/* Extra guards for specific views */
-.o_list_view, .o_kanban_view, .o_form_view { padding-top: 2px; }
-.o_kanban_view .o_kanban_renderer { padding-top: 6px; }
-
-
-/* 26. Kanban first-row spacing: reclaim header whitespace without overlap */
-.o_action_manager .o_control_panel { margin-top: 0 !important; }
-/* slightly reduce content top padding so first kanban row sits closer to the header */
-.o_action_manager .o_control_panel + .o_content { padding-top: 8px !important; }
-/* keep kanban renderer tight to the top */
-.o_kanban_view .o_kanban_renderer { padding-top: 2px !important; }
-
+    /* List and form views: minimal spacing */
+    .o_list_view,
+    .o_form_view {
+        padding-top: 0 !important;
+    }
