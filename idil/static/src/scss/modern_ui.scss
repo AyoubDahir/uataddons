@@ -1149,3 +1149,43 @@ body, .o_web_client { background: #f6f8fb !important; }
 .o_form_label .o_required_modifier:after,
 .o_field_required:after { font-weight: 700; }
 
+
+
+/* 24. Visibility & accessibility fixes for primary actions and statusbar */
+:root {
+  --action-primary: #374151; /* slate-700 */
+  --action-primary-hover: #1f2937; /* slate-900 */
+}
+/* Make highlight (primary/confirm) actions clearly visible on white UI */
+.o_form_view header .oe_highlight,
+.o_form_statusbar .btn.oe_highlight,
+.o_statusbar_buttons .btn.oe_highlight,
+.btn.oe_highlight {
+  background: var(--action-primary) !important;
+  color: #ffffff !important;
+  border-color: var(--action-primary) !important;
+  box-shadow: 0 2px 8px rgba(55, 65, 81, 0.18) !important;
+}
+.o_form_view header .oe_highlight:hover,
+.o_form_statusbar .btn.oe_highlight:hover,
+.o_statusbar_buttons .btn.oe_highlight:hover,
+.btn.oe_highlight:hover {
+  background: var(--action-primary-hover) !important;
+  border-color: var(--action-primary-hover) !important;
+}
+/* Ensure non-highlight header buttons are still visible on white */
+.o_form_statusbar .btn,
+.o_statusbar_buttons .btn {
+  border: 1px solid #cbd5e1 !important;
+  background: #ffffff !important;
+  color: #111827 !important;
+}
+/* Slightly stronger disabled look so visibility remains clear */
+.btn.disabled, .btn:disabled { opacity: .65; }
+
+/* Make form sheet a bit wider for readability while keeping card look */
+.o_form_sheet { max-width: 960px !important; }
+
+/* Keep the header area visually separated from the form body */
+.o_form_view header { background: #ffffff !important; border-bottom: 1px solid #eef2f7 !important; }
+
