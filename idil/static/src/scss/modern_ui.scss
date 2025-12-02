@@ -642,12 +642,17 @@ textarea {
 // Ensure control panel never hides Save/Discard
 .o_control_panel {
     overflow: visible !important;
-    position: sticky;
-    /* keep actions visible while scrolling */
-    top: 64px;
-    /* navbar height */
-    z-index: 1020;
-    background: #fff;
+    position: static !important;
+    z-index: auto;
+}
+
+@supports selector(:has(*)) {
+    .o_view_controller:has(.o_form_view) .o_control_panel {
+        position: sticky !important;
+        top: 64px;
+        z-index: 1020;
+        background: #fff;
+    }
 }
 
 .o_control_panel .o_cp_top,
@@ -656,6 +661,14 @@ textarea {
 .o_control_panel .o_cp_left,
 .o_control_panel .o_cp_right {
     flex-wrap: wrap !important;
+}
+
+.o_action_manager .o_control_panel {
+    margin-bottom: 12px !important;
+}
+
+.o_action_manager .o_content {
+    margin-top: 8px !important;
 }
 
 .o_control_panel .o_cp_buttons .btn {
