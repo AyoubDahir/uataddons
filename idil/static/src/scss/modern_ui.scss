@@ -661,14 +661,6 @@ textarea {
     z-index: auto;
 }
 
-@supports selector(:has(*)) {
-    .o_view_controller:has(.o_form_view) .o_control_panel {
-        position: sticky !important;
-        top: 64px;
-        z-index: 1020;
-        background: #fff;
-    }
-}
 
 .o_control_panel .o_cp_top,
 .o_control_panel .o_cp_bottom,
