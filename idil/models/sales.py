@@ -513,25 +513,48 @@ class SaleOrder(models.Model):
                         "idil.salesperson.order.summary"
                     ].update_summary_from_order(order)
 
+
                     for line in order.order_lines:
                         product = line.product_id
 
-                        bom_currency = (
-                            product.bom_id.currency_id
-                            if product.bom_id
-                            else product.currency_id
-                        )
-                        amount_in_bom_currency = float(product.cost) * line.quantity
-                        if bom_currency.name == "USD":
-                            product_cost_amount = amount_in_bom_currency * order.rate
-                        else:
-                            product_cost_amount = amount_in_bom_currency
+                        # Use the product's cost_value_currency_id to determine cost currency
+                        # This field explicitly tracks whether cost is in USD or SL
+                        cost_currency = product.cost_value_currency_id
+                        if not cost_currency:
+                            # Fallback to USD if somehow not set (backward compatibility)
+                            cost_currency = self.env.ref("base.USD")
 
-                        _logger.info(
-                            "Product Cost Amount: %s for product %s",
-                            product_cost_amount,
-                            product.name,
-                        )
+                        cost_amount_base = float(product.cost) * line.quantity
+
+                        # Convert to sales currency (SL) if cost is in USD
+                        if cost_currency.name == "USD":
+                            # Cost is in USD, convert to SL using exchange rate
+                            product_cost_amount = cost_amount_base * order.rate
+                            _logger.info(
+                                "COGS USD→SL: Product=%s, Cost(USD)=%s×%s, Rate=%s, COGS(SL)=%s",
+                                product.name,
+                                product.cost,
+                                line.quantity,
+                                order.rate,
+                                product_cost_amount,
+                            )
+                        elif cost_currency.name == "SL":
+                            # Cost is already in SL, no conversion needed
+                            product_cost_amount = cost_amount_base
+                            _logger.info(
+                                "COGS SL (no conversion): Product=%s, Cost(SL)=%s×%s, COGS(SL)=%s",
+                                product.name,
+                                product.cost,
+                                line.quantity,
+                                product_cost_amount,
+                            )
+                        else:
+                            # Unsupported currency
+                            raise ValidationError(
+                                f"Product '{product.name}' has unsupported cost currency: {cost_currency.name}. "
+                                "Only USD and SL are supported."
+                            )
+
 
                         if line.commission_amount > 0:
                             if not product.sales_account_id:
@@ -663,6 +686,8 @@ class SaleOrder(models.Model):
                             }
                         )
                         # CR Revenue
+                        # Revenue should only be the sales amount (subtotal)
+                        # Commission and discount are posted separately as expenses
                         self.env["idil.transaction_bookingline"].create(
                             {
                                 "transaction_booking_id": transaction_booking.id,
@@ -672,11 +697,7 @@ class SaleOrder(models.Model):
                                 "account_number": product.income_account_id.id,
                                 "transaction_type": "cr",
                                 "dr_amount": 0,
-                                "cr_amount": float(
-                                    line.subtotal
-                                    + line.commission_amount
-                                    + line.discount_amount
-                                ),
+                                "cr_amount": float(line.subtotal),
                                 "rate": order.rate,
                                 "transaction_date": order.order_date,
                             }

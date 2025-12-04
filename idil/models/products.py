@@ -116,8 +116,20 @@ class Product(models.Model):
         string="Currency",
         required=True,
         default=lambda self: self.env.company.currency_id,
+        help="Currency for COGS and Adjustment account filtering",
     )
 
+    # NEW: Separate field to track the currency of the cost VALUE itself
+    cost_value_currency_id = fields.Many2one(
+        "res.currency",
+        string="Cost Currency",
+        required=True,
+        default=lambda self: self.env.ref("base.USD"),
+        help="Currency in which the product cost value is denominated (USD or SL)",
+        tracking=True,
+    )
+
+    #below if for account filtering
     account_cogs_id = fields.Many2one(
         "idil.chart.account",
         string="Cost of Goods Sold (Expense)",
