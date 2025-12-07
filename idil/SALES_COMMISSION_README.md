@@ -16,7 +16,7 @@ Open a Salesperson profile and configure the **Commission Settings**:
 
 ## 🔄 Workflow
 
-### 1. Sale Order Confirmation
+### 1. Sale Order Confirmationsg
 When a Sale Order is confirmed:
 1. **Sales Amount** and **Discount** are posted **immediately** to the salesperson's transaction history (increasing their debt/receivable).
 2. **Commission** is **NOT** posted immediately. Instead, a **Sales Commission Record** is created in the new system.
