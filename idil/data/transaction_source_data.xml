@@ -96,6 +96,11 @@
             <field name="description">Staff Sales</field>
         </record>
 
+        <record id="trx_source_commission_payment" model="idil.transaction.source">
+            <field name="name">Commission Payment</field>
+            <field name="description">Payment of sales commissions to salespersons</field>
+        </record>
+
 
    
    

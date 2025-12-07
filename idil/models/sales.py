@@ -748,11 +748,27 @@ class SaleOrder(models.Model):
                                         "transaction_date": order.order_date,
                                     }
                                 )
-                            # For 'daily' schedule, the commission is already accounted for by reducing
-                            # the Receivable (via subtotal), so no additional CR entry needed
+                            else:
+                                # Daily schedule: CR Receivable (commission reduces what salesperson owes)
+                                # This balances the DR Commission Expense entry above
+                                self.env["idil.transaction_bookingline"].create(
+                                    {
+                                        "transaction_booking_id": transaction_booking.id,
+                                        "sale_order_id": order.id,
+                                        "description": f"Commission Offset - {product.name}",
+                                        "product_id": product.id,
+                                        "account_number": order.sales_person_id.account_receivable_id.id,
+                                        "transaction_type": "cr",
+                                        "dr_amount": 0,
+                                        "cr_amount": float(line.commission_amount),
+                                        "rate": order.rate,
+                                        "transaction_date": order.order_date,
+                                    }
+                                )
 
-                        # DR Discount expense
+                        # Discount Accounting
                         if line.discount_amount > 0:
+                            # DR Discount Expense
                             self.env["idil.transaction_bookingline"].create(
                                 {
                                     "transaction_booking_id": transaction_booking.id,
@@ -763,6 +779,22 @@ class SaleOrder(models.Model):
                                     "transaction_type": "dr",
                                     "dr_amount": line.discount_amount,
                                     "cr_amount": 0,
+                                    "rate": order.rate,
+                                    "transaction_date": order.order_date,
+                                }
+                            )
+                            # CR Receivable (discount reduces what salesperson owes)
+                            # This balances the DR Discount Expense entry above
+                            self.env["idil.transaction_bookingline"].create(
+                                {
+                                    "transaction_booking_id": transaction_booking.id,
+                                    "sale_order_id": order.id,
+                                    "description": f"Discount Offset - {product.name}",
+                                    "product_id": product.id,
+                                    "account_number": order.sales_person_id.account_receivable_id.id,
+                                    "transaction_type": "cr",
+                                    "dr_amount": 0,
+                                    "cr_amount": float(line.discount_amount),
                                     "rate": order.rate,
                                     "transaction_date": order.order_date,
                                 }

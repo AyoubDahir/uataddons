@@ -247,6 +247,14 @@ class SalesCommission(models.Model):
                 f"commission amount ({self.commission_remaining})."
             )
 
+        # Validate commission payable account exists for monthly schedule
+        if self.payment_schedule == 'monthly':
+            if not self.sales_person_id.commission_payable_account_id:
+                raise ValidationError(
+                    f"Salesperson '{self.sales_person_id.name}' has monthly commission schedule "
+                    "but no Commission Payable Account configured."
+                )
+
         # Create payment record
         payment_vals = {
             "commission_id": self.id,
@@ -255,7 +263,58 @@ class SalesCommission(models.Model):
             "date": fields.Date.context_today(self),
             "cash_account_id": self.cash_account_id.id,
         }
-        self.env["idil.sales.commission.payment"].create(payment_vals)
+        payment = self.env["idil.sales.commission.payment"].create(payment_vals)
+
+        # Book accounting entry for commission payment (monthly schedule only)
+        # Daily schedule doesn't use Commission Payable, so no clearing entry needed
+        if self.payment_schedule == 'monthly':
+            trx_source = self.env["idil.transaction.source"].search(
+                [("name", "=", "Commission Payment")], limit=1
+            )
+            if not trx_source:
+                # Fallback to Receipt source if Commission Payment doesn't exist
+                trx_source = self.env["idil.transaction.source"].search(
+                    [("name", "=", "Receipt")], limit=1
+                )
+            
+            # Create transaction booking
+            booking = self.env["idil.transaction_booking"].create(
+                {
+                    "sales_person_id": self.sales_person_id.id,
+                    "trx_source_id": trx_source.id if trx_source else False,
+                    "trx_date": fields.Date.context_today(self),
+                    "amount": self.amount_to_pay,
+                    "payment_method": "cash",
+                    "payment_status": "paid",
+                    "reffno": f"Commission Payment - {self.name}",
+                }
+            )
+            
+            # DR Commission Payable (clear the liability)
+            self.env["idil.transaction_bookingline"].create(
+                {
+                    "transaction_booking_id": booking.id,
+                    "description": f"Commission Payment - {self.sale_order_id.name}",
+                    "account_number": self.sales_person_id.commission_payable_account_id.id,
+                    "transaction_type": "dr",
+                    "dr_amount": self.amount_to_pay,
+                    "cr_amount": 0,
+                    "transaction_date": fields.Date.context_today(self),
+                }
+            )
+            
+            # CR Cash/Bank (record cash outflow)
+            self.env["idil.transaction_bookingline"].create(
+                {
+                    "transaction_booking_id": booking.id,
+                    "description": f"Commission Payment - {self.sale_order_id.name}",
+                    "account_number": self.cash_account_id.id,
+                    "transaction_type": "cr",
+                    "dr_amount": 0,
+                    "cr_amount": self.amount_to_pay,
+                    "transaction_date": fields.Date.context_today(self),
+                }
+            )
 
         # Reset amount_to_pay
         self.amount_to_pay = 0.0
