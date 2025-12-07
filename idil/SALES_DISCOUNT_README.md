@@ -21,7 +21,7 @@ When a Sale Order is confirmed:
 1. **Sales Amount** is posted **immediately** to the salesperson's transaction history.
 2. **Discount** is **NOT** posted immediately. Instead, a **Sales Discount Record** is created.
 
-### 2. Due Date Calculation
+### 2. Due Date Calculations
 The system automatically calculates the `Due Date` for the discount processing:
 - **Daily Schedule**: Due Date = Order Date.
 - **Monthly Schedule**:
