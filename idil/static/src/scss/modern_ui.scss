@@ -178,6 +178,8 @@
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.03) !important;
     border: 1px solid rgba(0, 0, 0, 0.04);
     margin-bottom: 20px !important;
+    table-layout: auto !important;
+    width: 100% !important;
 
     thead {
         background: #f8fafc;
@@ -190,6 +192,31 @@
             letter-spacing: 0.08em;
             color: #64748b;
             padding: 16px 20px !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            max-width: 300px !important;
+            min-width: 80px !important;
+
+            // Specific width hints for common column types
+            &.o_list_number_th,
+            &[data-name*="qty"],
+            &[data-name*="quantity"],
+            &[data-name*="price"],
+            &[data-name*="amount"],
+            &[data-name*="subtotal"],
+            &[data-name*="total"] {
+                width: 120px !important;
+                max-width: 150px !important;
+                min-width: 100px !important;
+            }
+
+            &.o_list_button,
+            &.o_list_record_selector {
+                width: 50px !important;
+                max-width: 50px !important;
+                min-width: 50px !important;
+            }
         }
     }
 
@@ -201,6 +228,34 @@
             border-top: 1px solid #f1f5f9 !important;
             color: #334155;
             font-weight: 500;
+            max-width: 300px !important;
+            min-width: 80px !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            white-space: normal !important;
+            word-wrap: break-word !important;
+
+            // Specific width hints for numeric columns
+            &.o_list_number,
+            &[name*="qty"],
+            &[name*="quantity"],
+            &[name*="price"],
+            &[name*="amount"],
+            &[name*="subtotal"],
+            &[name*="total"] {
+                width: 120px !important;
+                max-width: 150px !important;
+                min-width: 100px !important;
+                text-align: right !important;
+                white-space: nowrap !important;
+            }
+
+            &.o_list_button,
+            &.o_list_record_selector {
+                width: 50px !important;
+                max-width: 50px !important;
+                min-width: 50px !important;
+            }
         }
 
         &:hover {
