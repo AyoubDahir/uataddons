@@ -132,6 +132,7 @@
         "views/inventory_dashboard.xml",
         "views/sales_dashboard.xml",
         "views/sales_commission.xml",
-        "views/sales_discount.xml"
+        "views/sales_discount.xml",
+        "views/report_product_inventory_summary.xml"
     ]
 }

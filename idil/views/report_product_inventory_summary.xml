@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+        <!-- Product Inventory Summary Report Wizard Form -->
+        <record id="view_product_inventory_summary_wizard_form" model="ir.ui.view">
+            <field name="name">product.inventory.summary.wizard.form</field>
+            <field name="model">idil.product.inventory.summary.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Product Inventory Summary Report">
+                    <group>
+                        <group>
+                            <field name="start_date"/>
+                            <field name="end_date"/>
+                        </group>
+                        <group>
+                            <field name="company_id"/>
+                            <field name="product_id"/>
+                        </group>
+                    </group>
+                    <footer>
+                        <button string="Generate PDF Report" 
+                                name="generate_pdf_report" 
+                                type="object" 
+                                class="btn-primary"/>
+                        <button string="Cancel" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <!-- Wizard Action -->
+        <record id="action_product_inventory_summary_wizard" model="ir.actions.act_window">
+            <field name="name">Product Inventory Summary</field>
+            <field name="res_model">idil.product.inventory.summary.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+        </record>
+
+        <!-- Menu Item under Reports -->
+        <menuitem id="menu_product_inventory_summary_report"
+                  name="Product Inventory Summary"
+                  parent="idil.menu_reports"
+                  action="action_product_inventory_summary_wizard"
+                  sequence="25"/>
+
+    </data>
+</odoo>

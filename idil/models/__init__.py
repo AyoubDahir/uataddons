@@ -76,3 +76,4 @@ from . import view_all_sales
 from . import report_kitchen_quantity
 from . import sales_commission
 from . import sales_discount
+from . import report_product_inventory_summary
