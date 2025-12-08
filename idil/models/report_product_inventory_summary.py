@@ -141,7 +141,7 @@ class ProductInventorySummaryWizard(models.TransientModel):
             SELECT
                 sol.product_id,
                 COALESCE(SUM(sol.quantity), 0) AS sold_qty,
-                COALESCE(SUM(sol.subtotal), 0) AS sold_revenue
+                COALESCE(SUM(sol.quantity * sol.price_unit), 0) AS sold_revenue
             FROM idil_sale_order_line sol
             JOIN idil_sale_order so ON sol.order_id = so.id
             WHERE so.state = 'confirmed'
