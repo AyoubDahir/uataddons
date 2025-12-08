@@ -96,7 +96,34 @@
                                 </group>
                             </page>
 
-                            <!-- Costing Information Page -->
+                            <!-- Commission Tab -->
+                            <page string="Commission">
+                                <group>
+                                    <group string="Sales Commission (When Sold)">
+                                        <field name="is_sales_commissionable"/>
+                                        <field name="commission" invisible="not is_sales_commissionable" string="Commission Rate (%)"/>
+                                        <field name="sales_currency_id" invisible="not is_sales_commissionable"/>
+                                        <field name="sales_account_id" invisible="not is_sales_commissionable" string="Commission Expense Account"/>
+                                    </group>
+                                    <group string="Manufacturing Commission (When Made)">
+                                        <field name="is_commissionable" string="Commissionable"/>
+                                        <field name="currency_id" invisible="not is_commissionable"/>
+                                        <field name="account_id" invisible="not is_commissionable" string="Commission Payable Account"/>
+                                    </group>
+                                </group>
+                                <separator string="Discount Settings"/>
+                                <group>
+                                    <group>
+                                        <field name="is_quantity_discount"/>
+                                        <field name="discount" invisible="not is_quantity_discount" string="Discount Rate (%)"/>
+                                    </group>
+                                    <group>
+                                        <field name="discount_currency_id" invisible="not is_quantity_discount"/>
+                                        <field name="sales_discount_id" invisible="not is_quantity_discount" string="Discount Expense Account"/>
+                                    </group>
+                                </group>
+                            </page>
+
                             <page string="Costing Information">
                                 <group>
                                     <group>
