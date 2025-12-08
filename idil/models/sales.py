@@ -686,8 +686,8 @@ class SaleOrder(models.Model):
                             }
                         )
                         # CR Revenue
-                        # Revenue should only be the sales amount (subtotal)
-                        # Commission and discount are posted separately as expenses
+                        # Revenue should be the FULL sales amount (before commission/discount)
+                        # Receivable is already netted via subtotal calculation
                         self.env["idil.transaction_bookingline"].create(
                             {
                                 "transaction_booking_id": transaction_booking.id,
@@ -697,7 +697,7 @@ class SaleOrder(models.Model):
                                 "account_number": product.income_account_id.id,
                                 "transaction_type": "cr",
                                 "dr_amount": 0,
-                                "cr_amount": float(line.subtotal),
+                                "cr_amount": float(line.quantity * line.price_unit),
                                 "rate": order.rate,
                                 "transaction_date": order.order_date,
                             }
@@ -748,23 +748,10 @@ class SaleOrder(models.Model):
                                         "transaction_date": order.order_date,
                                     }
                                 )
-                            else:
-                                # Daily schedule: CR Receivable (commission reduces what salesperson owes)
-                                # This balances the DR Commission Expense entry above
-                                self.env["idil.transaction_bookingline"].create(
-                                    {
-                                        "transaction_booking_id": transaction_booking.id,
-                                        "sale_order_id": order.id,
-                                        "description": f"Commission Offset - {product.name}",
-                                        "product_id": product.id,
-                                        "account_number": order.sales_person_id.account_receivable_id.id,
-                                        "transaction_type": "cr",
-                                        "dr_amount": 0,
-                                        "cr_amount": float(line.commission_amount),
-                                        "rate": order.rate,
-                                        "transaction_date": order.order_date,
-                                    }
-                                )
+                            # For daily schedule:
+                            # Commission is already netted in Receivable (via subtotal calculation)
+                            # No CR entry needed - DR Commission Expense is balanced by the fact that
+                            # Receivable was reduced by commission amount in the subtotal
 
                         # Discount Accounting
                         if line.discount_amount > 0:
@@ -783,22 +770,9 @@ class SaleOrder(models.Model):
                                     "transaction_date": order.order_date,
                                 }
                             )
-                            # CR Receivable (discount reduces what salesperson owes)
-                            # This balances the DR Discount Expense entry above
-                            self.env["idil.transaction_bookingline"].create(
-                                {
-                                    "transaction_booking_id": transaction_booking.id,
-                                    "sale_order_id": order.id,
-                                    "description": f"Discount Offset - {product.name}",
-                                    "product_id": product.id,
-                                    "account_number": order.sales_person_id.account_receivable_id.id,
-                                    "transaction_type": "cr",
-                                    "dr_amount": 0,
-                                    "cr_amount": float(line.discount_amount),
-                                    "rate": order.rate,
-                                    "transaction_date": order.order_date,
-                                }
-                            )
+                            # Discount is already netted in Receivable (via subtotal calculation)
+                            # No CR entry needed - DR Discount Expense is balanced by the fact that
+                            # Receivable was reduced by discount amount in the subtotal
         except Exception as e:
             _logger.error("transaction failed: %s", e)
             raise ValidationError(("Transaction failed: %s") % e)
