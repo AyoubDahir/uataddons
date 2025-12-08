@@ -873,7 +873,7 @@ class SaleOrder(models.Model):
                 return res
         except Exception as e:
             _logger.error("Create transaction failed: %s", e)
-            raise ValidationError("Transaction failed: %s") % e
+            raise ValidationError(("Transaction failed: %s") % e)
 
     def unlink(self):
         try:
