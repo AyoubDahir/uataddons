@@ -108,7 +108,7 @@
                                                invisible="not is_sales_commissionable"/>
                                         <field name="sales_account_id"
                                                invisible="not is_sales_commissionable"
-                                               string="Commission Expense Account"/>
+                                               string="Commission Expenses Account"/>
                                     </group>
                                 </group>
                             </page> 
@@ -134,7 +134,7 @@
                                         <field name="currency_id" invisible="not is_commissionable"/>
                                         <field name="account_id"
                                                invisible="not is_commissionable"
-                                               string="Commission Expanses Account"/>
+                                               string="Commission Expenses Account"/>
                                     </group>
                                 </group>
                             </page>
