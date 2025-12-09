@@ -66,9 +66,20 @@
                                 <group>
                                     <group>
                                         <field name="uom_id"/>
-                                        <field name="pos_categ_ids" widget="many2many_tags" string="POS Menu"/>
                                         <field name="asset_currency_id"/>
                                         <field name="asset_account_id"/>
+                                    </group>
+                                </group>
+                            </page>
+                            <!-- Sales Information Page -->
+                            <page string="Sales Information">
+                                <group>
+                                    <group>
+                                        <field name="stock_quantity" readonly="1"/>
+                                        <field name="sale_price"/>
+                                        <field name="sales_currency_id"/>
+                                        <field name="sales_account_id"/>
+                                        <field name="income_account_id"/>
                                     </group>
                                     <group>
                                         <field name="is_quantity_discount"/>
@@ -76,54 +87,14 @@
                                         <field name="sales_discount_id" invisible="not is_quantity_discount"/>
                                         <field name="discount" invisible="not is_quantity_discount"/>
                                     </group>
-                                </group>
-                            </page>
-
-                            <!-- Sales Information Page -->
-                            <page string="Sales Information">
-                                <group>
-                                    <group>
-                                        <field name="sale_price"/>
-                                        <field name="sales_currency_id"/>
-                                        <field name="sales_account_id"/>
-                                        <field name="income_account_id"/>
-                                    </group>
-                                    <group>
-                                        <field name="stock_quantity" readonly="1"/>
-                                        <field name="is_sales_commissionable"/>
-                                        <field name="commission" invisible="not is_sales_commissionable"/>
-                                    </group>
-                                </group>
-                            </page>
-
-                            <!-- Commission Tab -->
-                            <page string="Commission">
-                                <group>
-                                    <group string="Sales Commission (When Sold)">
+                                     <group string="Sales Commission (When Sold)">
                                         <field name="is_sales_commissionable"/>
                                         <field name="commission" invisible="not is_sales_commissionable" string="Commission Rate (%)"/>
                                         <field name="sales_currency_id" invisible="not is_sales_commissionable"/>
                                         <field name="sales_account_id" invisible="not is_sales_commissionable" string="Commission Expense Account"/>
                                     </group>
-                                    <group string="Manufacturing Commission (When Made)">
-                                        <field name="is_commissionable" string="Commissionable"/>
-                                        <field name="currency_id" invisible="not is_commissionable"/>
-                                        <field name="account_id" invisible="not is_commissionable" string="Commission Payable Account"/>
-                                    </group>
                                 </group>
-                                <separator string="Discount Settings"/>
-                                <group>
-                                    <group>
-                                        <field name="is_quantity_discount"/>
-                                        <field name="discount" invisible="not is_quantity_discount" string="Discount Rate (%)"/>
-                                    </group>
-                                    <group>
-                                        <field name="discount_currency_id" invisible="not is_quantity_discount"/>
-                                        <field name="sales_discount_id" invisible="not is_quantity_discount" string="Discount Expense Account"/>
-                                    </group>
-                                </group>
-                            </page>
-
+                            </page> 
                             <page string="Costing Information">
                                 <group>
                                     <group>
@@ -136,7 +107,11 @@
                                         <field name="cost_value_currency_id"/>
                                         <field name="account_cogs_id"/>
                                         <field name="account_adjustment_id"/>
-                                        <field name="purchase_description"/>
+                                    </group>
+                                     <group string="Manufacturing Commission">
+                                        <field name="is_commissionable" string="Commissionable"/>
+                                        <field name="currency_id" invisible="not is_commissionable"/>
+                                        <field name="account_id" invisible="not is_commissionable" string="Commission Expanses Account"/>
                                     </group>
                                 </group>
                             </page>

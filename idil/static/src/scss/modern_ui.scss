@@ -1,1951 +1,229 @@
 // -------------------------------------------------------------------------
-// Modern UI Overrides for BizCore - Premium Edition (Fixed Layout Version)
+// 23. Responsive Auto-Fit (fields, columns, buttons, cells)
 // -------------------------------------------------------------------------
 
-
-// 1. Animations & Keyframes
-// -------------------------------------------------------------------------
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translate3d(0, 20px, 0);
-    }
-
-    to {
-        opacity: 1;
-        transform: translate3d(0, 0, 0);
-    }
-}
-
-@keyframes float {
-    0% {
-        transform: translateY(0px);
-    }
-
-    50% {
-        transform: translateY(-5px);
-    }
-
-    100% {
-        transform: translateY(0px);
-    }
-}
-
-.o_action_manager {
-    animation: fadeInUp 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-}
-
-
-// 2. Full-width Forms & Chatter Below
-// -------------------------------------------------------------------------
-// Remove Odoo's internal max-width for sheets
-:root {
-    --o-form-sheet-max-width: 100% !important;
-}
-
-// Make sheet / nosheet regions full width
-.o_form_view .o_form_sheet_bg,
-.o_form_view .o_form_sheet,
-.o_form_view .o_form_nosheet {
-    max-width: none !important;
-    width: 100% !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    padding-left: 16px !important;
-    padding-right: 16px !important;
-    box-sizing: border-box;
-}
-
-// Make the content container stretch on large screens
-@media (min-width: 1400px) {
-    .o_action_manager .o_content {
-        max-width: 100% !important;
-    }
-}
-
-// Remove builtin content max-widths and center gutters so content uses full width
-.o_web_client .o_action_manager .o_view_controller,
-.o_web_client .o_action_manager .o_control_panel,
-.o_web_client .o_action_manager .o_content {
-    max-width: none !important;
-    width: 100% !important;
-    margin: 0 !important;
-}
-
-// Stack form renderer + chatter vertically (form first, chatter below)
-.o_form_view .o_form_view_container {
-    display: flex !important;
-    flex-direction: column !important;
-    flex-wrap: nowrap !important;
-}
-
-// Ensure both form and chatter take full width
-.o_form_view .o_form_renderer,
-.o_form_view .oe_chatter,
-.o_form_view .o-mail-Chatter,
-.o_form_view .o_ChatterContainer,
-.o_form_view .o-aside {
-    display: block !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    float: none !important;
-    clear: both !important;
-    position: static !important;
-    grid-area: auto !important;
-    align-self: stretch !important;
-}
-
-// Spacing before chatter
-.o_form_view .oe_chatter,
-.o_form_view .o-mail-Chatter,
-.o_form_view .o_ChatterContainer,
-.o_form_view .o-aside {
-    margin-top: 16px !important;
-}
-
-// Ensure the form sheet itself expands and doesn't shrink weirdly
-.o_form_view .o_form_renderer,
-.o_form_view .o_form_sheet_bg,
-.o_form_view .o_form_sheet,
-.o_form_view .o_form_nosheet {
-    min-width: 0 !important;
-}
-
-// In case chatter is a direct child next to renderer
-.o_form_view .o_form_view_container>.o_form_renderer {
-    order: 1 !important;
-}
-
-.o_form_view .o_form_view_container>.oe_chatter,
-.o_form_view .o_form_view_container>.o-aside,
-.o_form_view .o_form_view_container>.o-mail-Chatter,
-.o_form_view .o_form_view_container>.o_ChatterContainer {
-    order: 2 !important;
-}
-
-.o_form_view .o_form_view_container>.o_form_renderer,
-.o_form_view .o_form_view_container>.oe_chatter,
-.o_form_view .o_form_view_container>.o-aside,
-.o_form_view .o_form_view_container>.o-mail-Chatter,
-.o_form_view .o_form_view_container>.o_ChatterContainer {
-    flex: 0 0 auto !important;
-}
-
-// Fallback for legacy selectors
-.o_form_view .o_form_view_container .o_aside,
-.o_form_view .o_form_view_container .o-aside,
-.o_form_view .o_form_view_container .oe_chatter,
-.o_form_view .o_form_view_container .o-mail-Chatter,
-.o_form_view .o_form_view_container .o_ChatterContainer {
-    width: 100% !important;
-    max-width: 100% !important;
-    float: none !important;
-    clear: both !important;
-}
-
-
-// 3. Form Views & Sheets (visual styling)
-// -------------------------------------------------------------------------
-.o_form_sheet {
-    background: #ffffff !important;
-    border: 1px solid rgba(255, 255, 255, 0.5) !important;
-    border-radius: 16px !important;
-    box-shadow:
-        0 20px 50px -12px rgba(0, 0, 0, 0.1),
-        0 0 25px -5px rgba(0, 0, 0, 0.05) !important;
-    padding: 24px 28px 32px !important;
-    width: 100% !important;
-    max-width: none !important;
-    box-sizing: border-box;
-    margin: 16px 0 !important;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.o_form_view .o_form_label {
-    font-size: 1rem !important; // 16px
-    font-weight: 600 !important;
-    color: #475569;
-    margin-bottom: 8px !important;
-}
-
-
-// 4. List Views - Enhanced Column Width Management
-// -------------------------------------------------------------------------
-.o_list_view .o_list_table,
-.o_field_one2many .o_list_table,
-.o_field_x2many .o_list_table {
-    background: #ffffff !important;
-    border-radius: 16px !important;
-    overflow: hidden;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.03) !important;
-    border: 1px solid rgba(0, 0, 0, 0.04);
-    margin-bottom: 20px !important;
-    table-layout: fixed !important; // Changed to fixed for better control
-    width: 100% !important;
-
-    // Column group for proportional widths
-    colgroup col {
-        &:first-child {
-            width: 40% !important; // Product/main column
-        }
-
-        &:nth-child(2),
-        &:nth-child(3),
-        &:nth-child(4),
-        &:nth-child(5) {
-            width: 15% !important; // Equal width for other columns
-        }
-    }
-
-    thead {
-        background: #f8fafc;
-
-        th {
-            border-bottom: 1px solid #e2e8f0 !important;
-            text-transform: uppercase;
-            font-size: 0.7rem;
-            font-weight: 600;
-            letter-spacing: 0.08em;
-            color: #64748b;
-            padding: 16px 20px !important;
-            white-space: nowrap !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
-
-            // First column (usually product/name)
-            &:first-child {
-                width: 40% !important;
-                max-width: 40% !important;
-            }
-
-            // Numeric and short columns get fixed smaller widths
-            &.o_list_number_th,
-            &[data-name*="qty"],
-            &[data-name*="quantity"],
-            &[data-name*="demand"],
-            &[data-name*="used"],
-            &[data-name*="price"],
-            &[data-name*="unit"],
-            &[data-name*="amount"],
-            &[data-name*="subtotal"],
-            &[data-name*="total"] {
-                width: 15% !important;
-                max-width: 15% !important;
-                min-width: 100px !important;
-            }
-
-            // Button columns
-            &.o_list_button,
-            &.o_list_record_selector,
-            &.o_list_record_remove {
-                width: 50px !important;
-                max-width: 50px !important;
-                min-width: 50px !important;
-            }
-        }
-    }
-
-    tbody tr {
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-
-        td {
-            padding: 16px 20px !important;
-            border-top: 1px solid #f1f5f9 !important;
-            color: #334155;
-            font-weight: 500;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
-            white-space: normal !important;
-            word-wrap: break-word !important;
-
-            // First column
-            &:first-child {
-                width: 40% !important;
-                max-width: 40% !important;
-            }
-
-            // Numeric cells
-            &.o_list_number,
-            &.o_data_cell[name*="qty"],
-            &.o_data_cell[name*="quantity"],
-            &.o_data_cell[name*="demand"],
-            &.o_data_cell[name*="used"],
-            &.o_data_cell[name*="price"],
-            &.o_data_cell[name*="unit"],
-            &.o_data_cell[name*="amount"],
-            &.o_data_cell[name*="subtotal"],
-            &.o_data_cell[name*="total"],
-            &[name*="qty"],
-            &[name*="quantity"],
-            &[name*="demand"],
-            &[name*="used"],
-            &[name*="price"],
-            &[name*="unit"],
-            &[name*="amount"],
-            &[name*="subtotal"],
-            &[name*="total"] {
-                width: 15% !important;
-                max-width: 15% !important;
-                min-width: 100px !important;
-                text-align: right !important;
-                white-space: nowrap !important;
-
-                input,
-                .o_input {
-                    text-align: right !important;
-                    width: 100% !important;
-                }
-            }
-
-            // Button columns
-            &.o_list_button,
-            &.o_list_record_selector,
-            &.o_list_record_remove {
-                width: 50px !important;
-                max-width: 50px !important;
-                min-width: 50px !important;
-            }
-        }
-
-        &:hover {
-            background-color: #f8fafc !important;
-            transform: scale(1.005);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            z-index: 1;
-            position: relative;
-        }
-    }
-}
-
-
-// 5. Modern Buttons
-// -------------------------------------------------------------------------
-.btn {
-    border-radius: 10px !important;
-    font-weight: 500 !important;
-    letter-spacing: 0.01em !important;
-    padding: 10px 24px !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    position: relative;
-    overflow: hidden;
-
-    &:active {
-        transform: scale(0.96);
-    }
-}
-
-.btn-primary {
-    background: #ffffff !important;
-    color: #1f2937 !important;
-    border: 1px solid #e2e8f0 !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
-
-    &:hover {
-        background: #ffffff !important;
-        color: #0f172a !important;
-        border-color: #cbd5e1 !important;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06) !important;
-        transform: none !important;
-    }
-
-    &:active,
-    &.active {
-        background: #ffffff !important;
-        border-color: #94a3b8 !important;
-        box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.06) inset !important;
-    }
-
-    &:disabled,
-    &.disabled {
-        background: #ffffff !important;
-        color: #94a3b8 !important;
-        border-color: #e5e7eb !important;
-        box-shadow: none !important;
-    }
-}
-
-.btn-secondary {
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    color: #475569 !important;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
-
-    &:hover {
-        background: #f8fafc !important;
-        border-color: #cbd5e1 !important;
-        color: #1e293b !important;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    }
-}
-
-
-// 6. Typography & Inputs
-// -------------------------------------------------------------------------
-body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-    -webkit-font-smoothing: antialiased;
-    color: #1e293b;
-    font-size: 15px !important;
-}
-
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-    font-weight: 700 !important;
-    letter-spacing: -0.02em;
-    color: #0f172a;
-}
-
-// Larger Inputs
-.o_field_widget {
-
-    input,
-    select,
-    textarea {
-        border-radius: 12px !important;
-        border: 1px solid #cbd5e1 !important;
-        padding: 14px 20px !important;
-        font-size: 1rem !important;
-        transition: all 0.2s ease;
-        background: #f8fafc;
-        font-weight: 500;
-        color: #1e293b;
-        min-height: 48px !important;
-
-        &:focus {
-            background: #ffffff;
-            border-color: #64748b !important;
-            box-shadow: 0 0 0 4px rgba(55, 65, 81, 0.15) !important;
-            outline: none;
-        }
-
-        &:hover {
-            border-color: #94a3b8 !important;
-        }
-    }
-}
-
-
-// 7. Kanban View Modernization
-// -------------------------------------------------------------------------
-.o_kanban_view .o_kanban_record {
-    border-radius: 16px !important;
-    border: 1px solid rgba(0, 0, 0, 0.04) !important;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
-    background: #fff !important;
-    margin-bottom: 20px !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-    &:hover {
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
-            0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
-        transform: translateY(-4px);
-        z-index: 10;
-    }
-}
-
-
-// 8. Navbar (Clean White Theme)
-// -------------------------------------------------------------------------
-.o_main_navbar,
-nav.o_main_navbar,
-header.o_main_navbar,
-.top_heading,
-#oe_main_menu_navbar {
-    background: #ffffff !important;
-    background-color: #ffffff !important;
-    background-image: none !important;
-    border-bottom: 1px solid #e5e7eb !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
-    height: 64px !important;
-    padding: 0 24px !important;
-    color: #1e293b !important;
-    z-index: 1000 !important;
-}
-
-// Remove gradients
-.o_main_navbar *,
-header *,
-.top_heading * {
-    background-image: none !important;
-}
-
-// Navbar Links & Buttons
-.o_main_navbar a,
-.o_main_navbar button,
-.o_main_navbar .o_menu_sections>li>a,
-.o_main_navbar .o_menu_systray .o_nav_entry,
-.o_main_navbar .o_menu_brand,
-.top_heading a,
-header a,
-.o_main_navbar .dropdown-toggle,
-.o_main_navbar .o_user_menu .dropdown-toggle {
-    color: #1e293b !important;
-    font-size: 14px !important;
-    font-weight: 600 !important;
-    padding: 8px 16px !important;
-    border-radius: 8px !important;
-    background: transparent !important;
-    text-shadow: none !important;
-    transition: all 0.2s ease;
-
-    &:hover {
-        background-color: #f3f4f6 !important;
-        color: #0f172a !important;
-    }
-}
-
-// Active Menu Item
-.o_main_navbar .o_menu_sections>li.active>a,
-.o_main_navbar .o_menu_sections>li.show>a {
-    background-color: #e5e7eb !important;
-    color: #0f172a !important;
-    font-weight: 700 !important;
-}
-
-// Systray Icons
-.o_menu_systray .o_nav_entry {
-    color: #64748b !important;
-
-    &:hover {
-        background-color: #f3f4f6 !important;
-        color: #1e293b !important;
-    }
-}
-
-.dropdown-menu {
-    z-index: 1050 !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
-    border: 1px solid rgba(0, 0, 0, 0.05) !important;
-    border-radius: 12px !important;
-}
-
-.o_user_menu .dropdown-item:hover {
-    background-color: #f3f4f6 !important;
-}
-
-// 9. Modal & Dialogs
-// -------------------------------------------------------------------------
-.modal-content {
-    border-radius: 24px !important;
-    border: none !important;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
-    overflow: hidden;
-}
-
-.modal-header {
-    border-bottom: 1px solid #f1f5f9;
-    padding: 24px 32px;
-}
-
-.modal-footer {
-    border-top: 1px solid #f1f5f9;
-    padding: 20px 32px;
-    background: #f8fafc;
-}
-
-// 10. Notebooks & Tabs
-// -------------------------------------------------------------------------
-.o_notebook_headers {
-    border-bottom: 2px solid #f1f5f9 !important;
-    margin-left: -20px !important;
-    margin-right: -20px !important;
-    padding-left: 20px !important;
-
-    .nav-tabs {
-        border-bottom: none !important;
-
-        .nav-item {
-            margin-bottom: -2px;
-
-            .nav-link {
-                border: none !important;
-                color: #64748b !important;
-                font-weight: 600;
-                padding: 16px 24px !important;
-                background: transparent !important;
-                border-bottom: 2px solid transparent !important;
-                transition: all 0.2s ease;
-
-                &.active {
-                    color: #374151 !important;
-                    border-bottom: 2px solid #374151 !important;
-                }
-
-                &:hover {
-                    color: #374151 !important;
-                    background: #f8fafc !important;
-                }
-            }
-        }
-    }
-}
-
-// 11. Textareas & Internal Notes
-// -------------------------------------------------------------------------
-.o_field_text,
-textarea {
-    min-height: 120px !important;
-    width: 100% !important;
-    resize: vertical;
-    line-height: 1.6 !important;
-}
-
-// Specific fix for inner groups
-.o_group.o_inner_group {
-    width: 100% !important;
-    display: block !important;
-}
-
-// 12. One2Many Lists
-// -------------------------------------------------------------------------
-.o_field_one2many {
-    .o_list_view {
-        box-shadow: none !important;
-        border: 1px solid #f1f5f9 !important;
-        margin-top: 16px !important;
-
-        .o_list_table {
-            border: none !important;
-        }
-    }
-
-    .o_field_x2many_list_row_add {
-        a {
-            display: inline-block;
-            margin-top: 10px;
-            padding: 8px 16px;
-            background: #f1f5f9;
-            border-radius: 8px;
-            color: #475569;
-            font-weight: 600;
-            text-decoration: none;
-            transition: all 0.2s ease;
-
-            &:hover {
-                background: #e2e8f0;
-                color: #1e293b;
-            }
-        }
-    }
-}
-
-// 13. Header Buttons (New, etc.)
-// -------------------------------------------------------------------------
-.o_control_panel .o_cp_buttons .btn {
-    text-transform: uppercase;
-    font-size: 0.75rem !important;
-    letter-spacing: 0.05em;
-    padding: 10px 20px !important;
-}
-
-// 14. Vanilla JS Datepicker (Bootstrap 5 style)
-// -------------------------------------------------------------------------
-.datepicker-dropdown,
-.datepicker {
-    z-index: 2090 !important;
-}
-
-.datepicker-picker {
-    background-color: #ffffff !important;
-    border: 1px solid rgba(0, 0, 0, .06) !important;
-    border-radius: 16px !important;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, .16) !important;
-    overflow: hidden !important;
-}
-
-.datepicker-title {
-    background: #ffffff !important;
-    color: #1f2937 !important;
-    font-weight: 700 !important;
-    font-size: 1rem !important;
-    padding: .75rem 1rem !important;
-    border-bottom: 1px solid #eef2f7 !important;
-}
-
-.datepicker-header .datepicker-controls {
-    padding: .5rem .75rem !important;
-}
-
-.datepicker-controls .button {
-    border: 1px solid #e5e7eb !important;
-    border-radius: 10px !important;
-    background: #fff !important;
-    color: #374151 !important;
-    transition: all .15s ease !important;
-
-    &:hover {
-        background: #f3f4f6 !important;
-        border-color: #d1d5db !important;
-    }
-}
-
-.datepicker-controls .view-switch {
-    font-weight: 700 !important;
-    background: transparent !important;
-    border-color: transparent !important;
-}
-
-.datepicker-main {
-    padding: .5rem !important;
-}
-
-.datepicker-view .days-of-week {
-    gap: .25rem;
-    padding: .25rem .25rem .5rem;
-}
-
-.datepicker-view .dow {
-    color: #6b7280 !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    font-size: .75rem !important;
-}
-
-.datepicker-view .week {
-    color: #9CA3AF !important;
-    font-weight: 700 !important;
-}
-
-.datepicker-view .days .datepicker-cell,
-.datepicker-view.datepicker-grid .datepicker-cell {
-    height: 40px !important;
-    line-height: 40px !important;
-    width: 40px !important;
-    margin: 4px !important;
-    border-radius: 10px !important;
-    color: #374151 !important;
-    transition: transform .12s ease, background-color .12s ease, color .12s ease !important;
-}
-
-.datepicker-cell:hover {
-    background: #f3f4f6 !important;
-    transform: scale(1.04);
-}
-
-.datepicker-cell.disabled,
-.datepicker-cell.disabled:hover {
-    color: #cbd5e1 !important;
-    background: transparent !important;
-    transform: none;
-}
-
-.datepicker-cell.today {
-    position: relative;
-}
-
-// 20. Layout fixes: remove left gap and keep Save visible
-// -------------------------------------------------------------------------
-// Collapse any reserved aside column and start the form at the very left
-.o_web_client .o_form_view .o_form_view_container {
-    display: flex !important;
-    flex-direction: column !important;
-    flex-wrap: nowrap !important;
-    gap: 16px !important;
-    --o-aside-width: 0 !important;
-}
-
-// Remove unexpected left padding/margins on content and sheet containers
-.o_action_manager .o_content,
-.o_form_view .o_form_sheet_bg,
-.o_form_view .o_form_sheet,
-.o_form_view .o_form_nosheet {
-    padding-left: 0 !important;
-    margin-left: 0 !important;
-}
-
-// Ensure control panel never hides Save/Discard
-.o_control_panel {
-    overflow: visible !important;
-    position: static !important;
-    z-index: auto;
-}
-
-
-.o_control_panel .o_cp_top,
-.o_control_panel .o_cp_bottom,
-.o_control_panel .o_cp_searchview,
-.o_control_panel .o_cp_left,
-.o_control_panel .o_cp_right {
-    flex-wrap: wrap !important;
-}
-
-.o_action_manager .o_control_panel {
-    margin-bottom: 12px !important;
-}
-
+// Global: prevent horizontal scroll where possible
 .o_action_manager .o_content {
-    margin-top: 8px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden;
 }
 
-.o_control_panel .o_cp_buttons .btn {
-    padding: 6px 12px !important;
-    line-height: 1.2 !important;
-    font-size: 0.875rem !important;
-}
-
-// Make status buttons and Save/Discard coexist on one line when space allows
-.o_form_statusbar {
+// Make Odoo groups behave like flexible columns
+.o_form_view .o_group {
+    display: flex !important;
     flex-wrap: wrap !important;
+    column-gap: 16px !important;
+    row-gap: 0 !important;
 }
 
-.datepicker-cell.today::after {
-    content: "";
-    position: absolute;
-    bottom: 6px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #374151;
+.o_form_view .o_group .o_group_col,
+.o_form_view .o_group .o_field_widget {
+    flex: 1 1 280px !important;     // auto-fit columns
+    max-width: 100% !important;
 }
 
-.datepicker-cell.selected,
-.datepicker-cell.range-start,
-.datepicker-cell.range-end {
-    background: #374151 !important;
-    color: #fff !important;
-    box-shadow: 0 6px 14px rgba(55, 65, 81, .25);
+// Ensure normal fields never overflow
+.o_field_widget,
+.o_field_widget input,
+.o_field_widget select,
+.o_field_widget textarea {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
 }
 
-.datepicker-cell.range,
-.datepicker-cell.range:hover {
-    background: #e5e7eb !important;
-    color: #111827 !important;
+/* Buttons: scale padding + allow wrapping text */
+.btn {
+    max-width: 100% !important;
+    white-space: normal !important;
+    padding: clamp(6px, 1.4vw, 10px) clamp(12px, 2vw, 24px) !important;
+    font-size: clamp(0.8rem, 1.4vw, 0.95rem) !important;
 }
 
-// Force light background
-.o_web_client .datepicker,
-.o_web_client .datepicker-dropdown,
-.o_web_client .datepicker-picker,
-.o_web_client .datepicker-main,
-.o_web_client .datepicker-view,
-.o_web_client .datepicker-view .days-of-week,
-.o_web_client .datepicker-view .days,
-.o_web_client .datepicker-view .dow,
-.o_web_client .datepicker-view .week,
-.o_web_client .datepicker-view .days .datepicker-cell {
-    background-color: #ffffff !important;
-    color: #111827 !important;
+/* Inputs & selects: responsive height / font */
+.o_field_widget input,
+.o_field_widget select,
+.o_field_widget textarea {
+    font-size: clamp(0.85rem, 1.5vw, 1rem) !important;
+    min-height: clamp(36px, 5vw, 48px) !important;
+    padding-inline: clamp(10px, 2vw, 20px) !important;
 }
 
-.o_web_client .datepicker .datepicker-grid,
-.o_web_client .datepicker .calendar-weeks,
-.o_web_client .datepicker .days-of-week,
-.o_web_client .datepicker .days,
-.o_web_client .datepicker .days .week,
-.o_web_client .datepicker .days .datepicker-cell:not(.selected):not(.range):not(.focused) {
-    background: #ffffff !important;
-    color: #111827 !important;
+// ------------------------
+// Breakpoint: <= 1400px
+// ------------------------
+@media (max-width: 1400px) {
+    // Let list views use natural widths instead of strict 40%/15%
+    .o_list_view .o_list_table,
+    .o_field_one2many .o_list_table,
+    .o_field_x2many .o_list_table {
+        table-layout: auto !important;
+    }
+
+    .o_list_view .o_list_table colgroup col,
+    .o_field_one2many .o_list_table colgroup col,
+    .o_field_x2many .o_list_table colgroup col {
+        width: auto !important;
+        max-width: none !important;
+    }
+
+    .o_list_view .o_list_table thead th,
+    .o_list_view .o_list_table tbody td {
+        width: auto !important;
+        max-width: none !important;
+        min-width: 60px !important;
+    }
 }
 
-.o_dialog_container .datepicker-dropdown {
-    background: #ffffff !important;
+// ------------------------
+// Breakpoint: <= 1200px
+// ------------------------
+@media (max-width: 1200px) {
+    // 2 columns on medium screens
+    .o_form_view .o_group .o_group_col,
+    .o_form_view .o_group .o_field_widget {
+        flex: 1 1 calc(50% - 16px) !important;
+    }
+
+    .o_form_sheet {
+        padding: 10px !important;
+        margin: 12px 0 !important;
+    }
 }
 
-.o_web_client .datepicker .days .datepicker-cell {
-    background-color: #ffffff !important;
+// ------------------------
+// Breakpoint: <= 992px (tablets)
+// ------------------------
+@media (max-width: 992px) {
+    // Single column form layout
+    .o_form_view .o_group {
+        flex-direction: column !important;
+    }
+
+    .o_form_view .o_group .o_group_col,
+    .o_form_view .o_group .o_field_widget {
+        flex: 1 1 100% !important;
+        width: 100% !important;
+    }
+
+    .o_control_panel .o_cp_top,
+    .o_control_panel .o_cp_bottom,
+    .o_control_panel .o_cp_left,
+    .o_control_panel .o_cp_right {
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+
+    .o_control_panel .o_cp_buttons .btn {
+        width: auto;
+        max-width: 100%;
+    }
+
+    // Make list views scroll horizontally instead of breaking layout
+    .o_list_view .o_list_renderer,
+    .o_list_view .table-responsive,
+    .o_field_one2many .o_list_view .o_list_renderer,
+    .o_field_one2many .o_list_view .table-responsive {
+        overflow-x: auto !important;
+    }
+
+    .o_list_view .o_list_table {
+        min-width: 600px !important; // keeps structure, user scrolls horizontally
+    }
 }
 
-.o_web_client .datepicker .days .datepicker-cell.selected,
-.o_web_client .datepicker .days .datepicker-cell.range,
-.o_web_client .datepicker .days .datepicker-cell.range-start,
-.o_web_client .datepicker .days .datepicker-cell.range-end {
-    background-color: #374151 !important;
-    color: #ffffff !important;
-}
+// ------------------------
+// Breakpoint: <= 768px (phones)
+// ------------------------
+@media (max-width: 768px) {
+    // Full-width cards / sheets
+    .o_form_sheet {
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        border-left: none !important;
+        border-right: none !important;
+        padding: 16px !important;
+        margin: 0 !important;
+    }
 
-.o_web_client .datepicker *,
-.o_web_client .datepicker {
-    background-image: none !important;
-}
+    // Form labels & inputs stack nicely
+    .o_form_view .o_form_label {
+        display: block !important;
+        width: 100% !important;
+        margin-bottom: 4px !important;
+    }
 
-// 15. Bootstrap DateTimePicker (Odoo's bootstrap widget) – Light Theme
-// -------------------------------------------------------------------------
-body {
+    .o_field_widget {
+        width: 100% !important;
+    }
 
+    // Buttons row: wrap and fill width
+    .o_control_panel .o_cp_buttons,
+    .o_form_statusbar {
+        width: 100% !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+        justify-content: flex-start;
+    }
+
+    .o_control_panel .o_cp_buttons .btn,
+    .o_form_statusbar .btn {
+        flex: 1 1 calc(50% - 6px) !important;
+    }
+
+    // Kanban: cards full width
+    .o_kanban_view .o_kanban_renderer {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+
+    .o_kanban_view .o_kanban_record {
+        width: 100% !important;
+        margin: 0 !important;
+    }
+
+    // Date/time pickers: fit screen
     .bootstrap-datetimepicker-widget,
     .datepicker,
-    .datepicker-dropdown {
-        background-color: #ffffff !important;
-        background: #ffffff !important;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2) !important;
-        border: 1px solid rgba(0, 0, 0, 0.08) !important;
-        border-radius: 16px !important;
-        padding: 0 !important;
-        color: #1e293b !important;
-        width: auto !important;
-        min-width: 320px;
-        z-index: 9999 !important;
-        overflow: hidden;
-        font-family: 'Inter', sans-serif !important;
-
-        &.dropdown-menu {
-            display: block;
-            margin: 4px 0;
-            width: 20rem;
-            background-color: #ffffff !important;
-
-            &:before,
-            &:after {
-                display: none !important;
-            }
-        }
-
-        thead tr:first-child th,
-        .datepicker-switch,
-        .picker-switch {
-            background-color: #ffffff !important;
-            color: #1e293b !important;
-            font-size: 1rem !important;
-            font-weight: 600 !important;
-            padding: 16px 0 !important;
-            border-radius: 0 !important;
-
-            &:hover {
-                background-color: #f8fafc !important;
-            }
-        }
-
-        .prev,
-        .next,
-        .datepicker-prev,
-        .datepicker-next {
-            background-color: transparent !important;
-            color: #64748b !important;
-            border-radius: 0 !important;
-
-            &:hover {
-                background-color: #f1f5f9 !important;
-                color: #1e293b !important;
-            }
-
-            i {
-                color: #64748b !important;
-            }
-        }
-
-        thead tr:last-child th {
-            background-color: #f8fafc !important;
-            color: #64748b !important;
-            font-weight: 600;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            padding: 12px 0 !important;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        table {
-            background-color: #ffffff !important;
-            margin: 0 !important;
-            width: 100% !important;
-            border-spacing: 0;
-            border-collapse: collapse;
-
-            td {
-                height: 40px;
-                line-height: 40px;
-                width: 40px;
-                padding: 4px !important;
-
-                &.day {
-                    background-color: #ffffff !important;
-                    color: #334155 !important;
-                    font-weight: 500;
-                    border-radius: 50% !important;
-                    transition: all 0.2s ease;
-                    width: 36px !important;
-                    height: 36px !important;
-                    line-height: 36px !important;
-                    margin: 2px auto;
-
-                    &:hover {
-                        background-color: #f1f5f9 !important;
-                        color: #0f172a !important;
-                        transform: scale(1.1);
-                    }
-
-                    &.active,
-                    &.active:hover {
-                        background-color: #374151 !important;
-                        color: #ffffff !important;
-                        box-shadow: 0 4px 10px rgba(55, 65, 81, 0.3);
-                        font-weight: 700;
-                    }
-
-                    &.today {
-                        position: relative;
-                        color: #374151 !important;
-                        font-weight: 700;
-
-                        &:before {
-                            content: '';
-                            position: absolute;
-                            bottom: 4px;
-                            left: 50%;
-                            transform: translateX(-50%);
-                            width: 4px;
-                            height: 4px;
-                            background-color: #374151;
-                            border-radius: 50%;
-                            border: none !important;
-                        }
-
-                        &.active:before {
-                            background-color: #ffffff;
-                        }
-                    }
-
-                    &.old,
-                    &.new {
-                        color: #cbd5e1 !important;
-                    }
-                }
-
-            }
-        }
+    .datepicker-dropdown,
+    .o_datetime_picker,
+    .o_DateTimePicker,
+    .o_datepicker_popup {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
     }
 }
 
-// Force light background
-.o_web_client .datepicker,
-.o_web_client .datepicker-dropdown,
-.o_web_client .datepicker-picker,
-.o_web_client .datepicker-main,
-.o_web_client .datepicker-view,
-.o_web_client .datepicker-view .days-of-week,
-.o_web_client .datepicker-view .days,
-.o_web_client .datepicker-view .dow,
-.o_web_client .datepicker-view .week,
-.o_web_client .datepicker-view .days .datepicker-cell {
-    background-color: #ffffff !important;
-    color: #111827 !important;
-}
-
-.o_web_client .datepicker .datepicker-grid,
-.o_web_client .datepicker .calendar-weeks,
-.o_web_client .datepicker .days-of-week,
-.o_web_client .datepicker .days,
-.o_web_client .datepicker .days .week,
-.o_web_client .datepicker .days .datepicker-cell:not(.selected):not(.range):not(.focused) {
-    background: #ffffff !important;
-    color: #111827 !important;
-}
-
-.o_dialog_container .datepicker-dropdown {
-    background: #ffffff !important;
-}
-
-.o_web_client .datepicker .days .datepicker-cell {
-    background-color: #ffffff !important;
-}
-
-.o_web_client .datepicker .days .datepicker-cell.selected,
-.o_web_client .datepicker .days .datepicker-cell.range,
-.o_web_client .datepicker .days .datepicker-cell.range-start,
-.o_web_client .datepicker .days .datepicker-cell.range-end {
-    background-color: #374151 !important;
-    color: #ffffff !important;
-}
-
-.o_web_client .datepicker *,
-.o_web_client .datepicker {
-    background-image: none !important;
-}
-
-// 15. Bootstrap DateTimePicker (Odoo's bootstrap widget) – Light Theme
-// -------------------------------------------------------------------------
-body {
-
-    .bootstrap-datetimepicker-widget,
-    .datepicker,
-    .datepicker-dropdown {
-        background-color: #ffffff !important;
-        background: #ffffff !important;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2) !important;
-        border: 1px solid rgba(0, 0, 0, 0.08) !important;
-        border-radius: 16px !important;
-        padding: 0 !important;
-        color: #1e293b !important;
-        width: auto !important;
-        min-width: 320px;
-        z-index: 9999 !important;
-        overflow: hidden;
-        font-family: 'Inter', sans-serif !important;
-
-        &.dropdown-menu {
-            display: block;
-            margin: 4px 0;
-            width: 20rem;
-            background-color: #ffffff !important;
-
-            &:before,
-            &:after {
-                display: none !important;
-            }
-        }
-
-        thead tr:first-child th,
-        .datepicker-switch,
-        .picker-switch {
-            background-color: #ffffff !important;
-            color: #1e293b !important;
-            font-size: 1rem !important;
-            font-weight: 600 !important;
-            padding: 16px 0 !important;
-            border-radius: 0 !important;
-
-            &:hover {
-                background-color: #f8fafc !important;
-            }
-        }
-
-        .prev,
-        .next,
-        .datepicker-prev,
-        .datepicker-next {
-            background-color: transparent !important;
-            color: #64748b !important;
-            border-radius: 0 !important;
-
-            &:hover {
-                background-color: #f1f5f9 !important;
-                color: #1e293b !important;
-            }
-
-            i {
-                color: #64748b !important;
-            }
-        }
-
-        thead tr:last-child th {
-            background-color: #f8fafc !important;
-            color: #64748b !important;
-            font-weight: 600;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            padding: 12px 0 !important;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        table {
-            background-color: #ffffff !important;
-            margin: 0 !important;
-            width: 100% !important;
-            border-spacing: 0;
-            border-collapse: collapse;
-
-            td {
-                height: 40px;
-                line-height: 40px;
-                width: 40px;
-                padding: 4px !important;
-
-                &.day {
-                    background-color: #ffffff !important;
-                    color: #334155 !important;
-                    font-weight: 500;
-                    border-radius: 50% !important;
-                    transition: all 0.2s ease;
-                    width: 36px !important;
-                    height: 36px !important;
-                    line-height: 36px !important;
-                    margin: 2px auto;
-
-                    &:hover {
-                        background-color: #f1f5f9 !important;
-                        color: #0f172a !important;
-                        transform: scale(1.1);
-                    }
-
-                    &.active,
-                    &.active:hover {
-                        background-color: #374151 !important;
-                        color: #ffffff !important;
-                        box-shadow: 0 4px 10px rgba(55, 65, 81, 0.3);
-                        font-weight: 700;
-                    }
-
-                    &.today {
-                        position: relative;
-                        color: #374151 !important;
-                        font-weight: 700;
-
-                        &:before {
-                            content: '';
-                            position: absolute;
-                            bottom: 4px;
-                            left: 50%;
-                            transform: translateX(-50%);
-                            width: 4px;
-                            height: 4px;
-                            background-color: #374151;
-                            border-radius: 50%;
-                            border: none !important;
-                        }
-
-                        &.active:before {
-                            background-color: #ffffff;
-                        }
-                    }
-
-                    &.old,
-                    &.new {
-                        color: #cbd5e1 !important;
-                    }
-                }
-
-                span {
-                    border-radius: 8px;
-                    margin: 2px;
-
-                    &.active {
-                        background-color: #374151 !important;
-                        color: #ffffff !important;
-                    }
-
-                    &:hover {
-                        background-color: #f1f5f9 !important;
-                    }
-                }
-            }
-        }
+// ------------------------
+// Breakpoint: <= 576px (small phones)
+// ------------------------
+@media (max-width: 576px) {
+    body {
+        font-size: 14px !important;
     }
 
-    .datepicker-picker {
-        background-color: #ffffff !important;
-        color: #1e293b !important;
-    }
-}
-
-// 21. Kanban Spacing Fix
-// -------------------------------------------------------------------------
-/* Reduce top padding to bring kanban cards closer to header */
-.o_web_client .datepicker .days .week,
-.o_web_client .datepicker .days .datepicker-cell:not(.selected):not(.range):not(.focused) {
-    background: #ffffff !important;
-    color: #111827 !important;
-}
-
-.o_dialog_container .datepicker-dropdown {
-    background: #ffffff !important;
-}
-
-.o_web_client .datepicker .days .datepicker-cell {
-    background-color: #ffffff !important;
-}
-
-.o_web_client .datepicker .days .datepicker-cell.selected,
-.o_web_client .datepicker .days .datepicker-cell.range,
-.o_web_client .datepicker .days .datepicker-cell.range-start,
-.o_web_client .datepicker .days .datepicker-cell.range-end {
-    background-color: #374151 !important;
-    color: #ffffff !important;
-}
-
-.o_web_client .datepicker *,
-.o_web_client .datepicker {
-    background-image: none !important;
-}
-
-// 15. Bootstrap DateTimePicker (Odoo's bootstrap widget) – Light Theme
-// -------------------------------------------------------------------------
-body {
-
-    .bootstrap-datetimepicker-widget,
-    .datepicker,
-    .datepicker-dropdown {
-        background-color: #ffffff !important;
-        background: #ffffff !important;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2) !important;
-        border: 1px solid rgba(0, 0, 0, 0.08) !important;
-        border-radius: 16px !important;
-        padding: 0 !important;
-        color: #1e293b !important;
-        width: auto !important;
-        min-width: 320px;
-        z-index: 9999 !important;
-        overflow: hidden;
-        font-family: 'Inter', sans-serif !important;
-
-        &.dropdown-menu {
-            display: block;
-            margin: 4px 0;
-            width: 20rem;
-            background-color: #ffffff !important;
-
-            &:before,
-            &:after {
-                display: none !important;
-            }
-        }
-
-        thead tr:first-child th,
-        .datepicker-switch,
-        .picker-switch {
-            background-color: #ffffff !important;
-            color: #1e293b !important;
-            font-size: 1rem !important;
-            font-weight: 600 !important;
-            padding: 16px 0 !important;
-            border-radius: 0 !important;
-
-            &:hover {
-                background-color: #f8fafc !important;
-            }
-        }
-
-        .prev,
-        .next,
-        .datepicker-prev,
-        .datepicker-next {
-            background-color: transparent !important;
-            color: #64748b !important;
-            border-radius: 0 !important;
-
-            &:hover {
-                background-color: #f1f5f9 !important;
-                color: #1e293b !important;
-            }
-
-            i {
-                color: #64748b !important;
-            }
-        }
-
-        thead tr:last-child th {
-            background-color: #f8fafc !important;
-            color: #64748b !important;
-            font-weight: 600;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            padding: 12px 0 !important;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        table {
-            background-color: #ffffff !important;
-            margin: 0 !important;
-            width: 100% !important;
-            border-spacing: 0;
-            border-collapse: collapse;
-
-            td {
-                height: 40px;
-                line-height: 40px;
-                width: 40px;
-                padding: 4px !important;
-
-                &.day {
-                    background-color: #ffffff !important;
-                    color: #334155 !important;
-                    font-weight: 500;
-                    border-radius: 50% !important;
-                    transition: all 0.2s ease;
-                    width: 36px !important;
-                    height: 36px !important;
-                    line-height: 36px !important;
-                    margin: 2px auto;
-
-                    &:hover {
-                        background-color: #f1f5f9 !important;
-                        color: #0f172a !important;
-                        transform: scale(1.1);
-                    }
-
-                    &.active,
-                    &.active:hover {
-                        background-color: #374151 !important;
-                        color: #ffffff !important;
-                        box-shadow: 0 4px 10px rgba(55, 65, 81, 0.3);
-                        font-weight: 700;
-                    }
-
-                    &.today {
-                        position: relative;
-                        color: #374151 !important;
-                        font-weight: 700;
-
-                        &:before {
-                            content: '';
-                            position: absolute;
-                            bottom: 4px;
-                            left: 50%;
-                            transform: translateX(-50%);
-                            width: 4px;
-                            height: 4px;
-                            background-color: #374151;
-                            border-radius: 50%;
-                            border: none !important;
-                        }
-
-                        &.active:before {
-                            background-color: #ffffff;
-                        }
-                    }
-
-                    &.old,
-                    &.new {
-                        color: #cbd5e1 !important;
-                    }
-                }
-
-                span {
-                    border-radius: 8px;
-                    margin: 2px;
-
-                    &.active {
-                        background-color: #374151 !important;
-                        color: #ffffff !important;
-                    }
-
-                    &:hover {
-                        background-color: #f1f5f9 !important;
-                    }
-                }
-            }
-        }
-    }
-}
-
-.datepicker-picker {
-    background-color: #ffffff !important;
-    color: #1e293b !important;
-}
-
-
-// 21. Kanban Spacing Fix
-// -------------------------------------------------------------------------
-/* Reduce top padding to bring kanban cards closer to header */
-.o_kanban_view {
-    padding-top: 0 !important;
-}
-
-
-.o_dialog_container .datepicker-dropdown {
-    background: #ffffff !important;
-}
-
-.o_web_client .datepicker .days .datepicker-cell {
-    background-color: #ffffff !important;
-}
-
-.o_web_client .datepicker .days .datepicker-cell.selected,
-.o_web_client .datepicker .days .datepicker-cell.range,
-.o_web_client .datepicker .days .datepicker-cell.range-start,
-.o_web_client .datepicker .days .datepicker-cell.range-end {
-    background-color: #374151 !important;
-    color: #ffffff !important;
-}
-
-.o_web_client .datepicker *,
-.o_web_client .datepicker {
-    background-image: none !important;
-}
-
-// 15. Bootstrap DateTimePicker (Odoo's bootstrap widget) – Light Theme
-// -------------------------------------------------------------------------
-body {
-
-    .bootstrap-datetimepicker-widget,
-    .datepicker,
-    .datepicker-dropdown {
-        background-color: #ffffff !important;
-        background: #ffffff !important;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2) !important;
-        border: 1px solid rgba(0, 0, 0, 0.08) !important;
-        border-radius: 16px !important;
-        padding: 0 !important;
-        color: #1e293b !important;
-        width: auto !important;
-        min-width: 320px;
-        z-index: 9999 !important;
-        overflow: hidden;
-        font-family: 'Inter', sans-serif !important;
-
-        &.dropdown-menu {
-            display: block;
-            margin: 4px 0;
-            width: 20rem;
-            background-color: #ffffff !important;
-
-            &:before,
-            &:after {
-                display: none !important;
-            }
-        }
-
-        thead tr:first-child th,
-        .datepicker-switch,
-        .picker-switch {
-            background-color: #ffffff !important;
-            color: #1e293b !important;
-            font-size: 1rem !important;
-            font-weight: 600 !important;
-            padding: 16px 0 !important;
-            border-radius: 0 !important;
-
-            &:hover {
-                background-color: #f8fafc !important;
-            }
-        }
-
-        .prev,
-        .next,
-        .datepicker-prev,
-        .datepicker-next {
-            background-color: transparent !important;
-            color: #64748b !important;
-            border-radius: 0 !important;
-
-            &:hover {
-                background-color: #f1f5f9 !important;
-                color: #1e293b !important;
-            }
-
-            i {
-                color: #64748b !important;
-            }
-        }
-
-        thead tr:last-child th {
-            background-color: #f8fafc !important;
-            color: #64748b !important;
-            font-weight: 600;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            padding: 12px 0 !important;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        table {
-            background-color: #ffffff !important;
-            margin: 0 !important;
-            width: 100% !important;
-            border-spacing: 0;
-            border-collapse: collapse;
-
-            td {
-                height: 40px;
-                line-height: 40px;
-                width: 40px;
-                padding: 4px !important;
-
-                &.day {
-                    background-color: #ffffff !important;
-                    color: #334155 !important;
-                    font-weight: 500;
-                    border-radius: 50% !important;
-                    transition: all 0.2s ease;
-                    width: 36px !important;
-                    height: 36px !important;
-                    line-height: 36px !important;
-                    margin: 2px auto;
-
-                    &:hover {
-                        background-color: #f1f5f9 !important;
-                        color: #0f172a !important;
-                        transform: scale(1.1);
-                    }
-
-                    &.active,
-                    &.active:hover {
-                        background-color: #374151 !important;
-                        color: #ffffff !important;
-                        box-shadow: 0 4px 10px rgba(55, 65, 81, 0.3);
-                        font-weight: 700;
-                    }
-
-                    &.today {
-                        position: relative;
-                        color: #374151 !important;
-                        font-weight: 700;
-
-                        &:before {
-                            content: '';
-                            position: absolute;
-                            bottom: 4px;
-                            left: 50%;
-                            transform: translateX(-50%);
-                            width: 4px;
-                            height: 4px;
-                            background-color: #374151;
-                            border-radius: 50%;
-                            border: none !important;
-                        }
-
-                        &.active:before {
-                            background-color: #ffffff;
-                        }
-                    }
-
-                    &.old,
-                    &.new {
-                        color: #cbd5e1 !important;
-                    }
-                }
-
-                span {
-                    border-radius: 8px;
-                    margin: 2px;
-
-                    &.active {
-                        background-color: #374151 !important;
-                        color: #ffffff !important;
-                    }
-
-                    &:hover {
-                        background-color: #f1f5f9 !important;
-                    }
-                }
-            }
-        }
-    }
-}
-
-.datepicker-picker {
-    background-color: #ffffff !important;
-    color: #1e293b !important;
-}
-
-
-// 21. Kanban Spacing Fix
-// -------------------------------------------------------------------------
-/* Reduce top padding to bring kanban cards closer to header */
-.o_kanban_view {
-    padding-top: 0 !important;
-}
-
-.o_kanban_view .o_kanban_renderer {
-    padding-top: 4px !important;
-    margin-top: 0 !important;
-}
-
-.o_action_manager .o_control_panel {
-    margin-bottom: 4px !important;
-}
-
-// 22. Odoo OWL DateTimePicker - Premium Light Theme
-// -------------------------------------------------------------------------
-// This targets the modern Odoo 16/17 OWL-based DatePicker component
-
-// Main popover container
-.o_datetime_picker,
-.o_popover.o_datetime_picker,
-.o_DateTimePicker,
-.o_date_picker_root,
-.o-datepicker,
-.o_datepicker_popup {
-    background: #ffffff !important;
-    background-color: #ffffff !important;
-    border: 1px solid rgba(0, 0, 0, 0.08) !important;
-    border-radius: 16px !important;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15),
-        0 0 0 1px rgba(0, 0, 0, 0.02) !important;
-    overflow: hidden !important;
-    padding: 0 !important;
-    z-index: 10000 !important;
-
-    // Force all children to have white background
-    * {
-        background-color: transparent !important;
-    }
-}
-
-// Popover specific - ensure no dark backdrop
-.o_popover {
-
-    &.o_datetime_picker,
-    &[class*="date"] {
-        background: #ffffff !important;
-
-        &::before,
-        &::after {
-            background: #ffffff !important;
-            border-color: #e5e7eb !important;
-        }
-    }
-}
-
-// Calendar wrapper
-.o_datetime_picker,
-.o_DateTimePicker {
-
-    // Header with month/year navigation
-    .o_datetime_picker_header,
-    .o_date_picker_header,
-    .o_calendar_header,
-    header {
-        background: #ffffff !important;
-        color: #1f2937 !important;
-        padding: 16px 20px !important;
-        border-bottom: 1px solid #f1f5f9 !important;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-
-        // Navigation buttons
-        button,
-        .o_previous,
-        .o_next,
-        .btn {
-            background: #f8fafc !important;
-            border: 1px solid #e5e7eb !important;
-            color: #475569 !important;
-            border-radius: 10px !important;
-            width: 36px !important;
-            height: 36px !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            transition: all 0.2s ease !important;
-            cursor: pointer !important;
-
-            &:hover {
-                background: #e5e7eb !important;
-                color: #1f2937 !important;
-                transform: scale(1.05);
-            }
-
-            i,
-            svg {
-                color: inherit !important;
-            }
-        }
-
-        // Month/Year title
-        .o_datetime_picker_title,
-        .o_date_title,
-        span:not(.fa):not(.oi) {
-            font-size: 1.1rem !important;
-            font-weight: 700 !important;
-            color: #1f2937 !important;
-        }
+    .o_main_navbar,
+    nav.o_main_navbar {
+        padding: 0 10px !important;
     }
 
-    // Days container
-    .o_datetime_picker_body,
-    .o_date_picker_body,
-    .o_calendar_body,
-    .o_calendar_table,
-    table {
-        background: #ffffff !important;
+    .o_main_navbar a,
+    .o_main_navbar button {
+        padding: 6px 8px !important;
+        font-size: 12px !important;
+    }
+
+    .o_form_sheet {
         padding: 12px !important;
-
-        // Day names header (Sun, Mon, etc.)
-        thead,
-        tr:first-child,
-        .o_days_of_week,
-        .o_weekdays {
-            background: #ffffff !important;
-
-            th,
-            td,
-            div {
-                background: #ffffff !important;
-                color: #64748b !important;
-                font-weight: 600 !important;
-                font-size: 0.75rem !important;
-                text-transform: uppercase !important;
-                letter-spacing: 0.05em !important;
-                padding: 12px 0 !important;
-                text-align: center !important;
-            }
-        }
-
-        // Week numbers column
-        .o_week_number,
-        td:first-child {
-            color: #94a3b8 !important;
-            font-weight: 600 !important;
-            font-size: 0.8rem !important;
-        }
-
-        // Calendar days
-        tbody {
-            background: #ffffff !important;
-
-            tr {
-                background: #ffffff !important;
-            }
-
-            td,
-            .o_calendar_cell,
-            .o_day {
-                background: #ffffff !important;
-                padding: 4px !important;
-                text-align: center !important;
-
-                // Day number button/span
-                >div,
-                >span,
-                >button,
-                .o_day_number {
-                    background: #ffffff !important;
-                    color: #374151 !important;
-                    font-weight: 500 !important;
-                    width: 40px !important;
-                    height: 40px !important;
-                    line-height: 40px !important;
-                    border-radius: 12px !important;
-                    display: inline-flex !important;
-                    align-items: center !important;
-                    justify-content: center !important;
-                    transition: all 0.2s ease !important;
-                    margin: 2px auto !important;
-                    cursor: pointer !important;
-                    border: none !important;
-
-                    &:hover {
-                        background: #f1f5f9 !important;
-                        color: #1f2937 !important;
-                        transform: scale(1.08);
-                    }
-                }
-
-                // Today's date
-                &.o_today,
-                &[class*="today"] {
-
-                    >div,
-                    >span,
-                    >button,
-                    .o_day_number {
-                        background: #f8fafc !important;
-                        color: #1f2937 !important;
-                        font-weight: 700 !important;
-                        border: 2px solid #374151 !important;
-                    }
-                }
-
-                // Selected date
-                &.o_selected,
-                &.o_date_selected,
-                &.active,
-                &[class*="selected"] {
-
-                    >div,
-                    >span,
-                    >button,
-                    .o_day_number {
-                        background: linear-gradient(135deg, #374151, #1f2937) !important;
-                        color: #ffffff !important;
-                        font-weight: 700 !important;
-                        box-shadow: 0 4px 14px rgba(55, 65, 81, 0.3) !important;
-                        transform: scale(1.05);
-                    }
-                }
-
-                // Disabled/outside month days
-                &.o_out_of_range,
-                &.o_other_month,
-                &.disabled,
-                &[class*="disabled"],
-                &[class*="other"] {
-
-                    >div,
-                    >span,
-                    >button,
-                    .o_day_number {
-                        background: transparent !important;
-                        color: #cbd5e1 !important;
-                        cursor: default !important;
-
-                        &:hover {
-                            background: transparent !important;
-                            transform: none !important;
-                        }
-                    }
-                }
-            }
-        }
     }
 
-    // Time picker section
-    .o_time_picker,
-    .o_datetime_time,
-    .timepicker {
-        background: #ffffff !important;
-        border-top: 1px solid #f1f5f9 !important;
-        padding: 16px 20px !important;
-
-        input,
-        select {
-            background: #f8fafc !important;
-            border: 1px solid #e5e7eb !important;
-            color: #374151 !important;
-            border-radius: 10px !important;
-            padding: 10px 14px !important;
-            font-size: 1rem !important;
-            font-weight: 600 !important;
-            text-align: center !important;
-
-            &:focus {
-                border-color: #374151 !important;
-                box-shadow: 0 0 0 3px rgba(55, 65, 81, 0.1) !important;
-            }
-        }
-
-        span,
-        .separator {
-            color: #374151 !important;
-            font-weight: 600 !important;
-        }
-    }
-
-    // Footer with buttons
-    .o_datetime_picker_footer,
-    .o_date_picker_footer,
-    footer {
-        background: #f8fafc !important;
-        border-top: 1px solid #f1f5f9 !important;
-        padding: 12px 20px !important;
-
-        button,
-        .btn {
-            background: #374151 !important;
-            color: #ffffff !important;
-            border-radius: 10px !important;
-            padding: 10px 20px !important;
-            font-weight: 600 !important;
-
-            &:hover {
-                background: #1f2937 !important;
-            }
-
-            &.btn-secondary,
-            &.o_cancel {
-                background: #ffffff !important;
-                color: #475569 !important;
-                border: 1px solid #e5e7eb !important;
-
-                &:hover {
-                    background: #f1f5f9 !important;
-                }
-            }
-        }
-    }
-}
-
-// Global overrides for any datepicker with dark background
-[class*="date"][class*="picker"],
-[class*="datetime"],
-.popover[class*="date"] {
-    background: #ffffff !important;
-    background-color: #ffffff !important;
-
-    div,
-    span,
-    td,
-    th,
-    tr,
-    table,
-    button {
-        background-color: inherit;
+    .o_control_panel .o_cp_buttons .btn,
+    .o_form_statusbar .btn {
+        flex: 1 1 100% !important;
     }
 }

@@ -129,7 +129,7 @@ class Product(models.Model):
         tracking=True,
     )
 
-    #below if for account filtering
+    # below if for account filtering
     account_cogs_id = fields.Many2one(
         "idil.chart.account",
         string="Cost of Goods Sold (Expense)",
@@ -144,7 +144,7 @@ class Product(models.Model):
         "('currency_id', '=', currency_cogs_id)]",
     )
 
-    is_commissionable = fields.Boolean(string="Commissionable", default=False)
+    is_commissionable = fields.Boolean(string="Commissionable", default=True)
 
     sales_currency_id = fields.Many2one(
         "res.currency",
@@ -158,10 +158,10 @@ class Product(models.Model):
         domain="[('account_type', 'like', 'commission'), ('header_name', '=', 'Expenses'), "
         "('currency_id', '=', sales_currency_id)]",
     )
-    is_sales_commissionable = fields.Boolean(string="Commissionable", default=False)
+    is_sales_commissionable = fields.Boolean(string="Commissionable", default=True)
     commission = fields.Float(string="Commission Rate")
 
-    is_quantity_discount = fields.Boolean(string="Quantity Discount", default=False)
+    is_quantity_discount = fields.Boolean(string="Discountible", default=True)
     discount_currency_id = fields.Many2one(
         "res.currency",
         string="Currency",
