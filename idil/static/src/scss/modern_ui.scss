@@ -9,17 +9,34 @@
     overflow-x: hidden;
 }
 
+// Form sheet: use width of screen and look like a card
+.o_form_sheet_bg {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    background-color: #f3f4f6 !important; // soft gray
+}
+
+.o_form_sheet_bg .o_form_sheet {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 8px 0 16px 0 !important;
+    padding: 16px 24px !important;
+    background-color: #ffffff !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06) !important;
+}
+
 // Make Odoo groups behave like flexible columns
 .o_form_view .o_group {
     display: flex !important;
     flex-wrap: wrap !important;
-    column-gap: 16px !important;
-    row-gap: 0 !important;
+    column-gap: 24px !important;
+    row-gap: 16px !important;
 }
 
 .o_form_view .o_group .o_group_col,
 .o_form_view .o_group .o_field_widget {
-    flex: 1 1 280px !important;     // auto-fit columns
+    flex: 1 1 320px !important; // auto-fit columns with minimum width
     max-width: 100% !important;
 }
 
@@ -32,28 +49,92 @@
     box-sizing: border-box !important;
 }
 
-/* Buttons: scale padding + allow wrapping text */
+// Stronger labels
+.o_form_view .o_form_label {
+    font-weight: 500 !important;
+    color: #1f2937 !important;
+}
+
+// Buttons: comfortable size, wrap on small screens
 .btn {
     max-width: 100% !important;
     white-space: normal !important;
-    padding: clamp(6px, 1.4vw, 10px) clamp(12px, 2vw, 24px) !important;
-    font-size: clamp(0.8rem, 1.4vw, 0.95rem) !important;
+    padding: 6px 16px !important;
+    font-size: 0.9rem !important;
+    border-radius: 8px !important;
 }
 
-/* Inputs & selects: responsive height / font */
+// Inputs & selects: consistent height / padding
 .o_field_widget input,
 .o_field_widget select,
 .o_field_widget textarea {
-    font-size: clamp(0.85rem, 1.5vw, 1rem) !important;
-    min-height: clamp(36px, 5vw, 48px) !important;
-    padding-inline: clamp(10px, 2vw, 20px) !important;
+    font-size: 0.9rem !important;
+    min-height: 34px !important;
+    padding: 4px 12px !important;
+}
+
+// Nicer input borders & focus
+.o_input,
+.o_field_widget input,
+.o_field_widget select,
+.o_field_widget textarea {
+    border-radius: 6px !important;
+    border: 1px solid #d1d5db !important;
+}
+
+.o_input:focus,
+.o_field_widget input:focus,
+.o_field_widget select:focus,
+.o_field_widget textarea:focus {
+    border-color: #3068a0 !important;
+    box-shadow: 0 0 0 2px rgba(48, 104, 160, 0.18) !important;
+    outline: none !important;
+}
+
+// Search bar styling
+.o_searchview {
+    border-radius: 999px !important;
+    border: 1px solid #cbd5e1 !important;
+    background-color: #ffffff !important;
+    padding: 2px 10px !important;
+}
+
+.o_searchview_input {
+    font-size: 0.9rem !important;
+}
+
+// Control panel background
+.o_control_panel {
+    background-color: #f3f4f6 !important;
+    border-bottom: 1px solid #e5e7eb !important;
+}
+
+// Date/time pickers: subtle card style
+.bootstrap-datetimepicker-widget,
+.datepicker,
+.datepicker-dropdown,
+.o_datetime_picker,
+.o_DateTimePicker,
+.o_datepicker_popup {
+    border-radius: 8px !important;
+    border: 1px solid #d1d5db !important;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12) !important;
+}
+
+// Active date cell
+.bootstrap-datetimepicker-widget table td.active,
+.datepicker table td.active,
+.o_datepicker .o_selected {
+    background-color: #3068a0 !important;
+    border-color: #3068a0 !important;
+    color: #ffffff !important;
 }
 
 // ------------------------
 // Breakpoint: <= 1400px
 // ------------------------
 @media (max-width: 1400px) {
-    // Let list views use natural widths instead of strict 40%/15%
+    // Let list views use natural widths
     .o_list_view .o_list_table,
     .o_field_one2many .o_list_table,
     .o_field_x2many .o_list_table {
@@ -71,7 +152,7 @@
     .o_list_view .o_list_table tbody td {
         width: auto !important;
         max-width: none !important;
-        min-width: 60px !important;
+        min-width: 70px !important;
     }
 }
 
@@ -82,12 +163,12 @@
     // 2 columns on medium screens
     .o_form_view .o_group .o_group_col,
     .o_form_view .o_group .o_field_widget {
-        flex: 1 1 calc(50% - 16px) !important;
+        flex: 1 1 calc(50% - 24px) !important;
     }
 
     .o_form_sheet {
-        padding: 10px !important;
-        margin: 12px 0 !important;
+        padding: 14px 18px !important;
+        margin: 8px 0 !important;
     }
 }
 
@@ -128,7 +209,7 @@
     }
 
     .o_list_view .o_list_table {
-        min-width: 600px !important; // keeps structure, user scrolls horizontally
+        min-width: 640px !important; // keeps structure, user scrolls horizontally
     }
 }
 

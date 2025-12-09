@@ -39,7 +39,6 @@
             <field name="arch" type="xml">
                 <form string="Product">
                     <header>
-                        <!-- If you don't need this button you can remove it; left as-is to not change logic -->
                         <button string="Product Information" class="oe_highlight" colspan="4"/>
                         <button name="export_movements_to_excel"
                                 type="object"
@@ -83,8 +82,9 @@
 
                             <!-- Sales Information Page -->
                             <page string="Sales Information">
-                                <group col="4">
-                                    <group string="Sales Details" col="2">
+                                <!-- outer group has no col; inner groups will flex and auto-fit -->
+                                <group>
+                                    <group string="Sales Details">
                                         <field name="stock_quantity" readonly="1"/>
                                         <field name="sale_price"/>
                                         <field name="sales_currency_id"/>
@@ -92,14 +92,14 @@
                                         <field name="income_account_id"/>
                                     </group>
 
-                                    <group string="Quantity Discount" col="2">
+                                    <group string="Quantity Discount">
                                         <field name="is_quantity_discount"/>
                                         <field name="discount_currency_id" invisible="not is_quantity_discount"/>
                                         <field name="sales_discount_id" invisible="not is_quantity_discount"/>
                                         <field name="discount" invisible="not is_quantity_discount"/>
                                     </group>
 
-                                    <group string="Sales Commission (When Sold)" col="2">
+                                    <group string="Sales Commission (When Sold)">
                                         <field name="is_sales_commissionable"/>
                                         <field name="commission"
                                                invisible="not is_sales_commissionable"
@@ -115,7 +115,7 @@
 
                             <!-- Costing Information Page -->
                             <page string="Costing Information">
-                                <group col="4">
+                                <group col="2">
                                     <group string="Cost &amp; BoM" col="2">
                                         <field name="bom_id"/>
                                         <field name="is_cost_manual_purchase"/>
