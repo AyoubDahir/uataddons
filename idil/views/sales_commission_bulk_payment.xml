@@ -91,8 +91,9 @@
     <!-- Menu Item -->
     <menuitem id="menu_sales_commission_bulk_payment" 
               name="Bulk Payment" 
-              parent="menu_sales_commission_root" 
+              parent="idil.menu_sales_commission_root" 
               action="action_sales_commission_bulk_payment" 
+              groups="base.group_user"
               sequence="30"/>
 
 </odoo>
