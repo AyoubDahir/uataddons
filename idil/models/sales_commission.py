@@ -82,7 +82,7 @@ class SalesCommission(models.Model):
     # Payment Schedule Fields
     payment_schedule = fields.Selection(
         related="sales_person_id.commission_payment_schedule",
-        store=True,
+        store=False,
         string="Payment Schedule",
         readonly=True,
     )
