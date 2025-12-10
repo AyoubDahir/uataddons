@@ -141,6 +141,23 @@ class SalesCommission(models.Model):
                 commission.commission_amount - commission.commission_paid
             )
 
+    @api.depends("payment_ids", "payment_ids.amount")
+    def _compute_commission_paid(self):
+        for commission in self:
+            # Use search to ensure we get all payments, including newly created ones
+            # This bypasses potential cache issues with the One2many field
+            payments = self.env["idil.sales.commission.payment"].search([
+                ("commission_id", "=", commission.id)
+            ])
+            commission.commission_paid = sum(payments.mapped("amount"))
+
+    @api.depends("commission_amount", "commission_paid")
+    def _compute_commission_remaining(self):
+        for commission in self:
+            commission.commission_remaining = (
+                commission.commission_amount - commission.commission_paid
+            )
+
     @api.depends("date", "sales_person_id.commission_payment_schedule",
                  "sales_person_id.commission_payment_day")
     def _compute_due_date(self):
@@ -362,8 +379,13 @@ class SalesCommissionPayment(models.Model):
         # Create salesperson transaction (In - reduces what they owe)
         payment._create_salesperson_transaction()
         
-        # Explicitly update commission fields to ensure persistence
-        payment._update_commission_balance()
+        # Invalidate cache to ensure the new payment is seen by the compute methods
+        payment.commission_id.invalidate_recordset(['commission_paid', 'commission_remaining', 'payment_status'])
+        
+        # Trigger recomputation
+        payment.commission_id._compute_commission_paid()
+        payment.commission_id._compute_commission_remaining()
+        payment.commission_id._compute_payment_status()
         
         return payment
 
@@ -405,45 +427,11 @@ class SalesCommissionPayment(models.Model):
 
         res = super(SalesCommissionPayment, self).unlink()
         
-        # Force update after deletion
+        # Force recomputation after deletion
         for commission in commissions:
-            # We need to find a payment related to this commission to call the method, 
-            # or just implement the logic here. 
-            # Since the payment is deleted, we can't call a method on it easily if we don't have a record.
-            # But we can use the commission record directly if we move the logic or re-implement it.
-            
-            paid = sum(commission.payment_ids.mapped("amount"))
-            remaining = commission.commission_amount - paid
-            
-            status = "pending"
-            if paid >= commission.commission_amount:
-                status = "paid"
-            elif paid > 0:
-                status = "partial_paid"
-                
-            commission.write({
-                'commission_paid': paid,
-                'commission_remaining': remaining,
-                'payment_status': status
-            })
+            commission.invalidate_recordset(['commission_paid', 'commission_remaining', 'payment_status'])
+            commission._compute_commission_paid()
+            commission._compute_commission_remaining()
+            commission._compute_payment_status()
             
         return res
-
-    def _update_commission_balance(self):
-        """Helper to update commission balance"""
-        for payment in self:
-            commission = payment.commission_id
-            paid = sum(commission.payment_ids.mapped("amount"))
-            remaining = commission.commission_amount - paid
-            
-            status = "pending"
-            if paid >= commission.commission_amount:
-                status = "paid"
-            elif paid > 0:
-                status = "partial_paid"
-                
-            commission.write({
-                'commission_paid': paid,
-                'commission_remaining': remaining,
-                'payment_status': status
-            })
