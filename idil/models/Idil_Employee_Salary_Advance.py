@@ -243,11 +243,24 @@ class IdilEmployeeSalaryAdvance(models.Model):
             if record.state != "draft":
                 raise ValidationError("Only advances in draft state can be approved.")
 
-            # Prevent self-approval
-            if record.create_uid == self.env.user:
-                if not record.employee_id.maker_checker:  # Proper boolean check
+            # Prevent self-approval unless maker-checker is enabled
+            creator = record.create_uid  # user who created the record
+            approver = self.env.user  # user trying to approve now
+
+            # Only check maker-checker if the same user is approving their own record
+            if creator == approver:
+                # Find the employee linked to this user
+                employee = self.env["idil.employee"].search(
+                    [("user_id", "=", approver.id)],
+                    limit=1,
+                )
+
+                # If no employee linked, or maker_checker is False → block self-approval
+                if not employee or not employee.maker_checker:
                     raise ValidationError(
-                        "You cannot approve an advance that you created."
+                        "You are not allowed to approve your own advance request. "
+                        "Only employees with 'Maker & Checker' enabled can self-approve. "
+                        "Please request approval from another authorized user."
                     )
 
             # Fetch the account record for "Salary Advance Expense"
@@ -264,7 +277,7 @@ class IdilEmployeeSalaryAdvance(models.Model):
 
             if not salary_advance_expense_account:
                 raise ValidationError(
-                    "The Salary Advance Expense account is not configured in the chart of accounts."
+                    "The 'Salary Expense' account is not configured in the chart of accounts. the account name should be 'Salary Expense'."
                 )
 
             # Fetch the trx source record for "Salary Advance Expense"

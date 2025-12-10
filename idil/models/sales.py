@@ -303,8 +303,12 @@ class SaleOrder(models.Model):
     def button_confirm(self):
         for order in self:
             if order.state == "confirmed":
-                continue
+                raise UserError("This Sales Order is already confirmed.")
 
+            if order.state == "cancel":
+                raise UserError("This Sales Order is already cancelled.")
+
+            # precheck
             order.precheck_before_confirm()
             order.freeze_exchange_rate()
 
@@ -366,26 +370,30 @@ class SaleOrder(models.Model):
         """Create deferred commission record for salesperson"""
         for order in self:
             if order.commission_amount > 0:
-                self.env['idil.sales.commission'].create({
-                    'sale_order_id': order.id,
-                    'sales_person_id': order.sales_person_id.id,
-                    'date': order.order_date,
-                    'currency_id': order.currency_id.id,
-                    'commission_amount': order.commission_amount,
-                })
+                self.env["idil.sales.commission"].create(
+                    {
+                        "sale_order_id": order.id,
+                        "sales_person_id": order.sales_person_id.id,
+                        "date": order.order_date,
+                        "currency_id": order.currency_id.id,
+                        "commission_amount": order.commission_amount,
+                    }
+                )
 
     def _create_sales_discount_record(self):
         """Create deferred discount record for salesperson"""
         for order in self:
-            total_discount = sum(order.order_lines.mapped('discount_amount'))
+            total_discount = sum(order.order_lines.mapped("discount_amount"))
             if total_discount > 0:
-                self.env['idil.sales.discount'].create({
-                    'sale_order_id': order.id,
-                    'sales_person_id': order.sales_person_id.id,
-                    'date': order.order_date,
-                    'currency_id': order.currency_id.id,
-                    'discount_amount': total_discount,
-                })
+                self.env["idil.sales.discount"].create(
+                    {
+                        "sale_order_id": order.id,
+                        "sales_person_id": order.sales_person_id.id,
+                        "date": order.order_date,
+                        "currency_id": order.currency_id.id,
+                        "discount_amount": total_discount,
+                    }
+                )
 
     def precheck_before_confirm(self):
         self.ensure_one()
@@ -513,7 +521,6 @@ class SaleOrder(models.Model):
                         "idil.salesperson.order.summary"
                     ].update_summary_from_order(order)
 
-
                     for line in order.order_lines:
                         product = line.product_id
 
@@ -554,7 +561,6 @@ class SaleOrder(models.Model):
                                 f"Product '{product.name}' has unsupported cost currency: {cost_currency.name}. "
                                 "Only USD and SL are supported."
                             )
-
 
                         if line.commission_amount > 0:
                             if not product.sales_account_id:
@@ -723,17 +729,19 @@ class SaleOrder(models.Model):
                                     "transaction_date": order.order_date,
                                 }
                             )
-                            
+
                             # CR depends on payment schedule
                             schedule = order.sales_person_id.commission_payment_schedule
-                            if schedule == 'monthly':
+                            if schedule == "monthly":
                                 # Deferred: Credit Commission Payable (liability)
-                                if not order.sales_person_id.commission_payable_account_id:
+                                if (
+                                    not order.sales_person_id.commission_payable_account_id
+                                ):
                                     raise ValidationError(
                                         f"Salesperson '{order.sales_person_id.name}' has monthly commission schedule "
                                         "but no Commission Payable Account configured."
                                     )
-                                
+
                                 self.env["idil.transaction_bookingline"].create(
                                     {
                                         "transaction_booking_id": transaction_booking.id,
@@ -1042,17 +1050,24 @@ class SaleOrderLine(models.Model):
         for line in self:
             pass
 
-    @api.depends("quantity", "price_unit", "commission_amount", "order_id.sales_person_id.commission_payment_schedule")
+    @api.depends(
+        "quantity",
+        "price_unit",
+        "commission_amount",
+        "order_id.sales_person_id.commission_payment_schedule",
+    )
     def _compute_subtotal(self):
         for line in self:
             # Base amount before commission
-            base_amount = (line.quantity * line.price_unit) - (line.discount_quantity * line.price_unit)
-            
+            base_amount = (line.quantity * line.price_unit) - (
+                line.discount_quantity * line.price_unit
+            )
+
             # Only subtract commission if it's paid immediately (daily schedule)
             # For monthly/deferred commissions, salesperson must remit the full amount
             if line.order_id and line.order_id.sales_person_id:
                 schedule = line.order_id.sales_person_id.commission_payment_schedule
-                if schedule == 'daily':
+                if schedule == "daily":
                     # Immediate payment: salesperson keeps commission from the sale
                     line.subtotal = base_amount - line.commission_amount
                 else:
