@@ -69,24 +69,35 @@ class SalesCommissionBulkPayment(models.Model):
     def _onchange_sales_person_id(self):
         # Always clear all existing lines first
         self.line_ids = [(5, 0, 0)]
-        if self.sales_person_id and self.amount_to_pay:
-            unpaid_commissions = self.env["idil.sales.commission"].search(
-                [
-                    ("sales_person_id", "=", self.sales_person_id.id),
-                    ("payment_status", "!=", "paid"),
-                    ("payment_schedule", "=", "monthly"),
-                ],
-                order="id asc",
-            )
-            total_remaining = sum(c.commission_remaining for c in unpaid_commissions)
-            if self.amount_to_pay > total_remaining:
-                self.amount_to_pay = 0
-                return {
-                    "warning": {
-                        "title": "Amount Too High",
-                        "message": f"Total Amount to Pay cannot exceed the sum of all unpaid commissions ({total_remaining}).",
-                    }
+        
+        if not self.sales_person_id:
+            return
+
+        unpaid_commissions = self.env["idil.sales.commission"].search(
+            [
+                ("sales_person_id", "=", self.sales_person_id.id),
+                ("payment_status", "!=", "paid"),
+                ("payment_schedule", "=", "monthly"),
+            ],
+            order="id asc",
+        )
+        total_remaining = sum(c.commission_remaining for c in unpaid_commissions)
+        
+        # Auto-fill amount if it's 0
+        if self.amount_to_pay == 0:
+            self.amount_to_pay = total_remaining
+
+        if self.amount_to_pay > total_remaining:
+            self.amount_to_pay = 0
+            return {
+                "warning": {
+                    "title": "Amount Too High",
+                    "message": f"Total Amount to Pay cannot exceed the sum of all unpaid commissions ({total_remaining}).",
                 }
+            }
+            
+        # Generate lines based on amount_to_pay
+        if self.amount_to_pay > 0:
             lines = []
             remaining_payment = self.amount_to_pay
             for commission in unpaid_commissions:
@@ -113,8 +124,6 @@ class SalesCommissionBulkPayment(models.Model):
                     )
                     remaining_payment -= payable
             self.line_ids = lines
-        else:
-            self.line_ids = [(5, 0, 0)]
 
     @api.constrains("amount_to_pay", "sales_person_id")
     def _check_amount_to_pay(self):
