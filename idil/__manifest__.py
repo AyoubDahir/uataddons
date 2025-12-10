@@ -41,6 +41,7 @@
         "data/idil_sequence.xml",
         "data/delete.xml",
         "data/booking_sequence.xml",
+        "data/sales_commission_sequence.xml",
         "data/purchase_sequence.xml",
         "reports/report_placeorder.xml",
         "views/customer_view.xml",

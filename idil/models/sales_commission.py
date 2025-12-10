@@ -361,6 +361,10 @@ class SalesCommissionPayment(models.Model):
         payment = super(SalesCommissionPayment, self).create(vals)
         # Create salesperson transaction (In - reduces what they owe)
         payment._create_salesperson_transaction()
+        
+        # Explicitly update commission fields to ensure persistence
+        payment._update_commission_balance()
+        
         return payment
 
     def _create_salesperson_transaction(self):
@@ -377,6 +381,9 @@ class SalesCommissionPayment(models.Model):
 
     def unlink(self):
         """Delete associated salesperson transaction when payment is deleted"""
+        # Store commissions to update before deletion
+        commissions = self.mapped('commission_id')
+        
         for payment in self:
             # Find and delete the transaction
             transaction = self.env["idil.salesperson.transaction"].search(
@@ -396,4 +403,47 @@ class SalesCommissionPayment(models.Model):
             if transaction:
                 transaction.unlink()
 
-        return super(SalesCommissionPayment, self).unlink()
+        res = super(SalesCommissionPayment, self).unlink()
+        
+        # Force update after deletion
+        for commission in commissions:
+            # We need to find a payment related to this commission to call the method, 
+            # or just implement the logic here. 
+            # Since the payment is deleted, we can't call a method on it easily if we don't have a record.
+            # But we can use the commission record directly if we move the logic or re-implement it.
+            
+            paid = sum(commission.payment_ids.mapped("amount"))
+            remaining = commission.commission_amount - paid
+            
+            status = "pending"
+            if paid >= commission.commission_amount:
+                status = "paid"
+            elif paid > 0:
+                status = "partial_paid"
+                
+            commission.write({
+                'commission_paid': paid,
+                'commission_remaining': remaining,
+                'payment_status': status
+            })
+            
+        return res
+
+    def _update_commission_balance(self):
+        """Helper to update commission balance"""
+        for payment in self:
+            commission = payment.commission_id
+            paid = sum(commission.payment_ids.mapped("amount"))
+            remaining = commission.commission_amount - paid
+            
+            status = "pending"
+            if paid >= commission.commission_amount:
+                status = "paid"
+            elif paid > 0:
+                status = "partial_paid"
+                
+            commission.write({
+                'commission_paid': paid,
+                'commission_remaining': remaining,
+                'payment_status': status
+            })
