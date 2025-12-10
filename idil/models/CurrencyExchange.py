@@ -16,11 +16,15 @@ class CurrencyExchange(models.Model):
     )
 
     sourcecy_currency_id = fields.Many2one(
-        "res.currency", string="Source Currency", required=True
+        "res.currency",
+        string="Source Currency",
+        required=True,
+        store=True,
     )
     source_account_id = fields.Many2one(
         "idil.chart.account",
         string="Source Account",
+        store=True,
         required=True,
         domain="[('currency_id', '=', sourcecy_currency_id)]",
     )
@@ -30,15 +34,19 @@ class CurrencyExchange(models.Model):
         readonly=True,
         string="Source Account Currency",
     )
-    source_account_balance = fields.Float(
+    source_account_balance = fields.Monetary(
         string="Account Balance",
         compute="_compute_account_balances",
         currency_field="source_currency_id",
+        store=True,
     )
     # ______________________________________________________________________________________________________________
 
     targetcy_currency_id = fields.Many2one(
-        "res.currency", string="Target Currency", required=True
+        "res.currency",
+        string="Target Currency",
+        required=True,
+        store=True,
     )
     target_account_id = fields.Many2one(
         "idil.chart.account",
@@ -50,9 +58,10 @@ class CurrencyExchange(models.Model):
         "res.currency",
         related="target_account_id.currency_id",
         readonly=True,
+        store=True,
         string="Target Account Currency",
     )
-    target_account_balance = fields.Float(
+    target_account_balance = fields.Monetary(
         string="Account Balance",
         compute="_compute_account_balances",
         currency_field="target_currency_id",
@@ -60,9 +69,14 @@ class CurrencyExchange(models.Model):
 
     # ______________________________________________________________________________________________________________
 
-    amount = fields.Float(string="Amount in Source Currency", required=True)
+    amount = fields.Monetary(
+        string="Amount in Source Currency",
+        required=True,
+        currency_field="source_currency_id",
+        tracking=True,
+    )
 
-    amount_when_converted = fields.Float(
+    amount_when_converted = fields.Monetary(
         string="Amount in Target Currency",
         compute="_compute_amount_when_converted",
         currency_field="target_currency_id",
@@ -97,10 +111,26 @@ class CurrencyExchange(models.Model):
         tracking=True,
     )
 
-    @api.depends("amount", "rate")
+    @api.depends("amount", "rate", "source_currency_id")
     def _compute_amount_when_converted(self):
         for rec in self:
-            rec.amount_when_converted = rec.amount * rec.rate
+            # Default value to prevent Odoo crash
+            rec.amount_when_converted = 0.0
+
+            if not rec.amount or not rec.rate or not rec.source_currency_id:
+                continue  # nothing to compute yet
+
+            currency_name = rec.source_currency_id.name.upper()
+
+            if currency_name == "SL":
+                rec.amount_when_converted = rec.amount / rec.rate
+
+            elif currency_name == "USD":
+                rec.amount_when_converted = rec.amount * rec.rate
+
+            else:
+                # If any other currency comes later, fail gracefully
+                rec.amount_when_converted = 0.0
 
     @api.depends("currency_id", "transaction_date", "company_id")
     def _compute_exchange_rate(self):
@@ -158,9 +188,15 @@ class CurrencyExchange(models.Model):
 
     @api.model
     def create(self, vals):
-        if vals.get("name", "New") == "New":
-            # Generate the name as "Exchange" followed by the current date
-            vals["name"] = f"Exchange {datetime.now().strftime('%Y-%m-%d')}"
+        # Ensure transaction_date exists
+        if not vals.get("transaction_date"):
+            vals["transaction_date"] = fields.Date.context_today(self)
+        # Convert to YMD string
+        tx_date = fields.Date.to_date(vals["transaction_date"])
+        # Get serial number from sequence
+        seq = self.env["ir.sequence"].next_by_code("idil.currency.exchange") or "0000"
+        # Construct final reference
+        vals["name"] = f"Currency Exchange - {tx_date}/{seq}"
         return super(CurrencyExchange, self).create(vals)
 
     @api.depends("source_account_id", "target_account_id")
@@ -193,6 +229,7 @@ class CurrencyExchange(models.Model):
         for record in self:
             if record.state == "confirmed":
                 raise ValidationError("This exchange has already been processed.")
+
             if record.source_currency_id == record.target_currency_id:
                 raise ValidationError(
                     "The source and target accounts must have different currencies."
