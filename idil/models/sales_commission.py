@@ -195,6 +195,9 @@ class SalesCommission(models.Model):
         else:
             return [
                 "|",
+                ("payment_status", "=", "paid"),
+                ("due_date", ">", today),
+            ]
 
     @api.depends("commission_amount", "commission_paid")
     def _compute_payment_status(self):
