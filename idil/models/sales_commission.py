@@ -379,13 +379,8 @@ class SalesCommissionPayment(models.Model):
         # Create salesperson transaction (In - reduces what they owe)
         payment._create_salesperson_transaction()
         
-        # Invalidate cache to ensure the new payment is seen by the compute methods
-        payment.commission_id.invalidate_recordset(['commission_paid', 'commission_remaining', 'payment_status'])
-        
-        # Trigger recomputation
-        payment.commission_id._compute_commission_paid()
-        payment.commission_id._compute_commission_remaining()
-        payment.commission_id._compute_payment_status()
+        # Explicitly update commission fields to ensure persistence
+        payment._update_commission_balance()
         
         return payment
 
@@ -427,11 +422,48 @@ class SalesCommissionPayment(models.Model):
 
         res = super(SalesCommissionPayment, self).unlink()
         
-        # Force recomputation after deletion
+        # Force update after deletion
         for commission in commissions:
-            commission.invalidate_recordset(['commission_paid', 'commission_remaining', 'payment_status'])
-            commission._compute_commission_paid()
-            commission._compute_commission_remaining()
-            commission._compute_payment_status()
+            # Re-calculate manually since we can't call the method on deleted payments
+            payments = self.env["idil.sales.commission.payment"].search([
+                ("commission_id", "=", commission.id)
+            ])
+            paid = sum(payments.mapped("amount"))
+            remaining = commission.commission_amount - paid
+            
+            status = "pending"
+            if paid >= commission.commission_amount:
+                status = "paid"
+            elif paid > 0:
+                status = "partial_paid"
+                
+            commission.write({
+                'commission_paid': paid,
+                'commission_remaining': remaining,
+                'payment_status': status
+            })
             
         return res
+
+    def _update_commission_balance(self):
+        """Helper to update commission balance"""
+        for payment in self:
+            commission = payment.commission_id
+            # Use search to ensure we see the new payment
+            payments = self.env["idil.sales.commission.payment"].search([
+                ("commission_id", "=", commission.id)
+            ])
+            paid = sum(payments.mapped("amount"))
+            remaining = commission.commission_amount - paid
+            
+            status = "pending"
+            if paid >= commission.commission_amount:
+                status = "paid"
+            elif paid > 0:
+                status = "partial_paid"
+                
+            commission.write({
+                'commission_paid': paid,
+                'commission_remaining': remaining,
+                'payment_status': status
+            })
