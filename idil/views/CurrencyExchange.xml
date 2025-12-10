@@ -6,11 +6,15 @@
         <field name="arch" type="xml">
             <tree string="Currency Exchange">
                 <field name="name"/>
-                <field name="transaction_date"/>
-                <field name="source_account_id"/>
-                <field name="target_account_id"/>
-                <field name="amount"/>
+                <field name="transaction_date" />
+                <field name="source_account_id" />
+                <field name="source_currency_id" optional="show"/> <!-- show currency -->
+                <field name="target_account_id" />
+                <field name="targetcy_currency_id" optional="show"/>
+                <field name="amount" sum="Total"/>
+                <field name="amount_when_converted" sum="Total" optional="show"/>
                 <field name="rate"/>
+                <field name="state"/>
             </tree>
         </field>
     </record>
@@ -22,8 +26,11 @@
         <field name="arch" type="xml">
             <form string="Currency Exchange">
                 <header>
+
                     <button string="Perform Exchange" type="object" name="perform_exchange" class="btn-primary"/>
                     <button string="Cancel" class="btn-secondary" special="cancel"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,cancel"/>
+
                 </header>
                 <sheet>
                     <div class="oe_title">

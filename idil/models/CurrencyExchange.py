@@ -363,6 +363,8 @@ class CurrencyExchange(models.Model):
                     }
                 )
 
+                record.state = "confirmed"
+
                 # Check if transaction booking was created successfully
                 if not transaction_booking:
                     raise ValidationError(
