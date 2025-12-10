@@ -370,7 +370,7 @@ class ManufacturingOrder(models.Model):
                     if bom and bom.product_id:
                         vals["product_id"] = bom.product_id.id
                         product = bom.product_id
-                        if product.account_id and not vals.get(
+                        if product.account_id and product.is_commissionable and not vals.get(
                             "commission_employee_id"
                         ):
                             raise ValidationError(
