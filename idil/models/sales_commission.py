@@ -129,6 +129,18 @@ class SalesCommission(models.Model):
         string="Amount to Pay", digits=(16, 5), default=0.0
     )
 
+    @api.depends("payment_ids.amount")
+    def _compute_commission_paid(self):
+        for commission in self:
+            commission.commission_paid = sum(commission.payment_ids.mapped("amount"))
+
+    @api.depends("commission_amount", "commission_paid")
+    def _compute_commission_remaining(self):
+        for commission in self:
+            commission.commission_remaining = (
+                commission.commission_amount - commission.commission_paid
+            )
+
     @api.depends("date", "sales_person_id.commission_payment_schedule",
                  "sales_person_id.commission_payment_day")
     def _compute_due_date(self):
