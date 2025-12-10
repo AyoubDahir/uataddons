@@ -119,5 +119,11 @@
             <field name="implementation">standard</field>
         </record>
 
+        <record id="seq_idil_currency_exchange" model="ir.sequence">
+            <field name="name">Currency Exchange Reference</field>
+            <field name="code">idil.currency.exchange</field>
+            <field name="padding">4</field>
+        </record>
+
     </data>
 </odoo>
