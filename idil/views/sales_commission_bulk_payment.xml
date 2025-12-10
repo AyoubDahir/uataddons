@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Form View -->
+    <record id="view_sales_commission_bulk_payment_form" model="ir.ui.view">
+        <field name="name">idil.sales.commission.bulk.payment.form</field>
+        <field name="model">idil.sales.commission.bulk.payment</field>
+        <field name="arch" type="xml">
+            <form string="Sales Commission Bulk Payment" create="true" edit="true">
+                <header>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,confirmed"/>
+                    <button name="action_confirm_payment" type="object" string="Confirm Payment" class="btn-primary" invisible="state != 'draft'"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="sales_person_id" readonly="state != 'draft'"/>
+                            <field name="date" readonly="state != 'draft'"/>
+                        </group>
+                        <group>
+                            <field name="due_commission_amount" readonly="1"/>
+                            <field name="due_commission_count" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="amount_to_pay" readonly="state != 'draft'"/>
+                            <field name="cash_account_id" options="{'no_create': True}" readonly="state != 'draft'"/>
+                        </group>
+                    </group>
+                    <separator string="Commission Lines"/>
+                    <field name="line_ids" readonly="1">
+                       <tree create="false" edit="false" delete="false">
+                            <field name="sale_order_id"/>
+                            <field name="commission_id" column_invisible="1"/>
+                            <field name="commission_date"/>
+                            <field name="commission_amount" sum="Total Amount"/>
+                            <field name="commission_paid" sum="Total Paid"/>
+                            <field name="commission_remaining" sum="Total Remaining"/>
+                            <field name="paid_amount" sum="Total Paid Now"/>
+                            <field name="commission_status" widget="badge" 
+                                   decoration-success="commission_status == 'paid'"
+                                   decoration-warning="commission_status == 'partial_paid'"
+                                   decoration-info="commission_status == 'pending'"/>
+                        </tree>
+                    </field>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- Tree View -->
+    <record id="view_sales_commission_bulk_payment_tree" model="ir.ui.view">
+        <field name="name">idil.sales.commission.bulk.payment.tree</field>
+        <field name="model">idil.sales.commission.bulk.payment</field>
+        <field name="arch" type="xml">
+            <tree string="Sales Commission Bulk Payments">
+                <field name="name"/>
+                <field name="sales_person_id"/>
+                <field name="amount_to_pay"/>
+                <field name="date"/>
+                <field name="state" widget="badge" 
+                       decoration-success="state == 'confirmed'"
+                       decoration-info="state == 'draft'"/>
+            </tree>
+        </field>
+    </record>
+    
+    <!-- Action -->
+    <record id="action_sales_commission_bulk_payment" model="ir.actions.act_window">
+        <field name="name">Bulk Commission Payments</field>
+        <field name="res_model">idil.sales.commission.bulk.payment</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create bulk commission payments for salespersons.
+            </p>
+            <p>
+                This feature allows you to pay multiple monthly commissions for a salesperson in a single transaction.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu Item -->
+    <menuitem id="menu_sales_commission_bulk_payment" 
+              name="Bulk Payment" 
+              parent="menu_sales_commission_root" 
+              action="action_sales_commission_bulk_payment" 
+              sequence="30"/>
+
+</odoo>

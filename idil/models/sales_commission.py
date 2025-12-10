@@ -195,21 +195,6 @@ class SalesCommission(models.Model):
         else:
             return [
                 "|",
-                ("payment_status", "=", "paid"),
-                ("due_date", ">", today),
-            ]
-
-    @api.depends("payment_ids.amount")
-    def _compute_commission_paid(self):
-        for record in self:
-            record.commission_paid = sum(
-                payment.amount for payment in record.payment_ids
-            )
-
-    @api.depends("commission_amount", "commission_paid")
-    def _compute_commission_remaining(self):
-        for record in self:
-            record.commission_remaining = record.commission_amount - record.commission_paid
 
     @api.depends("commission_amount", "commission_paid")
     def _compute_payment_status(self):
@@ -326,6 +311,12 @@ class SalesCommissionPayment(models.Model):
     _name = "idil.sales.commission.payment"
     _description = "Sales Commission Payment"
     _order = "id desc"
+
+    bulk_payment_line_id = fields.Many2one(
+        "idil.sales.commission.bulk.payment.line",
+        string="Bulk Payment Line",
+        readonly=True,
+    )
 
     company_id = fields.Many2one(
         "res.company", default=lambda s: s.env.company, required=True
