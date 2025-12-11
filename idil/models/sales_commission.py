@@ -250,6 +250,15 @@ class SalesCommission(models.Model):
         """Pay commission to salesperson"""
         self.ensure_one()
 
+        # Guard with fresh DB state (avoid cache/UI staleness)
+        payments = self.env["idil.sales.commission.payment"].search(
+            [("commission_id", "=", self.id)]
+        )
+        total_paid = sum(payments.mapped("amount"))
+        remaining = (self.commission_amount or 0.0) - total_paid
+        if remaining <= 0:
+            raise ValidationError("This commission is already fully paid.")
+
         if not self.cash_account_id:
             raise ValidationError(
                 "Please select a cash account before paying the commission."
@@ -258,10 +267,11 @@ class SalesCommission(models.Model):
         if self.amount_to_pay <= 0:
             raise ValidationError("Amount to pay must be greater than 0.")
 
-        if self.amount_to_pay > self.commission_remaining:
+        # Validate against fresh remaining to prevent overpay from stale cache/UI
+        if self.amount_to_pay > remaining:
             raise ValidationError(
                 f"The amount to pay ({self.amount_to_pay}) exceeds the remaining "
-                f"commission amount ({self.commission_remaining})."
+                f"commission amount ({remaining})."
             )
 
         # Validate commission payable account exists for monthly schedule
@@ -333,7 +343,7 @@ class SalesCommission(models.Model):
                 }
             )
 
-        # Reset amount_to_pay
+        # Reset amount_to_pay and reload the view to reflect updated status
         self.amount_to_pay = 0.0
 
         return {"type": "ir.actions.client", "tag": "reload"}
@@ -375,6 +385,23 @@ class SalesCommissionPayment(models.Model):
     )
 
     def create(self, vals):
+        # Validate at DB level against fresh remaining to prevent overpay
+        commission = None
+        if vals.get("commission_id"):
+            commission = self.env["idil.sales.commission"].browse(vals["commission_id"])  # noqa: E501
+            payments = self.env["idil.sales.commission.payment"].search(
+                [("commission_id", "=", commission.id)]
+            )
+            total_paid = sum(payments.mapped("amount"))
+            remaining = (commission.commission_amount or 0.0) - total_paid
+            amount = (vals.get("amount") or 0.0)
+            if remaining <= 0:
+                raise ValidationError("This commission is already fully paid.")
+            if amount > remaining:
+                raise ValidationError(
+                    f"The amount to pay ({amount}) exceeds the remaining commission amount ({remaining})."
+                )
+
         payment = super(SalesCommissionPayment, self).create(vals)
         # Create salesperson transaction (In - reduces what they owe)
         payment._create_salesperson_transaction()
@@ -467,3 +494,21 @@ class SalesCommissionPayment(models.Model):
                 'commission_remaining': remaining,
                 'payment_status': status
             })
+
+    @api.constrains("amount", "commission_id")
+    def _check_amount_not_exceed_remaining(self):
+        """Safety net to prevent overpayment in concurrent flows."""
+        for rec in self:
+            if not rec.commission_id:
+                continue
+            # Exclude current payment when checking remaining
+            other_payments = self.env["idil.sales.commission.payment"].search([
+                ("commission_id", "=", rec.commission_id.id),
+                ("id", "!=", rec.id),
+            ])
+            already_paid = sum(other_payments.mapped("amount"))
+            remaining = (rec.commission_id.commission_amount or 0.0) - already_paid
+            if rec.amount > remaining + 1e-9:
+                raise ValidationError(
+                    f"Payment amount ({rec.amount}) exceeds remaining commission ({remaining})."
+                )

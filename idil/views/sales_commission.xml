@@ -67,7 +67,7 @@
                             <field name="amount_to_pay"/>
                             <button name="pay_commission" string="Pay Commission" 
                                     type="object" class="oe_highlight" 
-                                    invisible="amount_to_pay &lt;= 0"/>
+                                    invisible="amount_to_pay &lt;= 0 or payment_status == 'paid' or commission_remaining &lt;= 0"/>
                         </group>
                     </group>
                     
