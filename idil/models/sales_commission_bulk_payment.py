@@ -1,5 +1,12 @@
 from odoo import models, fields, api
 from odoo.exceptions import ValidationError
+import logging
+
+_logger = logging.getLogger(__name__)
+
+# VERSION MARKER: v2.0 - Added duplicate payment prevention
+# If you see this in logs, the new code is running
+MODULE_VERSION = "2.0"
 
 
 class SalesCommissionBulkPayment(models.Model):
@@ -214,6 +221,17 @@ class SalesCommissionBulkPayment(models.Model):
         if self.state != "draft":
             return
 
+        _logger.info(f"=== BULK PAYMENT v{MODULE_VERSION} === Confirming {self.name}")
+        
+        # CRITICAL: Ensure there are lines to process
+        if not self.line_ids:
+            raise ValidationError(
+                "No commission lines to pay. Please select a salesperson and ensure "
+                "there are unpaid commissions before confirming."
+            )
+        
+        _logger.info(f"Bulk payment {self.name} has {len(self.line_ids)} lines to process")
+
         # Re-validate total amount against fresh DB data (monthly commissions only)
         # SIMPLIFIED QUERY: Calculate remaining directly from payments
         self.env.cr.execute(
@@ -251,12 +269,16 @@ class SalesCommissionBulkPayment(models.Model):
             )
 
         remaining_payment = self.amount_to_pay
+        payments_created = 0
+        total_paid_amount = 0.0
 
         for line in self.line_ids:
             if remaining_payment <= 0:
                 break
 
             commission = line.commission_id
+            
+            _logger.info(f"Processing commission {commission.id} (amount: {commission.commission_amount})")
             
             # Get fresh remaining from DB to avoid stale cache
             self.env.cr.execute(
@@ -269,14 +291,19 @@ class SalesCommissionBulkPayment(models.Model):
             )
             total_paid = self.env.cr.fetchone()[0]
             commission_needed = (commission.commission_amount or 0.0) - total_paid
+            
+            _logger.info(f"Commission {commission.id}: total_paid={total_paid}, needed={commission_needed}")
 
             if commission_needed <= 0:
+                _logger.info(f"Commission {commission.id} already fully paid, skipping")
                 continue
 
             # Amount to pay for this commission (full or partial)
             payable = min(remaining_payment, commission_needed)
             if payable <= 0:
                 break
+
+            _logger.info(f"Paying {payable} for commission {commission.id}")
 
             # Set the payment fields on the commission and trigger payment
             commission.cash_account_id = self.cash_account_id
@@ -296,6 +323,9 @@ class SalesCommissionBulkPayment(models.Model):
             if payment:
                 payment.bulk_payment_line_id = line.id
                 payment.flush_recordset()
+                payments_created += 1
+                total_paid_amount += payable
+                _logger.info(f"Created payment {payment.id} for commission {commission.id}")
 
             # pay_commission() now handles the status update directly via SQL
             # Just update the line with fresh data from SQL
@@ -321,6 +351,15 @@ class SalesCommissionBulkPayment(models.Model):
                 }
             )
             remaining_payment -= payable
+
+        # CRITICAL: Ensure at least one payment was made
+        if payments_created == 0:
+            raise ValidationError(
+                "No payments were created. All commissions may already be fully paid. "
+                "Please refresh the page and try again."
+            )
+
+        _logger.info(f"Bulk payment {self.name}: Created {payments_created} payments totaling {total_paid_amount}")
 
         # Update state to confirmed
         self.write({'state': 'confirmed'})
