@@ -148,9 +148,10 @@ class SalesCommissionBulkPayment(models.Model):
             for row in commission_data:
                 if remaining_payment <= 0:
                     break
-                commission_id, commission_date, commission_amount, commission_paid, commission_remaining = row
-                if commission_remaining <= 0:
-                    continue  # already paid
+                # Unpack values - row contains 6 values since we added payment_status to the query
+                commission_id, commission_date, commission_amount, commission_paid, commission_remaining, payment_status = row
+                if commission_remaining <= 0 or payment_status == 'paid':
+                    continue  # already paid or marked as paid
 
                 payable = min(remaining_payment, commission_remaining)
                 if payable > 0:
