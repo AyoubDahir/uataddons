@@ -313,6 +313,9 @@ class SalesCommission(models.Model):
         
         # Cap amount to remaining if within tolerance
         actual_amount = min(self.amount_to_pay, remaining)
+        
+        # Round payment amount to 2 decimal places to prevent floating-point issues
+        payment_amount = round(self.amount_to_pay, 2)
 
         # Validate commission payable account exists for monthly schedule
         if not self.sales_person_id.commission_payable_account_id:
@@ -321,11 +324,11 @@ class SalesCommission(models.Model):
                 "but no Commission Payable Account configured."
             )
 
-        # Create payment record
+        # Create payment record with rounded amount
         payment_vals = {
             "commission_id": self.id,
             "sales_person_id": self.sales_person_id.id,
-            "amount": self.amount_to_pay,
+            "amount": payment_amount,
             "date": fields.Date.context_today(self),
             "cash_account_id": self.cash_account_id.id,
         }
@@ -353,7 +356,7 @@ class SalesCommission(models.Model):
                     "sales_person_id": self.sales_person_id.id,
                     "trx_source_id": trx_source.id if trx_source else False,
                     "trx_date": fields.Date.context_today(self),
-                    "amount": self.amount_to_pay,
+                    "amount": payment_amount,
                     "payment_method": "commission_payment",
                     "payment_status": "paid",
                     "reffno": f"Commission Payment - {self.name}",
@@ -372,8 +375,12 @@ class SalesCommission(models.Model):
                 payable_account = self.sales_person_id.commission_payable_account_id
                 cash_account = self.cash_account_id
                 
+                # CRITICAL: Round amount to 2 decimal places to prevent floating-point precision issues
+                # This ensures DR and CR entries are exactly equal
+                rounded_amount = round(self.amount_to_pay, 2)
+                
                 _logger.info(f"Commission Payment Accounting:")
-                _logger.info(f"  - Commission: {self.name}, Amount: {self.amount_to_pay}")
+                _logger.info(f"  - Commission: {self.name}, Amount: {rounded_amount}")
                 _logger.info(f"  - DR Account: {payable_account.code} - {payable_account.name} (Currency: {payable_account.currency_id.name})")
                 _logger.info(f"  - CR Account: {cash_account.code} - {cash_account.name} (Currency: {cash_account.currency_id.name})")
                 
@@ -384,7 +391,7 @@ class SalesCommission(models.Model):
                         "description": f"Commission Payment - {self.sale_order_id.name if self.sale_order_id else self.name}",
                         "account_number": payable_account.id,
                         "transaction_type": "dr",
-                        "dr_amount": self.amount_to_pay,
+                        "dr_amount": rounded_amount,
                         "cr_amount": 0,
                         "transaction_date": fields.Date.context_today(self),
                         "company_id": self.company_id.id,
@@ -400,7 +407,7 @@ class SalesCommission(models.Model):
                         "account_number": cash_account.id,
                         "transaction_type": "cr",
                         "dr_amount": 0,
-                        "cr_amount": self.amount_to_pay,
+                        "cr_amount": rounded_amount,
                         "transaction_date": fields.Date.context_today(self),
                         "company_id": self.company_id.id,
                     }
