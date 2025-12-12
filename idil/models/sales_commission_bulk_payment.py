@@ -48,51 +48,81 @@ class SalesCommissionBulkPayment(models.Model):
 
     @api.depends("sales_person_id")
     def _compute_due_commission(self):
+        """Compute due commission using SQL for fresh data."""
         for rec in self:
             if rec.sales_person_id:
-                unpaid_commissions = rec.env["idil.sales.commission"].search(
-                    [
-                        ("sales_person_id", "=", rec.sales_person_id.id),
-                        ("payment_status", "!=", "paid"),
-                        ("payment_schedule", "=", "monthly"),
-                    ]
+                # Use SQL to get fresh totals, bypassing ORM cache
+                rec.env.cr.execute(
+                    """
+                    SELECT 
+                        COUNT(*),
+                        COALESCE(SUM(sc.commission_amount - COALESCE(paid.total_paid, 0)), 0)
+                    FROM idil_sales_commission sc
+                    JOIN idil_sales_sales_personnel sp ON sp.id = sc.sales_person_id
+                    LEFT JOIN (
+                        SELECT commission_id, SUM(amount) as total_paid
+                        FROM idil_sales_commission_payment
+                        GROUP BY commission_id
+                    ) paid ON paid.commission_id = sc.id
+                    WHERE sc.sales_person_id = %s
+                    AND sp.commission_payment_schedule = 'monthly'
+                    AND (sc.commission_amount - COALESCE(paid.total_paid, 0)) > 0.001
+                    """,
+                    (rec.sales_person_id.id,)
                 )
-                rec.due_commission_amount = sum(
-                    c.commission_remaining for c in unpaid_commissions
-                )
-                rec.due_commission_count = len(unpaid_commissions)
+                result = rec.env.cr.fetchone()
+                rec.due_commission_count = result[0] or 0
+                rec.due_commission_amount = result[1] or 0.0
             else:
                 rec.due_commission_amount = 0.0
                 rec.due_commission_count = 0
 
     @api.onchange("sales_person_id", "amount_to_pay")
     def _onchange_sales_person_id(self):
+        """Generate commission lines using SQL for fresh data."""
         # Always clear all existing lines first
         self.line_ids = [(5, 0, 0)]
         
         if not self.sales_person_id:
             return
 
-        unpaid_commissions = self.env["idil.sales.commission"].search(
-            [
-                ("sales_person_id", "=", self.sales_person_id.id),
-                ("payment_status", "!=", "paid"),
-                ("payment_schedule", "=", "monthly"),
-            ],
-            order="id asc",
+        # Use SQL to get fresh commission data with actual remaining amounts
+        self.env.cr.execute(
+            """
+            SELECT 
+                sc.id,
+                sc.date,
+                sc.commission_amount,
+                COALESCE(paid.total_paid, 0) as commission_paid,
+                (sc.commission_amount - COALESCE(paid.total_paid, 0)) as commission_remaining
+            FROM idil_sales_commission sc
+            JOIN idil_sales_sales_personnel sp ON sp.id = sc.sales_person_id
+            LEFT JOIN (
+                SELECT commission_id, SUM(amount) as total_paid
+                FROM idil_sales_commission_payment
+                GROUP BY commission_id
+            ) paid ON paid.commission_id = sc.id
+            WHERE sc.sales_person_id = %s
+            AND sp.commission_payment_schedule = 'monthly'
+            AND (sc.commission_amount - COALESCE(paid.total_paid, 0)) > 0.001
+            ORDER BY sc.id ASC
+            """,
+            (self.sales_person_id.id,)
         )
-        total_remaining = sum(c.commission_remaining for c in unpaid_commissions)
+        commission_data = self.env.cr.fetchall()
+        
+        total_remaining = sum(row[4] for row in commission_data)  # commission_remaining
         
         # Auto-fill amount if it's 0
         if self.amount_to_pay == 0:
             self.amount_to_pay = total_remaining
 
-        if self.amount_to_pay > total_remaining:
+        if self.amount_to_pay > total_remaining + 0.001:
             self.amount_to_pay = 0
             return {
                 "warning": {
                     "title": "Amount Too High",
-                    "message": f"Total Amount to Pay cannot exceed the sum of all unpaid commissions ({total_remaining}).",
+                    "message": f"Total Amount to Pay cannot exceed the sum of all unpaid commissions ({total_remaining:.2f}).",
                 }
             }
             
@@ -100,25 +130,25 @@ class SalesCommissionBulkPayment(models.Model):
         if self.amount_to_pay > 0:
             lines = []
             remaining_payment = self.amount_to_pay
-            for commission in unpaid_commissions:
+            for row in commission_data:
                 if remaining_payment <= 0:
                     break
-                commission_needed = commission.commission_remaining
-                if commission_needed <= 0:
+                commission_id, commission_date, commission_amount, commission_paid, commission_remaining = row
+                if commission_remaining <= 0:
                     continue  # already paid
 
-                payable = min(remaining_payment, commission_needed)
+                payable = min(remaining_payment, commission_remaining)
                 if payable > 0:
                     lines.append(
                         (
                             0,
                             0,
                             {
-                                "commission_id": commission.id,
-                                "commission_date": commission.date,
-                                "commission_amount": commission.commission_amount,
-                                "commission_paid": commission.commission_paid,
-                                "commission_remaining": commission.commission_remaining,
+                                "commission_id": commission_id,
+                                "commission_date": commission_date,
+                                "commission_amount": commission_amount,
+                                "commission_paid": commission_paid,
+                                "commission_remaining": commission_remaining,
                             },
                         )
                     )
@@ -237,22 +267,45 @@ class SalesCommissionBulkPayment(models.Model):
             )
             if payment:
                 payment.bulk_payment_line_id = line.id
+                payment.flush_recordset()
 
-            # Write only to this processed line with fresh data
-            commission.invalidate_recordset(['commission_paid', 'commission_remaining'])
+            # Force recomputation of commission fields
+            commission.invalidate_recordset(
+                ['commission_paid', 'commission_remaining', 'payment_status']
+            )
+            commission._compute_commission_paid()
+            commission._compute_commission_remaining()
+            commission._compute_payment_status()
+            commission.flush_recordset(
+                ['commission_paid', 'commission_remaining', 'payment_status']
+            )
+
+            # Write to this processed line with fresh data from SQL
+            self.env.cr.execute(
+                """
+                SELECT COALESCE(SUM(amount), 0)
+                FROM idil_sales_commission_payment
+                WHERE commission_id = %s
+                """,
+                (commission.id,)
+            )
+            fresh_paid = self.env.cr.fetchone()[0]
+            fresh_remaining = commission.commission_amount - fresh_paid
+            
             line.write(
                 {
                     "paid_amount": payable,
                     "commission_amount": commission.commission_amount,
                     "commission_id": commission.id,
                     "commission_date": commission.date,
-                    "commission_paid": commission.commission_paid,
-                    "commission_remaining": commission.commission_remaining,
+                    "commission_paid": fresh_paid,
+                    "commission_remaining": fresh_remaining,
                 }
             )
             remaining_payment -= payable
 
-        self.state = "confirmed"
+        # Update state to confirmed
+        self.write({'state': 'confirmed'})
 
     def _get_cash_account_balance(self):
         self.env.cr.execute(
@@ -277,6 +330,7 @@ class SalesCommissionBulkPayment(models.Model):
         return super().create(vals)
 
     def unlink(self):
+        """Delete bulk payment and reverse all associated commission payments."""
         for bulk in self:
             # For each line in the bulk payment
             for line in bulk.line_ids:
@@ -289,14 +343,24 @@ class SalesCommissionBulkPayment(models.Model):
                     commission = payment.commission_id
                     # Delete the payment (this will delete associated transactions via unlink)
                     payment.unlink()
-                    # Trigger status recalculation
+                    # Trigger status recalculation with flush
+                    commission.invalidate_recordset(
+                        ['commission_paid', 'commission_remaining', 'payment_status']
+                    )
                     commission._compute_commission_paid()
                     commission._compute_commission_remaining()
                     commission._compute_payment_status()
+                    commission.flush_recordset(
+                        ['commission_paid', 'commission_remaining', 'payment_status']
+                    )
 
         return super(SalesCommissionBulkPayment, self).unlink()
 
     def write(self, vals):
+        # Allow state change to 'confirmed' even from draft
+        if vals.keys() == {'state'} and vals.get('state') == 'confirmed':
+            return super().write(vals)
+        
         for rec in self:
             if rec.state == "confirmed":
                 raise ValidationError(

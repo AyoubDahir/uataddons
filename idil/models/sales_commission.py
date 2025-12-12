@@ -129,30 +129,24 @@ class SalesCommission(models.Model):
         string="Amount to Pay", digits=(16, 5), default=0.0
     )
 
-    @api.depends("payment_ids.amount")
-    def _compute_commission_paid(self):
-        for commission in self:
-            commission.commission_paid = sum(commission.payment_ids.mapped("amount"))
-
-    @api.depends("commission_amount", "commission_paid")
-    def _compute_commission_remaining(self):
-        for commission in self:
-            commission.commission_remaining = (
-                commission.commission_amount - commission.commission_paid
-            )
-
     @api.depends("payment_ids", "payment_ids.amount")
     def _compute_commission_paid(self):
+        """Compute total paid amount from all payments."""
         for commission in self:
-            # Use search to ensure we get all payments, including newly created ones
-            # This bypasses potential cache issues with the One2many field
-            payments = self.env["idil.sales.commission.payment"].search([
-                ("commission_id", "=", commission.id)
-            ])
-            commission.commission_paid = sum(payments.mapped("amount"))
+            # Use SQL to get fresh totals, bypassing ORM cache
+            self.env.cr.execute(
+                """
+                SELECT COALESCE(SUM(amount), 0)
+                FROM idil_sales_commission_payment
+                WHERE commission_id = %s
+                """,
+                (commission.id,)
+            )
+            commission.commission_paid = self.env.cr.fetchone()[0]
 
     @api.depends("commission_amount", "commission_paid")
     def _compute_commission_remaining(self):
+        """Compute remaining commission amount."""
         for commission in self:
             commission.commission_remaining = (
                 commission.commission_amount - commission.commission_paid
@@ -514,51 +508,37 @@ class SalesCommissionPayment(models.Model):
 
         res = super(SalesCommissionPayment, self).unlink()
         
-        # Force update after deletion
+        # Force recomputation after deletion
         for commission in commissions:
-            # Re-calculate manually since we can't call the method on deleted payments
-            payments = self.env["idil.sales.commission.payment"].search([
-                ("commission_id", "=", commission.id)
-            ])
-            paid = sum(payments.mapped("amount"))
-            remaining = commission.commission_amount - paid
-            
-            status = "pending"
-            if paid >= commission.commission_amount:
-                status = "paid"
-            elif paid > 0:
-                status = "partial_paid"
-                
-            commission.write({
-                'commission_paid': paid,
-                'commission_remaining': remaining,
-                'payment_status': status
-            })
+            # Invalidate cache and trigger recomputation
+            commission.invalidate_recordset(
+                ['commission_paid', 'commission_remaining', 'payment_status']
+            )
+            commission._compute_commission_paid()
+            commission._compute_commission_remaining()
+            commission._compute_payment_status()
+            commission.flush_recordset(
+                ['commission_paid', 'commission_remaining', 'payment_status']
+            )
             
         return res
 
     def _update_commission_balance(self):
-        """Helper to update commission balance"""
+        """Trigger recomputation of commission balance fields."""
         for payment in self:
             commission = payment.commission_id
-            # Use search to ensure we see the new payment
-            payments = self.env["idil.sales.commission.payment"].search([
-                ("commission_id", "=", commission.id)
-            ])
-            paid = sum(payments.mapped("amount"))
-            remaining = commission.commission_amount - paid
-            
-            status = "pending"
-            if paid >= commission.commission_amount:
-                status = "paid"
-            elif paid > 0:
-                status = "partial_paid"
-                
-            commission.write({
-                'commission_paid': paid,
-                'commission_remaining': remaining,
-                'payment_status': status
-            })
+            # Invalidate cache to force recomputation
+            commission.invalidate_recordset(
+                ['commission_paid', 'commission_remaining', 'payment_status']
+            )
+            # Force recomputation by accessing the fields
+            commission._compute_commission_paid()
+            commission._compute_commission_remaining()
+            commission._compute_payment_status()
+            # Flush to database
+            commission.flush_recordset(
+                ['commission_paid', 'commission_remaining', 'payment_status']
+            )
 
     @api.constrains("amount", "commission_id")
     def _check_amount_not_exceed_remaining(self):
