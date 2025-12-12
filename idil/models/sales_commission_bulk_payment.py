@@ -294,18 +294,8 @@ class SalesCommissionBulkPayment(models.Model):
                 payment.bulk_payment_line_id = line.id
                 payment.flush_recordset()
 
-            # Force recomputation of commission fields
-            commission.invalidate_recordset(
-                ['commission_paid', 'commission_remaining', 'payment_status']
-            )
-            commission._compute_commission_paid()
-            commission._compute_commission_remaining()
-            commission._compute_payment_status()
-            commission.flush_recordset(
-                ['commission_paid', 'commission_remaining', 'payment_status']
-            )
-
-            # Write to this processed line with fresh data from SQL
+            # pay_commission() now handles the status update directly via SQL
+            # Just update the line with fresh data from SQL
             self.env.cr.execute(
                 """
                 SELECT COALESCE(SUM(amount), 0)

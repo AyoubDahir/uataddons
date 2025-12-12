@@ -412,6 +412,43 @@ class SalesCommission(models.Model):
             # Link booking to payment record for trial balance tracking
             payment.write({"transaction_booking_id": booking.id})
 
+        # CRITICAL: Explicitly update payment_status in database using SQL
+        # This ensures the status is persisted even if ORM caching causes issues
+        self.env.cr.execute(
+            """
+            SELECT COALESCE(SUM(amount), 0) 
+            FROM idil_sales_commission_payment 
+            WHERE commission_id = %s
+            """,
+            (self.id,)
+        )
+        total_paid_after = self.env.cr.fetchone()[0]
+        
+        # Determine new status based on actual payments
+        if total_paid_after >= self.commission_amount:
+            new_status = 'paid'
+        elif total_paid_after > 0:
+            new_status = 'partial_paid'
+        else:
+            new_status = 'pending'
+        
+        # Update status directly in database to ensure persistence
+        self.env.cr.execute(
+            """
+            UPDATE idil_sales_commission 
+            SET payment_status = %s,
+                commission_paid = %s,
+                commission_remaining = %s
+            WHERE id = %s
+            """,
+            (new_status, total_paid_after, self.commission_amount - total_paid_after, self.id)
+        )
+        
+        # Commit the status update
+        self.env.cr.commit()
+        
+        _logger.info(f"Commission {self.id}: Updated payment_status to '{new_status}' (paid: {total_paid_after}, total: {self.commission_amount})")
+
         # Reset amount_to_pay and reload the view to reflect updated status
         self.amount_to_pay = 0.0
 
@@ -504,6 +541,57 @@ class SalesCommission(models.Model):
             'params': {
                 'title': 'Sync Complete',
                 'message': f"Created {created_bookings} transaction bookings for previously missing payments",
+                'type': 'success',
+                'sticky': False,
+            }
+        }
+
+    @api.model
+    def fix_all_commission_statuses(self):
+        """Fix all commission statuses based on actual payment totals.
+        This is a utility method to fix data inconsistencies where
+        commissions were paid but payment_status was not updated."""
+        
+        # Find all commissions and update their status based on actual payments
+        self.env.cr.execute(
+            """
+            UPDATE idil_sales_commission sc
+            SET 
+                payment_status = CASE 
+                    WHEN COALESCE(paid.total_paid, 0) >= sc.commission_amount THEN 'paid'
+                    WHEN COALESCE(paid.total_paid, 0) > 0 THEN 'partial_paid'
+                    ELSE 'pending'
+                END,
+                commission_paid = COALESCE(paid.total_paid, 0),
+                commission_remaining = sc.commission_amount - COALESCE(paid.total_paid, 0)
+            FROM (
+                SELECT commission_id, SUM(amount) as total_paid
+                FROM idil_sales_commission_payment
+                GROUP BY commission_id
+            ) paid
+            WHERE paid.commission_id = sc.id
+            AND (
+                sc.payment_status != CASE 
+                    WHEN COALESCE(paid.total_paid, 0) >= sc.commission_amount THEN 'paid'
+                    WHEN COALESCE(paid.total_paid, 0) > 0 THEN 'partial_paid'
+                    ELSE 'pending'
+                END
+                OR sc.payment_status IS NULL
+            )
+            """
+        )
+        
+        updated_count = self.env.cr.rowcount
+        self.env.cr.commit()
+        
+        _logger.info(f"Fixed {updated_count} commission statuses")
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Status Fix Complete',
+                'message': f"Updated {updated_count} commission statuses based on actual payments",
                 'type': 'success',
                 'sticky': False,
             }
