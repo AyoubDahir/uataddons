@@ -184,6 +184,83 @@ class SalesCommissionBulkPayment(models.Model):
                     remaining_payment -= payable
             self.line_ids = lines
 
+    def _generate_commission_lines(self):
+        """Generate commission lines from fresh DB data - used as fallback when onchange lines don't persist."""
+        if not self.sales_person_id or not self.amount_to_pay:
+            return
+        
+        _logger.info(f"Generating lines for {self.name}: salesperson={self.sales_person_id.id}, amount={self.amount_to_pay}")
+        
+        # Query fresh commission data
+        self.env.cr.execute(
+            """
+            SELECT 
+                sc.id as commission_id,
+                sc.date as commission_date,
+                sc.commission_amount,
+                COALESCE((
+                    SELECT SUM(amount) 
+                    FROM idil_sales_commission_payment 
+                    WHERE commission_id = sc.id
+                ), 0) as commission_paid,
+                sc.commission_amount - COALESCE((
+                    SELECT SUM(amount) 
+                    FROM idil_sales_commission_payment 
+                    WHERE commission_id = sc.id
+                ), 0) as commission_remaining
+            FROM idil_sales_commission sc
+            JOIN idil_sales_sales_personnel sp ON sp.id = sc.sales_person_id
+            WHERE sc.sales_person_id = %s
+            AND sp.commission_payment_schedule = 'monthly'
+            AND sc.commission_amount - COALESCE((
+                SELECT SUM(amount) 
+                FROM idil_sales_commission_payment 
+                WHERE commission_id = sc.id
+            ), 0) > 0.001
+            ORDER BY sc.id ASC
+            """,
+            (self.sales_person_id.id,)
+        )
+        commission_data = self.env.cr.dictfetchall()
+        
+        _logger.info(f"Found {len(commission_data)} unpaid commissions")
+        
+        if not commission_data:
+            return
+        
+        # Create lines
+        lines_to_create = []
+        remaining_payment = self.amount_to_pay
+        
+        for row in commission_data:
+            if remaining_payment <= 0:
+                break
+            
+            commission_remaining = row['commission_remaining']
+            if commission_remaining <= 0:
+                continue
+            
+            payable = min(remaining_payment, commission_remaining)
+            if payable > 0:
+                lines_to_create.append({
+                    "bulk_payment_id": self.id,
+                    "commission_id": row['commission_id'],
+                    "commission_date": row['commission_date'],
+                    "commission_amount": row['commission_amount'],
+                    "commission_paid": row['commission_paid'],
+                    "commission_remaining": commission_remaining,
+                })
+                remaining_payment -= payable
+        
+        # Create lines directly in DB
+        if lines_to_create:
+            line_model = self.env["idil.sales.commission.bulk.payment.line"]
+            for line_vals in lines_to_create:
+                line_model.create(line_vals)
+            _logger.info(f"Created {len(lines_to_create)} commission lines for {self.name}")
+            # Refresh to get the new lines
+            self.invalidate_recordset(['line_ids'])
+
     @api.constrains("amount_to_pay", "sales_person_id")
     def _check_amount_to_pay(self):
         """Validate amount doesn't exceed total unpaid commission using SQL."""
@@ -223,7 +300,12 @@ class SalesCommissionBulkPayment(models.Model):
 
         _logger.info(f"=== BULK PAYMENT v{MODULE_VERSION} === Confirming {self.name}")
         
-        # CRITICAL: Ensure there are lines to process
+        # If lines are empty, try to regenerate them from fresh DB data
+        if not self.line_ids:
+            _logger.info(f"No lines found, regenerating from DB for {self.name}")
+            self._generate_commission_lines()
+        
+        # After regeneration attempt, check again
         if not self.line_ids:
             raise ValidationError(
                 "No commission lines to pay. Please select a salesperson and ensure "
