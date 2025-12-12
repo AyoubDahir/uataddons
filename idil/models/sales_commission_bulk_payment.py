@@ -96,11 +96,12 @@ class SalesCommissionBulkPayment(models.Model):
 
         # Use SQL to get fresh commission data with actual remaining amounts
         # Also check payment_status to avoid including already paid commissions
+        # Using dictionaries for robust column handling
         self.env.cr.execute(
             """
             SELECT 
-                sc.id,
-                sc.date,
+                sc.id as commission_id,
+                sc.date as commission_date,
                 sc.commission_amount,
                 COALESCE(paid.total_paid, 0) as commission_paid,
                 (sc.commission_amount - COALESCE(paid.total_paid, 0)) as commission_remaining,
@@ -124,9 +125,9 @@ class SalesCommissionBulkPayment(models.Model):
             """,
             (self.sales_person_id.id,)
         )
-        commission_data = self.env.cr.fetchall()
+        commission_data = self.env.cr.dictfetchall()
         
-        total_remaining = sum(row[4] for row in commission_data)  # commission_remaining
+        total_remaining = sum(row['commission_remaining'] for row in commission_data)  # commission_remaining
         
         # Auto-fill amount if it's 0
         if self.amount_to_pay == 0:
@@ -148,8 +149,16 @@ class SalesCommissionBulkPayment(models.Model):
             for row in commission_data:
                 if remaining_payment <= 0:
                     break
-                # Unpack values - row contains 6 values since we added payment_status to the query
-                commission_id, commission_date, commission_amount, commission_paid, commission_remaining, payment_status = row
+                    
+                # Use dictionary keys instead of positional values - more robust
+                # This way it won't break if we add or change columns in the future
+                commission_id = row['commission_id']
+                commission_date = row['commission_date']
+                commission_amount = row['commission_amount']
+                commission_paid = row['commission_paid']
+                commission_remaining = row['commission_remaining']
+                payment_status = row['payment_status']
+                
                 if commission_remaining <= 0 or payment_status == 'paid':
                     continue  # already paid or marked as paid
 
