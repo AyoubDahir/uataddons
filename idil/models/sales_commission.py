@@ -325,6 +325,9 @@ class SalesCommission(models.Model):
                     [("name", "=", "Receipt")], limit=1
                 )
             
+            # Get exchange rate - use the rate from the sale order or default to 1.0
+            rate = self.sale_order_id.rate if self.sale_order_id and self.sale_order_id.rate else 1.0
+            
             # Create transaction booking
             booking = self.env["idil.transaction_booking"].create(
                 {
@@ -332,9 +335,11 @@ class SalesCommission(models.Model):
                     "trx_source_id": trx_source.id if trx_source else False,
                     "trx_date": fields.Date.context_today(self),
                     "amount": self.amount_to_pay,
-                    "payment_method": "cash",
+                    "payment_method": "commission_payment",
                     "payment_status": "paid",
                     "reffno": f"Commission Payment - {self.name}",
+                    "rate": rate,
+                    "sale_order_id": self.sale_order_id.id if self.sale_order_id else False,
                 }
             )
             

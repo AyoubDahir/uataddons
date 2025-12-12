@@ -20,7 +20,20 @@ This document describes the fixes and improvements made to the sales commission 
 - Updated `_compute_due_commission` in bulk payment to use SQL
 - Updated onchange method to use SQL for fresh commission data
 
-### 2. Overpayment Bug
+### 2. Transaction Booking Missing Required Rate Field
+**Problem**: The `pay_commission` method created a transaction booking without the required `rate` field, causing the booking creation to fail silently. This meant no accounting entries were being created.
+
+**Solution**: Added the `rate` field to the transaction booking creation, using the rate from the associated sale order:
+```python
+rate = self.sale_order_id.rate if self.sale_order_id and self.sale_order_id.rate else 1.0
+booking = self.env["idil.transaction_booking"].create({
+    ...
+    "rate": rate,
+    "sale_order_id": self.sale_order_id.id if self.sale_order_id else False,
+})
+```
+
+### 3. Overpayment Bug
 **Problem**: Users could pay commissions multiple times, exceeding the total commission amount. The system allowed overpayment because validation used cached ORM data that could become stale.
 
 **Solution**: Implemented SQL-level locking and validation:
@@ -170,3 +183,4 @@ fresh_total = self.env.cr.fetchone()[0]
 - **Date**: December 12, 2025
 - **Author**: Cascade AI Assistant
 - **Update 2**: Fixed commission status not updating after bulk payment confirmation
+- **Update 3**: Fixed missing `rate` field in transaction booking creation causing accounting entries to fail
