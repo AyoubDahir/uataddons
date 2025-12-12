@@ -51,29 +51,27 @@ class SalesCommissionBulkPayment(models.Model):
         """Compute due commission using SQL for fresh data and payment status."""
         for rec in self:
             if rec.sales_person_id:
-                # Use direct SQL to get only truly unpaid commissions
-                # This improved query also checks payment_status to make sure we don't show
-                # commissions that are already paid but might have stale computed fields
+                # SIMPLIFIED QUERY: Only check actual remaining amounts from payments
+                # This is the most reliable way to determine what's still owed
                 rec.env.cr.execute(
                     """
                     SELECT 
                         COUNT(*),
-                        COALESCE(SUM(sc.commission_amount - COALESCE(paid.total_paid, 0)), 0)
-                    FROM idil_sales_commission sc
-                    JOIN idil_sales_sales_personnel sp ON sp.id = sc.sales_person_id
-                    LEFT JOIN (
-                        SELECT commission_id, SUM(amount) as total_paid
-                        FROM idil_sales_commission_payment
-                        GROUP BY commission_id
-                    ) paid ON paid.commission_id = sc.id
-                    LEFT JOIN (
-                        SELECT id, payment_status 
-                        FROM idil_sales_commission
-                    ) status ON status.id = sc.id
-                    WHERE sc.sales_person_id = %s
-                    AND sp.commission_payment_schedule = 'monthly'
-                    AND (status.payment_status != 'paid' OR status.payment_status IS NULL)
-                    AND (sc.commission_amount - COALESCE(paid.total_paid, 0)) > 0.001
+                        COALESCE(SUM(remaining), 0)
+                    FROM (
+                        SELECT 
+                            sc.id,
+                            sc.commission_amount - COALESCE((
+                                SELECT SUM(amount) 
+                                FROM idil_sales_commission_payment 
+                                WHERE commission_id = sc.id
+                            ), 0) as remaining
+                        FROM idil_sales_commission sc
+                        JOIN idil_sales_sales_personnel sp ON sp.id = sc.sales_person_id
+                        WHERE sc.sales_person_id = %s
+                        AND sp.commission_payment_schedule = 'monthly'
+                    ) sub
+                    WHERE remaining > 0.001
                     """,
                     (rec.sales_person_id.id,)
                 )
@@ -94,33 +92,33 @@ class SalesCommissionBulkPayment(models.Model):
         if not self.sales_person_id:
             return
 
-        # Use SQL to get fresh commission data with actual remaining amounts
-        # Also check payment_status to avoid including already paid commissions
-        # Using dictionaries for robust column handling
+        # SIMPLIFIED QUERY: Only check actual remaining amounts from payments
+        # Use subquery for each commission to get its actual paid amount
         self.env.cr.execute(
             """
             SELECT 
                 sc.id as commission_id,
                 sc.date as commission_date,
                 sc.commission_amount,
-                COALESCE(paid.total_paid, 0) as commission_paid,
-                (sc.commission_amount - COALESCE(paid.total_paid, 0)) as commission_remaining,
-                status.payment_status
+                COALESCE((
+                    SELECT SUM(amount) 
+                    FROM idil_sales_commission_payment 
+                    WHERE commission_id = sc.id
+                ), 0) as commission_paid,
+                sc.commission_amount - COALESCE((
+                    SELECT SUM(amount) 
+                    FROM idil_sales_commission_payment 
+                    WHERE commission_id = sc.id
+                ), 0) as commission_remaining
             FROM idil_sales_commission sc
             JOIN idil_sales_sales_personnel sp ON sp.id = sc.sales_person_id
-            LEFT JOIN (
-                SELECT commission_id, SUM(amount) as total_paid
-                FROM idil_sales_commission_payment
-                GROUP BY commission_id
-            ) paid ON paid.commission_id = sc.id
-            LEFT JOIN (
-                SELECT id, payment_status 
-                FROM idil_sales_commission
-            ) status ON status.id = sc.id
             WHERE sc.sales_person_id = %s
             AND sp.commission_payment_schedule = 'monthly'
-            AND (status.payment_status != 'paid' OR status.payment_status IS NULL)
-            AND (sc.commission_amount - COALESCE(paid.total_paid, 0)) > 0.001
+            AND sc.commission_amount - COALESCE((
+                SELECT SUM(amount) 
+                FROM idil_sales_commission_payment 
+                WHERE commission_id = sc.id
+            ), 0) > 0.001
             ORDER BY sc.id ASC
             """,
             (self.sales_person_id.id,)
@@ -150,17 +148,16 @@ class SalesCommissionBulkPayment(models.Model):
                 if remaining_payment <= 0:
                     break
                     
-                # Use dictionary keys instead of positional values - more robust
-                # This way it won't break if we add or change columns in the future
+                # Use dictionary keys - query already filters out fully paid commissions
                 commission_id = row['commission_id']
                 commission_date = row['commission_date']
                 commission_amount = row['commission_amount']
                 commission_paid = row['commission_paid']
                 commission_remaining = row['commission_remaining']
-                payment_status = row['payment_status']
                 
-                if commission_remaining <= 0 or payment_status == 'paid':
-                    continue  # already paid or marked as paid
+                # Double-check remaining (query already filters, but be safe)
+                if commission_remaining <= 0:
+                    continue
 
                 payable = min(remaining_payment, commission_remaining)
                 if payable > 0:
@@ -185,20 +182,23 @@ class SalesCommissionBulkPayment(models.Model):
         """Validate amount doesn't exceed total unpaid commission using SQL."""
         for rec in self:
             if rec.sales_person_id and rec.amount_to_pay:
-                # Use SQL to get fresh totals (monthly commissions only)
+                # SIMPLIFIED QUERY: Calculate remaining directly from payments
                 rec.env.cr.execute(
                     """
-                    SELECT COALESCE(SUM(sc.commission_amount - COALESCE(paid.total_paid, 0)), 0)
-                    FROM idil_sales_commission sc
-                    JOIN idil_sales_sales_personnel sp ON sp.id = sc.sales_person_id
-                    LEFT JOIN (
-                        SELECT commission_id, SUM(amount) as total_paid
-                        FROM idil_sales_commission_payment
-                        GROUP BY commission_id
-                    ) paid ON paid.commission_id = sc.id
-                    WHERE sc.sales_person_id = %s
-                    AND sp.commission_payment_schedule = 'monthly'
-                    AND (sc.commission_amount - COALESCE(paid.total_paid, 0)) > 0
+                    SELECT COALESCE(SUM(remaining), 0)
+                    FROM (
+                        SELECT 
+                            sc.commission_amount - COALESCE((
+                                SELECT SUM(amount) 
+                                FROM idil_sales_commission_payment 
+                                WHERE commission_id = sc.id
+                            ), 0) as remaining
+                        FROM idil_sales_commission sc
+                        JOIN idil_sales_sales_personnel sp ON sp.id = sc.sales_person_id
+                        WHERE sc.sales_person_id = %s
+                        AND sp.commission_payment_schedule = 'monthly'
+                    ) sub
+                    WHERE remaining > 0.001
                     """,
                     (rec.sales_person_id.id,)
                 )
@@ -215,20 +215,23 @@ class SalesCommissionBulkPayment(models.Model):
             return
 
         # Re-validate total amount against fresh DB data (monthly commissions only)
-        # Join with sales_personnel to get payment schedule
+        # SIMPLIFIED QUERY: Calculate remaining directly from payments
         self.env.cr.execute(
             """
-            SELECT COALESCE(SUM(sc.commission_amount - COALESCE(paid.total_paid, 0)), 0)
-            FROM idil_sales_commission sc
-            JOIN idil_sales_sales_personnel sp ON sp.id = sc.sales_person_id
-            LEFT JOIN (
-                SELECT commission_id, SUM(amount) as total_paid
-                FROM idil_sales_commission_payment
-                GROUP BY commission_id
-            ) paid ON paid.commission_id = sc.id
-            WHERE sc.sales_person_id = %s
-            AND sp.commission_payment_schedule = 'monthly'
-            AND (sc.commission_amount - COALESCE(paid.total_paid, 0)) > 0
+            SELECT COALESCE(SUM(remaining), 0)
+            FROM (
+                SELECT 
+                    sc.commission_amount - COALESCE((
+                        SELECT SUM(amount) 
+                        FROM idil_sales_commission_payment 
+                        WHERE commission_id = sc.id
+                    ), 0) as remaining
+                FROM idil_sales_commission sc
+                JOIN idil_sales_sales_personnel sp ON sp.id = sc.sales_person_id
+                WHERE sc.sales_person_id = %s
+                AND sp.commission_payment_schedule = 'monthly'
+            ) sub
+            WHERE remaining > 0.001
             """,
             (self.sales_person_id.id,)
         )
