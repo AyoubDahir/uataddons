@@ -48,10 +48,12 @@ class SalesCommissionBulkPayment(models.Model):
 
     @api.depends("sales_person_id")
     def _compute_due_commission(self):
-        """Compute due commission using SQL for fresh data."""
+        """Compute due commission using SQL for fresh data and payment status."""
         for rec in self:
             if rec.sales_person_id:
-                # Use SQL to get fresh totals, bypassing ORM cache
+                # Use direct SQL to get only truly unpaid commissions
+                # This improved query also checks payment_status to make sure we don't show
+                # commissions that are already paid but might have stale computed fields
                 rec.env.cr.execute(
                     """
                     SELECT 
@@ -64,12 +66,18 @@ class SalesCommissionBulkPayment(models.Model):
                         FROM idil_sales_commission_payment
                         GROUP BY commission_id
                     ) paid ON paid.commission_id = sc.id
+                    LEFT JOIN (
+                        SELECT id, payment_status 
+                        FROM idil_sales_commission
+                    ) status ON status.id = sc.id
                     WHERE sc.sales_person_id = %s
                     AND sp.commission_payment_schedule = 'monthly'
+                    AND (status.payment_status != 'paid' OR status.payment_status IS NULL)
                     AND (sc.commission_amount - COALESCE(paid.total_paid, 0)) > 0.001
                     """,
                     (rec.sales_person_id.id,)
                 )
+                
                 result = rec.env.cr.fetchone()
                 rec.due_commission_count = result[0] or 0
                 rec.due_commission_amount = result[1] or 0.0
@@ -87,6 +95,7 @@ class SalesCommissionBulkPayment(models.Model):
             return
 
         # Use SQL to get fresh commission data with actual remaining amounts
+        # Also check payment_status to avoid including already paid commissions
         self.env.cr.execute(
             """
             SELECT 
@@ -94,7 +103,8 @@ class SalesCommissionBulkPayment(models.Model):
                 sc.date,
                 sc.commission_amount,
                 COALESCE(paid.total_paid, 0) as commission_paid,
-                (sc.commission_amount - COALESCE(paid.total_paid, 0)) as commission_remaining
+                (sc.commission_amount - COALESCE(paid.total_paid, 0)) as commission_remaining,
+                status.payment_status
             FROM idil_sales_commission sc
             JOIN idil_sales_sales_personnel sp ON sp.id = sc.sales_person_id
             LEFT JOIN (
@@ -102,8 +112,13 @@ class SalesCommissionBulkPayment(models.Model):
                 FROM idil_sales_commission_payment
                 GROUP BY commission_id
             ) paid ON paid.commission_id = sc.id
+            LEFT JOIN (
+                SELECT id, payment_status 
+                FROM idil_sales_commission
+            ) status ON status.id = sc.id
             WHERE sc.sales_person_id = %s
             AND sp.commission_payment_schedule = 'monthly'
+            AND (status.payment_status != 'paid' OR status.payment_status IS NULL)
             AND (sc.commission_amount - COALESCE(paid.total_paid, 0)) > 0.001
             ORDER BY sc.id ASC
             """,
@@ -306,6 +321,10 @@ class SalesCommissionBulkPayment(models.Model):
 
         # Update state to confirmed
         self.write({'state': 'confirmed'})
+        
+        # Commit changes to database to ensure all updates are persisted
+        # This is critical to make sure payment status updates are visible in subsequent queries
+        self.env.cr.commit()
 
     def _get_cash_account_balance(self):
         self.env.cr.execute(

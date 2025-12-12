@@ -20,18 +20,33 @@ This document describes the fixes and improvements made to the sales commission 
 - Updated `_compute_due_commission` in bulk payment to use SQL
 - Updated onchange method to use SQL for fresh commission data
 
-### 2. Transaction Booking Missing Required Rate Field
-**Problem**: The `pay_commission` method created a transaction booking without the required `rate` field, causing the booking creation to fail silently. This meant no accounting entries were being created.
+### 2. Commission Status Not Persisting After Payment
+**Problem**: Commission status would still show as "pending" after bulk payment, and commission amounts would still be calculated as due. Trial balance wasn't reflecting the payments.
 
-**Solution**: Added the `rate` field to the transaction booking creation, using the rate from the associated sale order:
+**Root Causes**:
+1. No database commit after bulk payment completion
+2. SQL-level race conditions in payment processing
+3. Payment status checks not using fresh data
+4. Missing required fields in transaction booking creation
+
+**Solutions**:
+- Added explicit database commit after bulk payment: `self.env.cr.commit()`
+- Updated all queries to check payment status when looking for due commissions:
 ```python
-rate = self.sale_order_id.rate if self.sale_order_id and self.sale_order_id.rate else 1.0
-booking = self.env["idil.transaction_booking"].create({
-    ...
-    "rate": rate,
-    "sale_order_id": self.sale_order_id.id if self.sale_order_id else False,
-})
+AND (status.payment_status != 'paid' OR status.payment_status IS NULL)
 ```
+- Fixed transaction booking creation with all required fields and error logging:
+```python
+booking_vals = {
+    "sales_person_id": self.sales_person_id.id,
+    "rate": rate,
+    "company_id": self.company_id.id,
+    "currency_id": self.currency_id.id,
+    # other fields...
+}
+```
+- Added comprehensive error handling and logging
+- Added sync function to fix existing payments with missing transaction bookings
 
 ### 3. Overpayment Bug
 **Problem**: Users could pay commissions multiple times, exceeding the total commission amount. The system allowed overpayment because validation used cached ORM data that could become stale.

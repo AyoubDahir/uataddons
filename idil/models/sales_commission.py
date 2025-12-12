@@ -224,13 +224,31 @@ class SalesCommission(models.Model):
 
     @api.depends("commission_amount", "commission_paid")
     def _compute_payment_status(self):
+        """Compute payment status using SQL for fresh data."""
         for record in self:
-            if record.commission_paid >= record.commission_amount:
+            # Use SQL to get fresh totals directly from DB
+            self.env.cr.execute(
+                """
+                SELECT COALESCE(SUM(amount), 0)
+                FROM idil_sales_commission_payment
+                WHERE commission_id = %s
+                """,
+                (record.id,)
+            )
+            paid_amount = self.env.cr.fetchone()[0] or 0.0
+            
+            # Update payment status based on fresh data
+            if paid_amount >= record.commission_amount:
                 record.payment_status = "paid"
-            elif record.commission_paid > 0:
+            elif paid_amount > 0:
                 record.payment_status = "partial_paid"
             else:
                 record.payment_status = "pending"
+                
+            # Log for debugging
+            _logger.info(
+                f"Commission {record.id}: Amount={record.commission_amount}, Paid={paid_amount}, Status={record.payment_status}"
+            )
 
     @api.model
     def create(self, vals):
@@ -328,9 +346,10 @@ class SalesCommission(models.Model):
             # Get exchange rate - use the rate from the sale order or default to 1.0
             rate = self.sale_order_id.rate if self.sale_order_id and self.sale_order_id.rate else 1.0
             
-            # Create transaction booking
-            booking = self.env["idil.transaction_booking"].create(
-                {
+            # Create transaction booking with all required fields
+            # Add more comprehensive error handling
+            try:
+                booking_vals = {
                     "sales_person_id": self.sales_person_id.id,
                     "trx_source_id": trx_source.id if trx_source else False,
                     "trx_date": fields.Date.context_today(self),
@@ -340,34 +359,55 @@ class SalesCommission(models.Model):
                     "reffno": f"Commission Payment - {self.name}",
                     "rate": rate,
                     "sale_order_id": self.sale_order_id.id if self.sale_order_id else False,
+                    "company_id": self.company_id.id,
+                    "currency_id": self.currency_id.id,
                 }
-            )
+                _logger.info(f"Creating transaction booking with values: {booking_vals}")
+                booking = self.env["idil.transaction_booking"].create(booking_vals)
+                _logger.info(f"Successfully created transaction booking ID: {booking.id}")
+            except Exception as e:
+                _logger.error(f"Failed to create transaction booking: {str(e)}")
+                raise ValidationError(f"Failed to create accounting entry: {str(e)}")
             
-            # DR Commission Payable (clear the liability)
-            self.env["idil.transaction_bookingline"].create(
-                {
-                    "transaction_booking_id": booking.id,
-                    "description": f"Commission Payment - {self.sale_order_id.name}",
-                    "account_number": self.sales_person_id.commission_payable_account_id.id,
-                    "transaction_type": "dr",
-                    "dr_amount": self.amount_to_pay,
-                    "cr_amount": 0,
-                    "transaction_date": fields.Date.context_today(self),
-                }
-            )
-            
-            # CR Cash/Bank (record cash outflow)
-            self.env["idil.transaction_bookingline"].create(
-                {
-                    "transaction_booking_id": booking.id,
-                    "description": f"Commission Payment - {self.sale_order_id.name}",
-                    "account_number": self.cash_account_id.id,
-                    "transaction_type": "cr",
-                    "dr_amount": 0,
-                    "cr_amount": self.amount_to_pay,
-                    "transaction_date": fields.Date.context_today(self),
-                }
-            )
+            try:
+                # DR Commission Payable (clear the liability)
+                dr_line = self.env["idil.transaction_bookingline"].create(
+                    {
+                        "transaction_booking_id": booking.id,
+                        "description": f"Commission Payment - {self.sale_order_id.name if self.sale_order_id else self.name}",
+                        "account_number": self.sales_person_id.commission_payable_account_id.id,
+                        "transaction_type": "dr",
+                        "dr_amount": self.amount_to_pay,
+                        "cr_amount": 0,
+                        "transaction_date": fields.Date.context_today(self),
+                        "company_id": self.company_id.id,
+                        "currency_id": self.currency_id.id,
+                    }
+                )
+                _logger.info(f"Created DR booking line ID: {dr_line.id}")
+                
+                # CR Cash/Bank (record cash outflow)
+                cr_line = self.env["idil.transaction_bookingline"].create(
+                    {
+                        "transaction_booking_id": booking.id,
+                        "description": f"Commission Payment - {self.sale_order_id.name if self.sale_order_id else self.name}",
+                        "account_number": self.cash_account_id.id,
+                        "transaction_type": "cr",
+                        "dr_amount": 0,
+                        "cr_amount": self.amount_to_pay,
+                        "transaction_date": fields.Date.context_today(self),
+                        "company_id": self.company_id.id,
+                        "currency_id": self.currency_id.id,
+                    }
+                )
+                _logger.info(f"Created CR booking line ID: {cr_line.id}")
+                
+                # Flush to ensure database consistency
+                self.env.cr.execute("COMMIT")
+                
+            except Exception as e:
+                _logger.error(f"Failed to create transaction booking lines: {str(e)}")
+                raise ValidationError(f"Failed to create accounting entries: {str(e)}")
             
             # Link booking to payment record for trial balance tracking
             payment.write({"transaction_booking_id": booking.id})
@@ -376,6 +416,98 @@ class SalesCommission(models.Model):
         self.amount_to_pay = 0.0
 
         return {"type": "ir.actions.client", "tag": "reload"}
+        
+    def action_sync_payments(self):
+        """Action to manually sync payment records and create missing transaction bookings.
+        This helps fix inconsistencies between commission payments and accounting entries."""
+        self.ensure_one()
+        
+        # Check if any payment exists without transaction booking
+        missing_bookings = self.env['idil.sales.commission.payment'].search([
+            ('commission_id', '=', self.id),
+            ('transaction_booking_id', '=', False),
+        ])
+        
+        if not missing_bookings:
+            raise ValidationError("All payments already have transaction bookings. Nothing to sync.")
+            
+        created_bookings = 0
+        for payment in missing_bookings:
+            try:
+                # Create missing transaction booking
+                trx_source = self.env["idil.transaction.source"].search(
+                    [("name", "=", "Commission Payment")], limit=1
+                ) or self.env["idil.transaction.source"].search([("name", "=", "Receipt")], limit=1)
+                
+                rate = self.sale_order_id.rate if self.sale_order_id and self.sale_order_id.rate else 1.0
+                
+                # Create booking for this payment
+                booking = self.env["idil.transaction_booking"].create({
+                    "sales_person_id": self.sales_person_id.id,
+                    "trx_source_id": trx_source.id if trx_source else False,
+                    "trx_date": payment.date,
+                    "amount": payment.amount,
+                    "payment_method": "commission_payment",
+                    "payment_status": "paid",
+                    "reffno": f"Commission Payment - {self.name} (Sync)",
+                    "rate": rate,
+                    "sale_order_id": self.sale_order_id.id if self.sale_order_id else False,
+                    "company_id": self.company_id.id,
+                    "currency_id": self.currency_id.id,
+                })
+                
+                # Create DR/CR lines
+                self.env["idil.transaction_bookingline"].create({
+                    "transaction_booking_id": booking.id,
+                    "description": f"Commission Payment - {self.name} (Sync)",
+                    "account_number": self.sales_person_id.commission_payable_account_id.id,
+                    "transaction_type": "dr",
+                    "dr_amount": payment.amount,
+                    "cr_amount": 0,
+                    "transaction_date": payment.date,
+                    "company_id": self.company_id.id,
+                    "currency_id": self.currency_id.id,
+                })
+                
+                self.env["idil.transaction_bookingline"].create({
+                    "transaction_booking_id": booking.id,
+                    "description": f"Commission Payment - {self.name} (Sync)",
+                    "account_number": payment.cash_account_id.id,
+                    "transaction_type": "cr",
+                    "dr_amount": 0,
+                    "cr_amount": payment.amount,
+                    "transaction_date": payment.date,
+                    "company_id": self.company_id.id,
+                    "currency_id": self.currency_id.id,
+                })
+                
+                # Link booking to payment
+                payment.write({"transaction_booking_id": booking.id})
+                created_bookings += 1
+                
+                # Commit after each successful booking creation
+                self.env.cr.commit()
+                
+            except Exception as e:
+                _logger.error(f"Failed to sync payment {payment.id}: {str(e)}")
+        
+        # Recompute payment status
+        self.invalidate_recordset(['commission_paid', 'commission_remaining', 'payment_status'])
+        self._compute_commission_paid()
+        self._compute_commission_remaining()
+        self._compute_payment_status()
+        self.flush_recordset(['commission_paid', 'commission_remaining', 'payment_status'])
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Sync Complete',
+                'message': f"Created {created_bookings} transaction bookings for previously missing payments",
+                'type': 'success',
+                'sticky': False,
+            }
+        }
 
 
 class SalesCommissionPayment(models.Model):
