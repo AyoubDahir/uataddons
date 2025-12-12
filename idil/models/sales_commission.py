@@ -359,8 +359,6 @@ class SalesCommission(models.Model):
                     "reffno": f"Commission Payment - {self.name}",
                     "rate": rate,
                     "sale_order_id": self.sale_order_id.id if self.sale_order_id else False,
-                    "company_id": self.company_id.id,
-                    "currency_id": self.currency_id.id,
                 }
                 _logger.info(f"Creating transaction booking with values: {booking_vals}")
                 booking = self.env["idil.transaction_booking"].create(booking_vals)
@@ -370,37 +368,44 @@ class SalesCommission(models.Model):
                 raise ValidationError(f"Failed to create accounting entry: {str(e)}")
             
             try:
+                # Get account details for logging
+                payable_account = self.sales_person_id.commission_payable_account_id
+                cash_account = self.cash_account_id
+                
+                _logger.info(f"Commission Payment Accounting:")
+                _logger.info(f"  - Commission: {self.name}, Amount: {self.amount_to_pay}")
+                _logger.info(f"  - DR Account: {payable_account.code} - {payable_account.name} (Currency: {payable_account.currency_id.name})")
+                _logger.info(f"  - CR Account: {cash_account.code} - {cash_account.name} (Currency: {cash_account.currency_id.name})")
+                
                 # DR Commission Payable (clear the liability)
                 dr_line = self.env["idil.transaction_bookingline"].create(
                     {
                         "transaction_booking_id": booking.id,
                         "description": f"Commission Payment - {self.sale_order_id.name if self.sale_order_id else self.name}",
-                        "account_number": self.sales_person_id.commission_payable_account_id.id,
+                        "account_number": payable_account.id,
                         "transaction_type": "dr",
                         "dr_amount": self.amount_to_pay,
                         "cr_amount": 0,
                         "transaction_date": fields.Date.context_today(self),
                         "company_id": self.company_id.id,
-                        "currency_id": self.currency_id.id,
                     }
                 )
-                _logger.info(f"Created DR booking line ID: {dr_line.id}")
+                _logger.info(f"Created DR booking line ID: {dr_line.id} for account {payable_account.code}")
                 
                 # CR Cash/Bank (record cash outflow)
                 cr_line = self.env["idil.transaction_bookingline"].create(
                     {
                         "transaction_booking_id": booking.id,
                         "description": f"Commission Payment - {self.sale_order_id.name if self.sale_order_id else self.name}",
-                        "account_number": self.cash_account_id.id,
+                        "account_number": cash_account.id,
                         "transaction_type": "cr",
                         "dr_amount": 0,
                         "cr_amount": self.amount_to_pay,
                         "transaction_date": fields.Date.context_today(self),
                         "company_id": self.company_id.id,
-                        "currency_id": self.currency_id.id,
                     }
                 )
-                _logger.info(f"Created CR booking line ID: {cr_line.id}")
+                _logger.info(f"Created CR booking line ID: {cr_line.id} for account {cash_account.code}")
                 
                 # Flush to ensure database consistency
                 self.env.cr.execute("COMMIT")
