@@ -250,12 +250,37 @@ class SalesCommission(models.Model):
         """Pay commission to salesperson"""
         self.ensure_one()
 
-        # Guard with fresh DB state (avoid cache/UI staleness)
-        payments = self.env["idil.sales.commission.payment"].search(
-            [("commission_id", "=", self.id)]
+        # CRITICAL: Daily schedule commissions are NOT payable
+        # For daily schedule, commission is netted from receivables at sale time
+        # The salesperson already keeps their commission - no payment needed
+        if self.payment_schedule == 'daily':
+            raise ValidationError(
+                "Daily schedule commissions are not payable. "
+                "The salesperson already received their commission at the time of sale "
+                "(netted from receivables)."
+            )
+
+        # Use SQL-level locking to prevent race conditions (SELECT FOR UPDATE)
+        self.env.cr.execute(
+            """
+            SELECT id FROM idil_sales_commission 
+            WHERE id = %s FOR UPDATE NOWAIT
+            """,
+            (self.id,)
         )
-        total_paid = sum(payments.mapped("amount"))
+
+        # Guard with fresh DB state (avoid cache/UI staleness)
+        self.env.cr.execute(
+            """
+            SELECT COALESCE(SUM(amount), 0) 
+            FROM idil_sales_commission_payment 
+            WHERE commission_id = %s
+            """,
+            (self.id,)
+        )
+        total_paid = self.env.cr.fetchone()[0]
         remaining = (self.commission_amount or 0.0) - total_paid
+        
         if remaining <= 0:
             raise ValidationError("This commission is already fully paid.")
 
@@ -268,19 +293,21 @@ class SalesCommission(models.Model):
             raise ValidationError("Amount to pay must be greater than 0.")
 
         # Validate against fresh remaining to prevent overpay from stale cache/UI
-        if self.amount_to_pay > remaining:
+        if self.amount_to_pay > remaining + 0.001:  # Small tolerance for float precision
             raise ValidationError(
-                f"The amount to pay ({self.amount_to_pay}) exceeds the remaining "
-                f"commission amount ({remaining})."
+                f"The amount to pay ({self.amount_to_pay:.2f}) exceeds the remaining "
+                f"commission amount ({remaining:.2f})."
             )
+        
+        # Cap amount to remaining if within tolerance
+        actual_amount = min(self.amount_to_pay, remaining)
 
         # Validate commission payable account exists for monthly schedule
-        if self.payment_schedule == 'monthly':
-            if not self.sales_person_id.commission_payable_account_id:
-                raise ValidationError(
-                    f"Salesperson '{self.sales_person_id.name}' has monthly commission schedule "
-                    "but no Commission Payable Account configured."
-                )
+        if not self.sales_person_id.commission_payable_account_id:
+            raise ValidationError(
+                f"Salesperson '{self.sales_person_id.name}' has monthly commission schedule "
+                "but no Commission Payable Account configured."
+            )
 
         # Create payment record
         payment_vals = {
@@ -342,6 +369,9 @@ class SalesCommission(models.Model):
                     "transaction_date": fields.Date.context_today(self),
                 }
             )
+            
+            # Link booking to payment record for trial balance tracking
+            payment.write({"transaction_booking_id": booking.id})
 
         # Reset amount_to_pay and reload the view to reflect updated status
         self.amount_to_pay = 0.0
@@ -383,24 +413,59 @@ class SalesCommissionPayment(models.Model):
     cash_account_id = fields.Many2one(
         "idil.chart.account", string="Cash/Bank Account", required=True
     )
+    transaction_booking_id = fields.Many2one(
+        "idil.transaction_booking",
+        string="Transaction Booking",
+        readonly=True,
+        help="Link to the accounting entry for this payment",
+    )
 
+    @api.model
     def create(self, vals):
-        # Validate at DB level against fresh remaining to prevent overpay
+        """Create payment with SQL-level validation to prevent overpayment."""
         commission = None
         if vals.get("commission_id"):
-            commission = self.env["idil.sales.commission"].browse(vals["commission_id"])  # noqa: E501
-            payments = self.env["idil.sales.commission.payment"].search(
-                [("commission_id", "=", commission.id)]
+            commission_id = vals["commission_id"]
+            commission = self.env["idil.sales.commission"].browse(commission_id)
+            
+            # CRITICAL: Block daily schedule commission payments
+            if commission.payment_schedule == 'daily':
+                raise ValidationError(
+                    "Daily schedule commissions are not payable. "
+                    "The salesperson already received their commission at the time of sale."
+                )
+            
+            # Use SQL-level locking to prevent race conditions
+            self.env.cr.execute(
+                """
+                SELECT id FROM idil_sales_commission 
+                WHERE id = %s FOR UPDATE NOWAIT
+                """,
+                (commission_id,)
             )
-            total_paid = sum(payments.mapped("amount"))
+            
+            # Get fresh totals directly from DB
+            self.env.cr.execute(
+                """
+                SELECT COALESCE(SUM(amount), 0) 
+                FROM idil_sales_commission_payment 
+                WHERE commission_id = %s
+                """,
+                (commission_id,)
+            )
+            total_paid = self.env.cr.fetchone()[0]
             remaining = (commission.commission_amount or 0.0) - total_paid
             amount = (vals.get("amount") or 0.0)
+            
             if remaining <= 0:
                 raise ValidationError("This commission is already fully paid.")
-            if amount > remaining:
+            if amount > remaining + 0.001:  # Small tolerance for float precision
                 raise ValidationError(
-                    f"The amount to pay ({amount}) exceeds the remaining commission amount ({remaining})."
+                    f"The amount to pay ({amount:.2f}) exceeds the remaining commission amount ({remaining:.2f})."
                 )
+            # Cap amount to remaining if within tolerance
+            if amount > remaining:
+                vals["amount"] = remaining
 
         payment = super(SalesCommissionPayment, self).create(vals)
         # Create salesperson transaction (In - reduces what they owe)
@@ -497,18 +562,31 @@ class SalesCommissionPayment(models.Model):
 
     @api.constrains("amount", "commission_id")
     def _check_amount_not_exceed_remaining(self):
-        """Safety net to prevent overpayment in concurrent flows."""
+        """Safety net to prevent overpayment using SQL-level check."""
         for rec in self:
             if not rec.commission_id:
                 continue
-            # Exclude current payment when checking remaining
-            other_payments = self.env["idil.sales.commission.payment"].search([
-                ("commission_id", "=", rec.commission_id.id),
-                ("id", "!=", rec.id),
-            ])
-            already_paid = sum(other_payments.mapped("amount"))
-            remaining = (rec.commission_id.commission_amount or 0.0) - already_paid
-            if rec.amount > remaining + 1e-9:
+            
+            # Block daily schedule payments at constraint level too
+            if rec.commission_id.payment_schedule == 'daily':
                 raise ValidationError(
-                    f"Payment amount ({rec.amount}) exceeds remaining commission ({remaining})."
+                    "Daily schedule commissions are not payable. "
+                    "The salesperson already received their commission at the time of sale."
+                )
+            
+            # Use SQL to get fresh totals excluding current record
+            self.env.cr.execute(
+                """
+                SELECT COALESCE(SUM(amount), 0) 
+                FROM idil_sales_commission_payment 
+                WHERE commission_id = %s AND id != %s
+                """,
+                (rec.commission_id.id, rec.id or 0)
+            )
+            already_paid = self.env.cr.fetchone()[0]
+            remaining = (rec.commission_id.commission_amount or 0.0) - already_paid
+            
+            if rec.amount > remaining + 0.001:  # Small tolerance for float precision
+                raise ValidationError(
+                    f"Payment amount ({rec.amount:.2f}) exceeds remaining commission ({remaining:.2f})."
                 )

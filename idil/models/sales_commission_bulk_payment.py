@@ -127,33 +127,69 @@ class SalesCommissionBulkPayment(models.Model):
 
     @api.constrains("amount_to_pay", "sales_person_id")
     def _check_amount_to_pay(self):
+        """Validate amount doesn't exceed total unpaid commission using SQL."""
         for rec in self:
             if rec.sales_person_id and rec.amount_to_pay:
-                unpaid_commissions = rec.env["idil.sales.commission"].search(
-                    [
-                        ("sales_person_id", "=", rec.sales_person_id.id),
-                        ("payment_status", "!=", "paid"),
-                        ("payment_schedule", "=", "monthly"),
-                    ]
+                # Use SQL to get fresh totals (monthly commissions only)
+                rec.env.cr.execute(
+                    """
+                    SELECT COALESCE(SUM(sc.commission_amount - COALESCE(paid.total_paid, 0)), 0)
+                    FROM idil_sales_commission sc
+                    JOIN idil_sales_sales_personnel sp ON sp.id = sc.sales_person_id
+                    LEFT JOIN (
+                        SELECT commission_id, SUM(amount) as total_paid
+                        FROM idil_sales_commission_payment
+                        GROUP BY commission_id
+                    ) paid ON paid.commission_id = sc.id
+                    WHERE sc.sales_person_id = %s
+                    AND sp.commission_payment_schedule = 'monthly'
+                    AND (sc.commission_amount - COALESCE(paid.total_paid, 0)) > 0
+                    """,
+                    (rec.sales_person_id.id,)
                 )
-                total_remaining = sum(
-                    c.commission_remaining for c in unpaid_commissions
-                )
-                if rec.amount_to_pay > total_remaining:
+                total_remaining = rec.env.cr.fetchone()[0] or 0.0
+                
+                if rec.amount_to_pay > total_remaining + 0.001:
                     raise ValidationError(
-                        f"Total Amount to Pay ({rec.amount_to_pay}) cannot exceed total unpaid commission ({total_remaining}) for this salesperson."
+                        f"Total Amount to Pay ({rec.amount_to_pay:.2f}) cannot exceed total unpaid commission ({total_remaining:.2f}) for this salesperson."
                     )
 
     def action_confirm_payment(self):
+        """Confirm bulk payment with proper validation and accounting."""
         if self.state != "draft":
             return
+
+        # Re-validate total amount against fresh DB data (monthly commissions only)
+        # Join with sales_personnel to get payment schedule
+        self.env.cr.execute(
+            """
+            SELECT COALESCE(SUM(sc.commission_amount - COALESCE(paid.total_paid, 0)), 0)
+            FROM idil_sales_commission sc
+            JOIN idil_sales_sales_personnel sp ON sp.id = sc.sales_person_id
+            LEFT JOIN (
+                SELECT commission_id, SUM(amount) as total_paid
+                FROM idil_sales_commission_payment
+                GROUP BY commission_id
+            ) paid ON paid.commission_id = sc.id
+            WHERE sc.sales_person_id = %s
+            AND sp.commission_payment_schedule = 'monthly'
+            AND (sc.commission_amount - COALESCE(paid.total_paid, 0)) > 0
+            """,
+            (self.sales_person_id.id,)
+        )
+        total_remaining = self.env.cr.fetchone()[0] or 0.0
+        
+        if self.amount_to_pay > total_remaining + 0.001:
+            raise ValidationError(
+                f"Amount to pay ({self.amount_to_pay:.2f}) exceeds total unpaid commission ({total_remaining:.2f})."
+            )
 
         cash_account_balance = (
             self.cash_account_id and self._get_cash_account_balance() or 0.0
         )
         if self.amount_to_pay > cash_account_balance:
             raise ValidationError(
-                f"Insufficient balance in cash account. Balance: {cash_account_balance}, Required: {self.amount_to_pay}"
+                f"Insufficient balance in cash account. Balance: {cash_account_balance:.2f}, Required: {self.amount_to_pay:.2f}"
             )
 
         remaining_payment = self.amount_to_pay
@@ -163,7 +199,18 @@ class SalesCommissionBulkPayment(models.Model):
                 break
 
             commission = line.commission_id
-            commission_needed = commission.commission_remaining
+            
+            # Get fresh remaining from DB to avoid stale cache
+            self.env.cr.execute(
+                """
+                SELECT COALESCE(SUM(amount), 0) 
+                FROM idil_sales_commission_payment 
+                WHERE commission_id = %s
+                """,
+                (commission.id,)
+            )
+            total_paid = self.env.cr.fetchone()[0]
+            commission_needed = (commission.commission_amount or 0.0) - total_paid
 
             if commission_needed <= 0:
                 continue
@@ -183,7 +230,6 @@ class SalesCommissionBulkPayment(models.Model):
                 [
                     ("commission_id", "=", commission.id),
                     ("sales_person_id", "=", commission.sales_person_id.id),
-                    ("amount", "=", payable),
                     ("bulk_payment_line_id", "=", False),
                 ],
                 order="id desc",
@@ -192,7 +238,8 @@ class SalesCommissionBulkPayment(models.Model):
             if payment:
                 payment.bulk_payment_line_id = line.id
 
-            # Write only to this processed line
+            # Write only to this processed line with fresh data
+            commission.invalidate_recordset(['commission_paid', 'commission_remaining'])
             line.write(
                 {
                     "paid_amount": payable,
