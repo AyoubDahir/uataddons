@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Wizard Form View -->
+    <record id="view_pending_orders_wizard_form" model="ir.ui.view">
+        <field name="name">idil.pending.orders.wizard.form</field>
+        <field name="model">idil.pending.orders.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Pending Orders Report">
+                <group>
+                    <group>
+                        <field name="order_type"/>
+                        <field name="days_old"/>
+                    </group>
+                    <group>
+                        <field name="salesperson_id" options="{'no_create': True}"/>
+                        <field name="customer_id" options="{'no_create': True}"/>
+                    </group>
+                </group>
+                <footer>
+                    <button string="Print Report" type="object" name="action_print_report" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Wizard Action -->
+    <record id="action_pending_orders_wizard" model="ir.actions.act_window">
+        <field name="name">Pending Orders Report</field>
+        <field name="res_model">idil.pending.orders.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Report Action -->
+    <record id="action_report_pending_orders" model="ir.actions.report">
+        <field name="name">Pending Orders Report</field>
+        <field name="model">idil.pending.orders.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">idil.report_pending_orders_template</field>
+        <field name="report_file">idil.report_pending_orders_template</field>
+        <field name="binding_model_id" ref="model_idil_pending_orders_wizard"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <!-- QWeb Report Template -->
+    <template id="report_pending_orders_template">
+        <t t-call="web.html_container">
+            <t t-call="web.external_layout">
+                <div class="page">
+                    <div class="text-center mb-4">
+                        <h2>📋 Pending Orders Report</h2>
+                        <p>
+                            <strong>Report Date:</strong> <span t-esc="data['report_date']"/>
+                            <br/>
+                            <strong>Order Type:</strong> <span t-esc="data['order_type'].replace('_', ' ').title()"/>
+                            <br/>
+                            <strong>Salesperson:</strong> <span t-esc="data['salesperson_name']"/>
+                            |
+                            <strong>Customer:</strong> <span t-esc="data['customer_name']"/>
+                        </p>
+                    </div>
+
+                    <!-- Summary Cards -->
+                    <div class="row mb-4">
+                        <div class="col-3 text-center">
+                            <div style="background: #fff3e0; padding: 15px; border-radius: 8px;">
+                                <h5>Pending Orders</h5>
+                                <h3 style="color: #ef6c00;" t-esc="data['total_orders']"/>
+                            </div>
+                        </div>
+                        <div class="col-3 text-center">
+                            <div style="background: #e3f2fd; padding: 15px; border-radius: 8px;">
+                                <h5>Total Value</h5>
+                                <h3 t-esc="'{:,.2f}'.format(data['total_value'])"/>
+                            </div>
+                        </div>
+                        <div class="col-3 text-center">
+                            <div style="background: #f3e5f5; padding: 15px; border-radius: 8px;">
+                                <h5>Avg Age (Days)</h5>
+                                <h3 t-esc="'{:.1f}'.format(data['avg_age'])"/>
+                            </div>
+                        </div>
+                        <div class="col-3 text-center">
+                            <div style="background: #ffebee; padding: 15px; border-radius: 8px;">
+                                <h5>Old (&gt;7 days)</h5>
+                                <h3 style="color: #c62828;" t-esc="data['old_orders_count']"/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Orders Table -->
+                    <table class="table table-sm table-bordered">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Type</th>
+                                <th>Reference</th>
+                                <th>Date</th>
+                                <th>Salesperson</th>
+                                <th>Customer</th>
+                                <th class="text-right">Total</th>
+                                <th class="text-right">Age (Days)</th>
+                                <th class="text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="data['orders']" t-as="order">
+                                <td><span t-esc="order['type']"/></td>
+                                <td><span t-esc="order['reference']"/></td>
+                                <td><span t-esc="order['date']"/></td>
+                                <td><span t-esc="order['salesperson']"/></td>
+                                <td><span t-esc="order['customer']"/></td>
+                                <td class="text-right"><span t-esc="'{:,.2f}'.format(order['total'])"/></td>
+                                <td class="text-right">
+                                    <span t-if="order['age_days'] > 7" style="color: #c62828; font-weight: bold;" t-esc="order['age_days']"/>
+                                    <span t-elif="order['age_days'] > 3" style="color: #ef6c00;" t-esc="order['age_days']"/>
+                                    <span t-else="" t-esc="order['age_days']"/>
+                                </td>
+                                <td class="text-center">
+                                    <span style="color: #ef6c00;">⏳ <span t-esc="order['status']"/></span>
+                                </td>
+                            </tr>
+                            <tr t-if="not data['orders']">
+                                <td colspan="8" class="text-center">✅ No pending orders found.</td>
+                            </tr>
+                            <tr class="font-weight-bold" style="background: #f5f5f5;">
+                                <td colspan="5">Total</td>
+                                <td class="text-right"><span t-esc="'{:,.2f}'.format(data['total_value'])"/></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </t>
+        </t>
+    </template>
+</odoo>

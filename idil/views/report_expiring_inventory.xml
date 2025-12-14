@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Wizard Form View -->
+    <record id="view_expiring_inventory_wizard_form" model="ir.ui.view">
+        <field name="name">idil.expiring.inventory.wizard.form</field>
+        <field name="model">idil.expiring.inventory.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Expiring Inventory Report">
+                <group>
+                    <group>
+                        <field name="days_ahead"/>
+                        <field name="include_expired"/>
+                    </group>
+                    <group>
+                        <field name="category_id" options="{'no_create': True}"/>
+                    </group>
+                </group>
+                <footer>
+                    <button string="Print Report" type="object" name="action_print_report" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Wizard Action -->
+    <record id="action_expiring_inventory_wizard" model="ir.actions.act_window">
+        <field name="name">Expiring Inventory Report</field>
+        <field name="res_model">idil.expiring.inventory.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Report Action -->
+    <record id="action_report_expiring_inventory" model="ir.actions.report">
+        <field name="name">Expiring Inventory Report</field>
+        <field name="model">idil.expiring.inventory.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">idil.report_expiring_inventory_template</field>
+        <field name="report_file">idil.report_expiring_inventory_template</field>
+        <field name="binding_model_id" ref="model_idil_expiring_inventory_wizard"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <!-- QWeb Report Template -->
+    <template id="report_expiring_inventory_template">
+        <t t-call="web.html_container">
+            <t t-call="web.external_layout">
+                <div class="page">
+                    <div class="text-center mb-4">
+                        <h2>📅 Expiring Inventory Report</h2>
+                        <p>
+                            <strong>Report Date:</strong> <span t-esc="data['report_date']"/>
+                            <br/>
+                            <strong>Showing:</strong> Items expiring within <span t-esc="data['days_ahead']"/> days
+                            <br/>
+                            <strong>Category:</strong> <span t-esc="data['category_name']"/>
+                        </p>
+                    </div>
+
+                    <!-- Summary Cards -->
+                    <div class="row mb-4">
+                        <div class="col-3 text-center">
+                            <div style="background: #ffebee; padding: 15px; border-radius: 8px;">
+                                <h5>🔴 Expired</h5>
+                                <h3 style="color: #c62828;" t-esc="data['expired_count']"/>
+                            </div>
+                        </div>
+                        <div class="col-3 text-center">
+                            <div style="background: #fff3e0; padding: 15px; border-radius: 8px;">
+                                <h5>🟠 Critical (≤7 days)</h5>
+                                <h3 style="color: #ef6c00;" t-esc="data['critical_count']"/>
+                            </div>
+                        </div>
+                        <div class="col-3 text-center">
+                            <div style="background: #fffde7; padding: 15px; border-radius: 8px;">
+                                <h5>🟡 Warning (≤30 days)</h5>
+                                <h3 style="color: #f9a825;" t-esc="data['warning_count']"/>
+                            </div>
+                        </div>
+                        <div class="col-3 text-center">
+                            <div style="background: #ffcdd2; padding: 15px; border-radius: 8px;">
+                                <h5>💰 Value at Risk</h5>
+                                <h3 t-esc="'{:,.2f}'.format(data['total_value_at_risk'])"/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Items Table -->
+                    <table class="table table-sm table-bordered">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Item</th>
+                                <th>Category</th>
+                                <th class="text-center">Expiration Date</th>
+                                <th class="text-right">Days Left</th>
+                                <th class="text-right">Quantity</th>
+                                <th class="text-right">Cost/Unit</th>
+                                <th class="text-right">Value at Risk</th>
+                                <th class="text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="data['items']" t-as="item">
+                                <td><span t-esc="item['item_name']"/></td>
+                                <td><span t-esc="item['category']"/></td>
+                                <td class="text-center"><span t-esc="item['expiration_date']"/></td>
+                                <td class="text-right">
+                                    <span t-if="item['days_until_expiry'] &lt; 0" style="color: #c62828;">
+                                        <span t-esc="abs(item['days_until_expiry'])"/> days ago
+                                    </span>
+                                    <span t-else="" t-esc="item['days_until_expiry']"/>
+                                </td>
+                                <td class="text-right"><span t-esc="'{:,.2f}'.format(item['quantity'])"/></td>
+                                <td class="text-right"><span t-esc="'{:,.2f}'.format(item['cost_price'])"/></td>
+                                <td class="text-right"><span t-esc="'{:,.2f}'.format(item['value_at_risk'])"/></td>
+                                <td class="text-center">
+                                    <span t-attf-style="color: #{item['status_color']}; font-weight: bold;">
+                                        <span t-esc="item['status']"/>
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr t-if="not data['items']">
+                                <td colspan="8" class="text-center">✅ No items expiring within the specified period.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </t>
+        </t>
+    </template>
+</odoo>

@@ -135,6 +135,11 @@
         "views/sales_commission.xml",
         "views/sales_commission_bulk_payment.xml",
         "views/sales_discount.xml",
-        "views/report_product_inventory_summary.xml"
+        "views/report_product_inventory_summary.xml",
+        "views/report_daily_cash_collection.xml",
+        "views/report_low_stock_alert.xml",
+        "views/report_expiring_inventory.xml",
+        "views/report_pending_orders.xml",
+        "views/report_customer_outstanding.xml"
     ]
 }

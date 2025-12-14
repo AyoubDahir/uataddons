@@ -78,3 +78,8 @@ from . import sales_commission
 from . import sales_commission_bulk_payment
 from . import sales_discount
 from . import report_product_inventory_summary
+from . import report_daily_cash_collection
+from . import report_low_stock_alert
+from . import report_expiring_inventory
+from . import report_pending_orders
+from . import report_customer_outstanding

@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Wizard Form View -->
+    <record id="view_low_stock_alert_wizard_form" model="ir.ui.view">
+        <field name="name">idil.low.stock.alert.wizard.form</field>
+        <field name="model">idil.low.stock.alert.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Low Stock Alert Report">
+                <group>
+                    <group>
+                        <field name="threshold"/>
+                        <field name="include_zero_stock"/>
+                    </group>
+                    <group>
+                        <field name="category_id" options="{'no_create': True}"/>
+                    </group>
+                </group>
+                <footer>
+                    <button string="Print Report" type="object" name="action_print_report" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Wizard Action -->
+    <record id="action_low_stock_alert_wizard" model="ir.actions.act_window">
+        <field name="name">Low Stock Alert Report</field>
+        <field name="res_model">idil.low.stock.alert.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Report Action -->
+    <record id="action_report_low_stock_alert" model="ir.actions.report">
+        <field name="name">Low Stock Alert Report</field>
+        <field name="model">idil.low.stock.alert.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">idil.report_low_stock_alert_template</field>
+        <field name="report_file">idil.report_low_stock_alert_template</field>
+        <field name="binding_model_id" ref="model_idil_low_stock_alert_wizard"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <!-- QWeb Report Template -->
+    <template id="report_low_stock_alert_template">
+        <t t-call="web.html_container">
+            <t t-call="web.external_layout">
+                <div class="page">
+                    <div class="text-center mb-4">
+                        <h2>⚠️ Low Stock Alert Report</h2>
+                        <p>
+                            <strong>Report Date:</strong> <span t-esc="data['report_date']"/>
+                            <br/>
+                            <strong>Threshold:</strong> Below <span t-esc="data['threshold']"/> units
+                            <br/>
+                            <strong>Category:</strong> <span t-esc="data['category_name']"/>
+                        </p>
+                    </div>
+
+                    <!-- Summary Cards -->
+                    <div class="row mb-4">
+                        <div class="col-3 text-center">
+                            <div style="background: #ffebee; padding: 15px; border-radius: 8px;">
+                                <h5>Critical (Zero)</h5>
+                                <h3 style="color: #c62828;" t-esc="data['critical_count']"/>
+                            </div>
+                        </div>
+                        <div class="col-3 text-center">
+                            <div style="background: #fff3e0; padding: 15px; border-radius: 8px;">
+                                <h5>Low Stock</h5>
+                                <h3 style="color: #ef6c00;" t-esc="data['low_count']"/>
+                            </div>
+                        </div>
+                        <div class="col-3 text-center">
+                            <div style="background: #e8f5e9; padding: 15px; border-radius: 8px;">
+                                <h5>Total Items</h5>
+                                <h3 t-esc="data['total_items']"/>
+                            </div>
+                        </div>
+                        <div class="col-3 text-center">
+                            <div style="background: #e3f2fd; padding: 15px; border-radius: 8px;">
+                                <h5>Restock Value</h5>
+                                <h3 t-esc="'{:,.2f}'.format(data['total_value_at_risk'])"/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Items Table -->
+                    <table class="table table-sm table-bordered">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Item</th>
+                                <th>Category</th>
+                                <th class="text-right">Current Qty</th>
+                                <th>Unit</th>
+                                <th class="text-right">Cost/Unit</th>
+                                <th class="text-right">Shortage</th>
+                                <th class="text-right">Restock Value</th>
+                                <th class="text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="data['items']" t-as="item">
+                                <td><span t-esc="item['name']"/></td>
+                                <td><span t-esc="item['category']"/></td>
+                                <td class="text-right"><span t-esc="'{:,.2f}'.format(item['quantity'])"/></td>
+                                <td><span t-esc="item['unit']"/></td>
+                                <td class="text-right"><span t-esc="'{:,.2f}'.format(item['cost_price'])"/></td>
+                                <td class="text-right"><span t-esc="'{:,.2f}'.format(item['shortage'])"/></td>
+                                <td class="text-right"><span t-esc="'{:,.2f}'.format(item['value_needed'])"/></td>
+                                <td class="text-center">
+                                    <span t-if="item['status'] == 'Critical'" style="color: #c62828; font-weight: bold;">🔴 Critical</span>
+                                    <span t-if="item['status'] == 'Low'" style="color: #ef6c00;">🟡 Low</span>
+                                </td>
+                            </tr>
+                            <tr t-if="not data['items']">
+                                <td colspan="8" class="text-center">✅ No items below the threshold. Stock levels are healthy!</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </t>
+        </t>
+    </template>
+</odoo>

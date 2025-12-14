@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Wizard Form View -->
+    <record id="view_daily_cash_collection_wizard_form" model="ir.ui.view">
+        <field name="name">idil.daily.cash.collection.wizard.form</field>
+        <field name="model">idil.daily.cash.collection.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Daily Cash Collection Report">
+                <group>
+                    <group>
+                        <field name="date"/>
+                    </group>
+                    <group>
+                        <field name="salesperson_id" options="{'no_create': True}"/>
+                        <field name="payment_method_id" options="{'no_create': True}"/>
+                    </group>
+                </group>
+                <footer>
+                    <button string="Print Report" type="object" name="action_print_report" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Wizard Action -->
+    <record id="action_daily_cash_collection_wizard" model="ir.actions.act_window">
+        <field name="name">Daily Cash Collection Report</field>
+        <field name="res_model">idil.daily.cash.collection.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Report Action -->
+    <record id="action_report_daily_cash_collection" model="ir.actions.report">
+        <field name="name">Daily Cash Collection Report</field>
+        <field name="model">idil.daily.cash.collection.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">idil.report_daily_cash_collection_template</field>
+        <field name="report_file">idil.report_daily_cash_collection_template</field>
+        <field name="binding_model_id" ref="model_idil_daily_cash_collection_wizard"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <!-- QWeb Report Template -->
+    <template id="report_daily_cash_collection_template">
+        <t t-call="web.html_container">
+            <t t-call="web.external_layout">
+                <div class="page">
+                    <div class="text-center mb-4">
+                        <h2>💵 Daily Cash Collection Report</h2>
+                        <p>
+                            <strong>Date:</strong> <span t-esc="data['date']"/>
+                            <br/>
+                            <strong>Salesperson:</strong> <span t-esc="data['salesperson_name']"/>
+                            <br/>
+                            <strong>Payment Method:</strong> <span t-esc="data['payment_method_name']"/>
+                        </p>
+                    </div>
+
+                    <!-- Summary Cards -->
+                    <div class="row mb-4">
+                        <div class="col-4 text-center">
+                            <div style="background: #e8f5e9; padding: 15px; border-radius: 8px;">
+                                <h5>Total Sales</h5>
+                                <h3 t-esc="'{:,.2f}'.format(data['total_sales'])"/>
+                            </div>
+                        </div>
+                        <div class="col-4 text-center">
+                            <div style="background: #e3f2fd; padding: 15px; border-radius: 8px;">
+                                <h5>Total Collected</h5>
+                                <h3 t-esc="'{:,.2f}'.format(data['total_collected'])"/>
+                            </div>
+                        </div>
+                        <div class="col-4 text-center">
+                            <div style="background: #fff3e0; padding: 15px; border-radius: 8px;">
+                                <h5>Collection Rate</h5>
+                                <h3><span t-esc="'{:.1f}'.format(data['collection_rate'])"/>%</h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- By Salesperson -->
+                    <h4>📊 Collection by Salesperson</h4>
+                    <table class="table table-sm table-bordered">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Salesperson</th>
+                                <th class="text-right">Receipts</th>
+                                <th class="text-right">Total Sales</th>
+                                <th class="text-right">Collected</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="data['salesperson_summary']" t-as="sp">
+                                <td><span t-esc="sp['name']"/></td>
+                                <td class="text-right"><span t-esc="sp['receipt_count']"/></td>
+                                <td class="text-right"><span t-esc="'{:,.2f}'.format(sp['total_sales'])"/></td>
+                                <td class="text-right"><span t-esc="'{:,.2f}'.format(sp['total_collected'])"/></td>
+                            </tr>
+                            <tr t-if="not data['salesperson_summary']">
+                                <td colspan="4" class="text-center">No collections for this date.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- By Payment Method -->
+                    <h4 class="mt-4">💳 Collection by Payment Method</h4>
+                    <table class="table table-sm table-bordered">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Payment Method</th>
+                                <th class="text-right">Transactions</th>
+                                <th class="text-right">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="data['payment_method_summary']" t-as="pm">
+                                <td><span t-esc="pm['name']"/></td>
+                                <td class="text-right"><span t-esc="pm['count']"/></td>
+                                <td class="text-right"><span t-esc="'{:,.2f}'.format(pm['amount'])"/></td>
+                            </tr>
+                            <tr t-if="not data['payment_method_summary']">
+                                <td colspan="3" class="text-center">No payments recorded.</td>
+                            </tr>
+                            <tr class="font-weight-bold" style="background: #f5f5f5;">
+                                <td>Total</td>
+                                <td></td>
+                                <td class="text-right"><span t-esc="'{:,.2f}'.format(data['total_by_method'])"/></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </t>
+        </t>
+    </template>
+</odoo>

@@ -523,7 +523,40 @@
                         action="action_product_profitability_report_wizard"
                         sequence="1"/>
 
-            
+    <!-- Operational Reports Menu -->
+    <menuitem id="menu_operational_reports"
+              name="Operational Reports"
+              parent="Reports"
+              sequence="3"/>
 
-     
+    <menuitem id="menu_daily_cash_collection"
+              name="Daily Cash Collection"
+              parent="menu_operational_reports"
+              action="action_daily_cash_collection_wizard"
+              sequence="1"/>
+
+    <menuitem id="menu_low_stock_alert"
+              name="Low Stock Alert"
+              parent="menu_operational_reports"
+              action="action_low_stock_alert_wizard"
+              sequence="2"/>
+
+    <menuitem id="menu_expiring_inventory"
+              name="Expiring Inventory"
+              parent="menu_operational_reports"
+              action="action_expiring_inventory_wizard"
+              sequence="3"/>
+
+    <menuitem id="menu_pending_orders"
+              name="Pending Orders"
+              parent="menu_operational_reports"
+              action="action_pending_orders_wizard"
+              sequence="4"/>
+
+    <menuitem id="menu_customer_outstanding"
+              name="Customer Outstanding Balance"
+              parent="menu_operational_reports"
+              action="action_customer_outstanding_wizard"
+              sequence="5"/>
+
 </odoo>
