@@ -513,6 +513,16 @@ class JournalEntryLine(models.Model):
     entry_id = fields.Many2one(
         "idil.journal.entry", string="Journal Entry", required=True, ondelete="cascade"
     )
+    # 🔗 Link each line to the customer of the journal entry
+    customer_id = fields.Many2one(
+        "idil.customer.registration",
+        string="Customer",
+        related="entry_id.customer_id",
+        store=True,
+        readonly=True,
+        index=True,
+    )
+
     account_id = fields.Many2one("idil.chart.account", string="Account", required=True)
     debit = fields.Monetary(string="Debit", currency_field="currency_id", store=True)
     credit = fields.Monetary(string="Credit", currency_field="currency_id", store=True)

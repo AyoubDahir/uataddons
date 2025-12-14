@@ -65,6 +65,11 @@ class Customer(models.Model):
         string="Employee",
         help="Select Employee",
     )
+    journal_entry_ids = fields.One2many(
+        "idil.journal.entry.line",
+        "customer_id",  # 👈 inverse field on the line model
+        string="Journal Entries",
+    )
 
     @api.depends("sale_order_ids")
     def _compute_total_receipt_due(self):

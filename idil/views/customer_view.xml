@@ -188,6 +188,18 @@
                                 </tree>
                             </field>
                         </page>
+                       <page string="Journal Entry Transactions">
+                            <field name="journal_entry_ids" readonly="1">
+                                <tree create="0" edit="0" delete="0">
+                                    <field name="entry_id"/>
+                                    <field name="account_id"/>
+                                    <field name="currency_id"/>
+                                    <field name="debit" sum="total"/>
+                                    <field name="credit" sum="total"/>
+                                </tree>
+                            </field>
+                        </page>
+
 
             </notebook>
                 </sheet>
