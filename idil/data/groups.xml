@@ -44,4 +44,12 @@
         <field name="name">Basic Access for Sales Team Management</field>
     </record>
 
+    <record id="group_idil_all_sales_access" model="res.groups">
+        <field name="name">All Sales Access</field>
+    </record>
+
+    <record id="group_idil_kitchen_report_access" model="res.groups">
+        <field name="name">Kitchen Quantity Report Access</field>
+    </record>
+
 </odoo>
