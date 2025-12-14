@@ -4,11 +4,15 @@
         <field name="model">idil.customer.place.order</field>
         <field name="arch" type="xml">
             <form string="Customer Place Order">
+           
+                <header>
+                     <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,cancel"/>
+                </header>
                 <sheet>
                     <group>
                         <field name="customer_id"/>
                         <field name="order_date"/>
-                        <field name="state"/>
+                       
                     </group>
                     <notebook>
                         <page string="Order Lines">

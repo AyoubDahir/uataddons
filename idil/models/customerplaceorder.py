@@ -22,6 +22,7 @@ class CustomerPlaceOrder(models.Model):
     state = fields.Selection(
         [("draft", "Draft"), ("confirmed", "Confirmed"), ("cancel", "Cancelled")],
         default="draft",
+        readonly=True,
     )
     total_quantity = fields.Float(
         string="Total Quantity", compute="_compute_total_quantity", store=True
