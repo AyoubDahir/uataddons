@@ -359,7 +359,6 @@ class IdilItemOpeningBalance(models.Model):
                 EquityAccount = self.env["idil.chart.account"].search(
                     [
                         ("name", "=", "Opening Balance Account"),
-                        ("currency_id.name", "=", "USD"),
                     ],
                     limit=1,
                 )
