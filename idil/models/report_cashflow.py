@@ -100,33 +100,42 @@ class ReportCashFlow(models.AbstractModel):
             if amount == 0:
                 continue
 
-            # Get the currency and convert amount to USD using the exchange rate at transaction time
-            transaction_currency = line.transaction_booking_id.currency_id or line.company_id.currency_id
+            # Get the currency from the ACCOUNT (line's currency), not the booking header
+            # This is more accurate as each account has its own currency
+            account_currency = line.currency_id or line.account_number.currency_id
             transaction_date = line.transaction_date
             
             # Convert to USD using the rate at transaction date
-            if transaction_currency and transaction_currency != usd_currency:
-                # Use the rate from the transaction if available
-                if line.transaction_booking_id.rate and line.transaction_booking_id.rate > 0:
+            # Only convert if the account is NOT in USD
+            if account_currency and account_currency.id != usd_currency.id:
+                # Get the rate from the transaction booking (stored at transaction time)
+                tx_rate = line.transaction_booking_id.rate if line.transaction_booking_id else 0.0
+                
+                if tx_rate and tx_rate > 0:
                     # Convert using transaction's stored rate
-                    amount = amount / line.transaction_booking_id.rate
+                    # Rate is stored as "local currency per 1 USD" (e.g., 10800 SL = 1 USD)
+                    # So we divide to get USD amount
+                    amount = amount / tx_rate
                 else:
-                    # Otherwise, look up the rate at the transaction date
+                    # Fallback: look up the exchange rate at the transaction date
                     currency_rate = self.env['res.currency.rate'].search([
-                        ('currency_id', '=', transaction_currency.id),
+                        ('currency_id', '=', account_currency.id),
                         ('name', '<=', transaction_date),
-                    ], order='name desc', limit=1)
+                        ('company_id', 'in', [company_id, False]),
+                    ], order='company_id desc, name desc', limit=1)
                     
                     if currency_rate and currency_rate.rate > 0:
+                        # Rate is "local currency per 1 USD"
                         amount = amount / currency_rate.rate
                     else:
-                        # If no rate found, use the company's default rate
-                        company_currency_rate = self.env['res.currency.rate'].search([
-                            ('currency_id', '=', transaction_currency.id),
+                        # Last fallback: get the most recent rate available
+                        fallback_rate = self.env['res.currency.rate'].search([
+                            ('currency_id', '=', account_currency.id),
                         ], order='name desc', limit=1)
                         
-                        if company_currency_rate and company_currency_rate.rate > 0:
-                            amount = amount / company_currency_rate.rate
+                        if fallback_rate and fallback_rate.rate > 0:
+                            amount = amount / fallback_rate.rate
+                        # If still no rate, amount stays as-is (should not happen in production)
 
             # Classify by account type
             category = 'operating'  # Default
