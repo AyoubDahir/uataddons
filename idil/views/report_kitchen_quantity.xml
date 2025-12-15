@@ -35,6 +35,7 @@
     <menuitem id="menu_kitchen_report"
               name="Kitchen Quantity Report"
               parent="idil.menu_sales"
+              groups="base.group_user"
               action="action_kitchen_report_wizard"
               sequence="50"/>
 

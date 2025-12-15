@@ -262,6 +262,7 @@
                         <menuitem id="menu_view_all_sales_root"
                                 name="View All Sales"
                                 parent="menu_sales"
+                                groups="base.group_user"
                                 sequence="4"/>
 
                                 <menuitem id="menu_view_all_sales"
