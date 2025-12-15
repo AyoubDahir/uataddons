@@ -15,156 +15,41 @@
             <t t-call="web.html_container">
                 <t t-call="web.external_layout">
                     <div class="page" style="font-family: 'Segoe UI', Arial, sans-serif;">
-                        <!-- Custom Styles -->
-                        <style>
-                            .cashflow-header {
-                                background: linear-gradient(135deg, #1a237e 0%, #3949ab 100%);
-                                color: white;
-                                padding: 25px;
-                                margin: -20px -20px 30px -20px;
-                                border-radius: 0 0 10px 10px;
-                            }
-                            .cashflow-header h1 {
-                                font-size: 28px;
-                                font-weight: 600;
-                                margin: 0 0 5px 0;
-                            }
-                            .cashflow-header .subtitle {
-                                font-size: 16px;
-                                opacity: 0.9;
-                            }
-                            .cashflow-header .period {
-                                font-size: 14px;
-                                opacity: 0.8;
-                                margin-top: 10px;
-                            }
-                            .cashflow-table {
-                                width: 100%;
-                                border-collapse: collapse;
-                                margin-top: 20px;
-                                font-size: 11px;
-                            }
-                            .cashflow-table th {
-                                background-color: #f8f9fa;
-                                border-bottom: 2px solid #dee2e6;
-                                padding: 12px 15px;
-                                text-align: left;
-                                font-weight: 600;
-                                color: #495057;
-                                text-transform: uppercase;
-                                font-size: 10px;
-                                letter-spacing: 0.5px;
-                            }
-                            .cashflow-table th.amount-col {
-                                text-align: right;
-                                width: 25%;
-                            }
-                            .cashflow-table td {
-                                padding: 10px 15px;
-                                border-bottom: 1px solid #e9ecef;
-                            }
-                            .section-header {
-                                background-color: #e8eaf6;
-                                font-weight: 700;
-                                font-size: 12px;
-                                color: #1a237e;
-                                text-transform: uppercase;
-                                letter-spacing: 0.5px;
-                            }
-                            .section-header td {
-                                padding: 14px 15px;
-                                border-bottom: 2px solid #c5cae9;
-                            }
-                            .subsection-header td {
-                                font-weight: 600;
-                                color: #5c6bc0;
-                                padding-left: 25px;
-                                font-style: italic;
-                                background-color: #fafafa;
-                            }
-                            .line-item td {
-                                padding-left: 40px;
-                                color: #424242;
-                            }
-                            .line-item td.amount {
-                                text-align: right;
-                                font-family: 'Consolas', 'Monaco', monospace;
-                                font-size: 11px;
-                            }
-                            .subtotal-row {
-                                background-color: #f5f5f5;
-                                font-weight: 600;
-                            }
-                            .subtotal-row td {
-                                padding: 12px 15px;
-                                border-top: 1px solid #bdbdbd;
-                                border-bottom: 2px solid #9e9e9e;
-                            }
-                            .subtotal-row td.amount {
-                                text-align: right;
-                                font-family: 'Consolas', 'Monaco', monospace;
-                            }
-                            .grand-total {
-                                background: linear-gradient(135deg, #1a237e 0%, #3949ab 100%);
-                                color: white;
-                                font-weight: 700;
-                                font-size: 13px;
-                            }
-                            .grand-total td {
-                                padding: 16px 15px;
-                                border: none;
-                            }
-                            .grand-total td.amount {
-                                text-align: right;
-                                font-family: 'Consolas', 'Monaco', monospace;
-                                font-size: 14px;
-                            }
-                            .positive { color: #2e7d32; }
-                            .negative { color: #c62828; }
-                            .currency-note {
-                                text-align: right;
-                                font-size: 10px;
-                                color: #757575;
-                                margin-top: 15px;
-                                font-style: italic;
-                            }
-                        </style>
-
                         <!-- Report Header -->
-                        <div class="cashflow-header">
-                            <h1>Statement of Cash Flows</h1>
-                            <div class="subtitle"><t t-esc="company_name"/></div>
-                            <div class="period">
-                                For the Period: <strong><t t-esc="start_date"/></strong> to <strong><t t-esc="end_date"/></strong>
+                        <div style="background-color: #1a237e; color: white; padding: 20px; margin-bottom: 25px; border-bottom: 4px solid #3949ab;">
+                            <h1 style="font-size: 24px; font-weight: bold; margin: 0 0 8px 0; color: white;">Statement of Cash Flows</h1>
+                            <div style="font-size: 16px; color: white; margin-bottom: 5px;"><t t-esc="company_name"/></div>
+                            <div style="font-size: 12px; color: #c5cae9;">
+                                For the Period: <strong style="color: white;"><t t-esc="start_date"/></strong> to <strong style="color: white;"><t t-esc="end_date"/></strong>
                             </div>
                         </div>
 
                         <!-- Cash Flow Table -->
-                        <table class="cashflow-table">
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px;">
                             <thead>
-                                <tr>
-                                    <th>Description</th>
-                                    <th class="amount-col">Amount (USD)</th>
+                                <tr style="background-color: #f5f5f5;">
+                                    <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: left; font-weight: bold; color: #333; width: 70%;">Description</th>
+                                    <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: right; font-weight: bold; color: #333; width: 30%;">Amount (USD)</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <!-- ═══════════════ OPERATING ACTIVITIES ═══════════════ -->
-                                <tr class="section-header">
-                                    <td colspan="2">
-                                        <span style="margin-right: 8px;">▶</span> Cash Flows from Operating Activities
+                                <tr style="background-color: #e8eaf6;">
+                                    <td colspan="2" style="padding: 12px 10px; font-weight: bold; font-size: 12px; color: #1a237e; border-bottom: 2px solid #c5cae9;">
+                                        ► CASH FLOWS FROM OPERATING ACTIVITIES
                                     </td>
                                 </tr>
                                 
                                 <!-- Operating Inflows -->
                                 <t t-if="operating_inflows">
-                                    <tr class="subsection-header">
-                                        <td colspan="2">Cash Received:</td>
+                                    <tr style="background-color: #fafafa;">
+                                        <td colspan="2" style="padding: 10px 10px 10px 20px; font-weight: 600; color: #5c6bc0; font-style: italic; border-bottom: 1px solid #e0e0e0;">Cash Received:</td>
                                     </tr>
                                     <t t-foreach="operating_inflows" t-as="item">
-                                        <tr class="line-item">
-                                            <td><t t-esc="item['name']"/></td>
-                                            <td class="amount positive">
-                                                <t t-esc="'${:,.2f}'.format(item['amount'])"/>
+                                        <tr>
+                                            <td style="padding: 8px 10px 8px 35px; color: #424242; border-bottom: 1px solid #eeeeee;"><t t-esc="item['name']"/></td>
+                                            <td style="padding: 8px 10px; text-align: right; color: #2e7d32; border-bottom: 1px solid #eeeeee;">
+                                                $<t t-esc="'{:,.2f}'.format(item['amount'])"/>
                                             </td>
                                         </tr>
                                     </t>
@@ -172,49 +57,52 @@
                                 
                                 <!-- Operating Outflows -->
                                 <t t-if="operating_outflows">
-                                    <tr class="subsection-header">
-                                        <td colspan="2">Cash Paid:</td>
+                                    <tr style="background-color: #fafafa;">
+                                        <td colspan="2" style="padding: 10px 10px 10px 20px; font-weight: 600; color: #5c6bc0; font-style: italic; border-bottom: 1px solid #e0e0e0;">Cash Paid:</td>
                                     </tr>
                                     <t t-foreach="operating_outflows" t-as="item">
-                                        <tr class="line-item">
-                                            <td><t t-esc="item['name']"/></td>
-                                            <td class="amount negative">
-                                                (<t t-esc="'${:,.2f}'.format(item['amount'])"/>)
+                                        <tr>
+                                            <td style="padding: 8px 10px 8px 35px; color: #424242; border-bottom: 1px solid #eeeeee;"><t t-esc="item['name']"/></td>
+                                            <td style="padding: 8px 10px; text-align: right; color: #c62828; border-bottom: 1px solid #eeeeee;">
+                                                ($<t t-esc="'{:,.2f}'.format(item['amount'])"/>)
                                             </td>
                                         </tr>
                                     </t>
                                 </t>
                                 
                                 <!-- Operating Subtotal -->
-                                <tr class="subtotal-row">
-                                    <td style="padding-left: 25px;">Net Cash from Operating Activities</td>
-                                    <td class="amount">
+                                <tr style="background-color: #f5f5f5;">
+                                    <td style="padding: 12px 10px 12px 20px; font-weight: bold; border-top: 1px solid #bdbdbd; border-bottom: 2px solid #9e9e9e;">Net Cash from Operating Activities</td>
+                                    <td style="padding: 12px 10px; text-align: right; font-weight: bold; border-top: 1px solid #bdbdbd; border-bottom: 2px solid #9e9e9e;">
                                         <t t-if="net_operating >= 0">
-                                            <span class="positive"><t t-esc="'${:,.2f}'.format(net_operating)"/></span>
+                                            <span style="color: #2e7d32;">$<t t-esc="'{:,.2f}'.format(net_operating)"/></span>
                                         </t>
                                         <t t-else="">
-                                            <span class="negative">(<t t-esc="'${:,.2f}'.format(abs(net_operating))"/>)</span>
+                                            <span style="color: #c62828;">($<t t-esc="'{:,.2f}'.format(abs(net_operating))"/>)</span>
                                         </t>
                                     </td>
                                 </tr>
 
+                                <!-- Spacer -->
+                                <tr><td colspan="2" style="height: 10px;"></td></tr>
+
                                 <!-- ═══════════════ INVESTING ACTIVITIES ═══════════════ -->
-                                <tr class="section-header">
-                                    <td colspan="2">
-                                        <span style="margin-right: 8px;">▶</span> Cash Flows from Investing Activities
+                                <tr style="background-color: #e8eaf6;">
+                                    <td colspan="2" style="padding: 12px 10px; font-weight: bold; font-size: 12px; color: #1a237e; border-bottom: 2px solid #c5cae9;">
+                                        ► CASH FLOWS FROM INVESTING ACTIVITIES
                                     </td>
                                 </tr>
                                 
                                 <!-- Investing Inflows -->
                                 <t t-if="investing_inflows">
-                                    <tr class="subsection-header">
-                                        <td colspan="2">Proceeds from:</td>
+                                    <tr style="background-color: #fafafa;">
+                                        <td colspan="2" style="padding: 10px 10px 10px 20px; font-weight: 600; color: #5c6bc0; font-style: italic; border-bottom: 1px solid #e0e0e0;">Proceeds from:</td>
                                     </tr>
                                     <t t-foreach="investing_inflows" t-as="item">
-                                        <tr class="line-item">
-                                            <td><t t-esc="item['name']"/></td>
-                                            <td class="amount positive">
-                                                <t t-esc="'${:,.2f}'.format(item['amount'])"/>
+                                        <tr>
+                                            <td style="padding: 8px 10px 8px 35px; color: #424242; border-bottom: 1px solid #eeeeee;"><t t-esc="item['name']"/></td>
+                                            <td style="padding: 8px 10px; text-align: right; color: #2e7d32; border-bottom: 1px solid #eeeeee;">
+                                                $<t t-esc="'{:,.2f}'.format(item['amount'])"/>
                                             </td>
                                         </tr>
                                     </t>
@@ -222,14 +110,14 @@
                                 
                                 <!-- Investing Outflows -->
                                 <t t-if="investing_outflows">
-                                    <tr class="subsection-header">
-                                        <td colspan="2">Payments for:</td>
+                                    <tr style="background-color: #fafafa;">
+                                        <td colspan="2" style="padding: 10px 10px 10px 20px; font-weight: 600; color: #5c6bc0; font-style: italic; border-bottom: 1px solid #e0e0e0;">Payments for:</td>
                                     </tr>
                                     <t t-foreach="investing_outflows" t-as="item">
-                                        <tr class="line-item">
-                                            <td><t t-esc="item['name']"/></td>
-                                            <td class="amount negative">
-                                                (<t t-esc="'${:,.2f}'.format(item['amount'])"/>)
+                                        <tr>
+                                            <td style="padding: 8px 10px 8px 35px; color: #424242; border-bottom: 1px solid #eeeeee;"><t t-esc="item['name']"/></td>
+                                            <td style="padding: 8px 10px; text-align: right; color: #c62828; border-bottom: 1px solid #eeeeee;">
+                                                ($<t t-esc="'{:,.2f}'.format(item['amount'])"/>)
                                             </td>
                                         </tr>
                                     </t>
@@ -237,45 +125,48 @@
                                 
                                 <!-- Show empty state if no investing activities -->
                                 <t t-if="not investing_inflows and not investing_outflows">
-                                    <tr class="line-item">
-                                        <td style="color: #9e9e9e; font-style: italic;">No investing activities</td>
-                                        <td class="amount">—</td>
+                                    <tr>
+                                        <td style="padding: 8px 10px 8px 35px; color: #9e9e9e; font-style: italic; border-bottom: 1px solid #eeeeee;">No investing activities</td>
+                                        <td style="padding: 8px 10px; text-align: right; color: #9e9e9e; border-bottom: 1px solid #eeeeee;">—</td>
                                     </tr>
                                 </t>
                                 
                                 <!-- Investing Subtotal -->
-                                <tr class="subtotal-row">
-                                    <td style="padding-left: 25px;">Net Cash from Investing Activities</td>
-                                    <td class="amount">
-                                        <t t-if="net_investing >= 0">
-                                            <span class="positive"><t t-esc="'${:,.2f}'.format(net_investing)"/></span>
+                                <tr style="background-color: #f5f5f5;">
+                                    <td style="padding: 12px 10px 12px 20px; font-weight: bold; border-top: 1px solid #bdbdbd; border-bottom: 2px solid #9e9e9e;">Net Cash from Investing Activities</td>
+                                    <td style="padding: 12px 10px; text-align: right; font-weight: bold; border-top: 1px solid #bdbdbd; border-bottom: 2px solid #9e9e9e;">
+                                        <t t-if="net_investing > 0">
+                                            <span style="color: #2e7d32;">$<t t-esc="'{:,.2f}'.format(net_investing)"/></span>
                                         </t>
                                         <t t-elif="net_investing == 0">
                                             <span>$0.00</span>
                                         </t>
                                         <t t-else="">
-                                            <span class="negative">(<t t-esc="'${:,.2f}'.format(abs(net_investing))"/>)</span>
+                                            <span style="color: #c62828;">($<t t-esc="'{:,.2f}'.format(abs(net_investing))"/>)</span>
                                         </t>
                                     </td>
                                 </tr>
 
+                                <!-- Spacer -->
+                                <tr><td colspan="2" style="height: 10px;"></td></tr>
+
                                 <!-- ═══════════════ FINANCING ACTIVITIES ═══════════════ -->
-                                <tr class="section-header">
-                                    <td colspan="2">
-                                        <span style="margin-right: 8px;">▶</span> Cash Flows from Financing Activities
+                                <tr style="background-color: #e8eaf6;">
+                                    <td colspan="2" style="padding: 12px 10px; font-weight: bold; font-size: 12px; color: #1a237e; border-bottom: 2px solid #c5cae9;">
+                                        ► CASH FLOWS FROM FINANCING ACTIVITIES
                                     </td>
                                 </tr>
                                 
                                 <!-- Financing Inflows -->
                                 <t t-if="financing_inflows">
-                                    <tr class="subsection-header">
-                                        <td colspan="2">Proceeds from:</td>
+                                    <tr style="background-color: #fafafa;">
+                                        <td colspan="2" style="padding: 10px 10px 10px 20px; font-weight: 600; color: #5c6bc0; font-style: italic; border-bottom: 1px solid #e0e0e0;">Proceeds from:</td>
                                     </tr>
                                     <t t-foreach="financing_inflows" t-as="item">
-                                        <tr class="line-item">
-                                            <td><t t-esc="item['name']"/></td>
-                                            <td class="amount positive">
-                                                <t t-esc="'${:,.2f}'.format(item['amount'])"/>
+                                        <tr>
+                                            <td style="padding: 8px 10px 8px 35px; color: #424242; border-bottom: 1px solid #eeeeee;"><t t-esc="item['name']"/></td>
+                                            <td style="padding: 8px 10px; text-align: right; color: #2e7d32; border-bottom: 1px solid #eeeeee;">
+                                                $<t t-esc="'{:,.2f}'.format(item['amount'])"/>
                                             </td>
                                         </tr>
                                     </t>
@@ -283,14 +174,14 @@
                                 
                                 <!-- Financing Outflows -->
                                 <t t-if="financing_outflows">
-                                    <tr class="subsection-header">
-                                        <td colspan="2">Payments for:</td>
+                                    <tr style="background-color: #fafafa;">
+                                        <td colspan="2" style="padding: 10px 10px 10px 20px; font-weight: 600; color: #5c6bc0; font-style: italic; border-bottom: 1px solid #e0e0e0;">Payments for:</td>
                                     </tr>
                                     <t t-foreach="financing_outflows" t-as="item">
-                                        <tr class="line-item">
-                                            <td><t t-esc="item['name']"/></td>
-                                            <td class="amount negative">
-                                                (<t t-esc="'${:,.2f}'.format(item['amount'])"/>)
+                                        <tr>
+                                            <td style="padding: 8px 10px 8px 35px; color: #424242; border-bottom: 1px solid #eeeeee;"><t t-esc="item['name']"/></td>
+                                            <td style="padding: 8px 10px; text-align: right; color: #c62828; border-bottom: 1px solid #eeeeee;">
+                                                ($<t t-esc="'{:,.2f}'.format(item['amount'])"/>)
                                             </td>
                                         </tr>
                                     </t>
@@ -298,40 +189,42 @@
                                 
                                 <!-- Show empty state if no financing activities -->
                                 <t t-if="not financing_inflows and not financing_outflows">
-                                    <tr class="line-item">
-                                        <td style="color: #9e9e9e; font-style: italic;">No financing activities</td>
-                                        <td class="amount">—</td>
+                                    <tr>
+                                        <td style="padding: 8px 10px 8px 35px; color: #9e9e9e; font-style: italic; border-bottom: 1px solid #eeeeee;">No financing activities</td>
+                                        <td style="padding: 8px 10px; text-align: right; color: #9e9e9e; border-bottom: 1px solid #eeeeee;">—</td>
                                     </tr>
                                 </t>
                                 
                                 <!-- Financing Subtotal -->
-                                <tr class="subtotal-row">
-                                    <td style="padding-left: 25px;">Net Cash from Financing Activities</td>
-                                    <td class="amount">
-                                        <t t-if="net_financing >= 0">
-                                            <span class="positive"><t t-esc="'${:,.2f}'.format(net_financing)"/></span>
+                                <tr style="background-color: #f5f5f5;">
+                                    <td style="padding: 12px 10px 12px 20px; font-weight: bold; border-top: 1px solid #bdbdbd; border-bottom: 2px solid #9e9e9e;">Net Cash from Financing Activities</td>
+                                    <td style="padding: 12px 10px; text-align: right; font-weight: bold; border-top: 1px solid #bdbdbd; border-bottom: 2px solid #9e9e9e;">
+                                        <t t-if="net_financing > 0">
+                                            <span style="color: #2e7d32;">$<t t-esc="'{:,.2f}'.format(net_financing)"/></span>
                                         </t>
                                         <t t-elif="net_financing == 0">
                                             <span>$0.00</span>
                                         </t>
                                         <t t-else="">
-                                            <span class="negative">(<t t-esc="'${:,.2f}'.format(abs(net_financing))"/>)</span>
+                                            <span style="color: #c62828;">($<t t-esc="'{:,.2f}'.format(abs(net_financing))"/>)</span>
                                         </t>
                                     </td>
                                 </tr>
 
+                                <!-- Spacer -->
+                                <tr><td colspan="2" style="height: 15px;"></td></tr>
+
                                 <!-- ═══════════════ GRAND TOTAL ═══════════════ -->
-                                <tr style="height: 15px;"><td colspan="2"></td></tr>
-                                <tr class="grand-total">
-                                    <td>
-                                        <strong>NET INCREASE (DECREASE) IN CASH</strong>
+                                <tr style="background-color: #1a237e;">
+                                    <td style="padding: 15px 10px; font-weight: bold; font-size: 13px; color: white;">
+                                        NET INCREASE (DECREASE) IN CASH
                                     </td>
-                                    <td class="amount">
+                                    <td style="padding: 15px 10px; text-align: right; font-weight: bold; font-size: 14px; color: white;">
                                         <t t-if="net_cash_flow >= 0">
-                                            <strong><t t-esc="'${:,.2f}'.format(net_cash_flow)"/></strong>
+                                            $<t t-esc="'{:,.2f}'.format(net_cash_flow)"/>
                                         </t>
                                         <t t-else="">
-                                            <strong>(<t t-esc="'${:,.2f}'.format(abs(net_cash_flow))"/>)</strong>
+                                            ($<t t-esc="'{:,.2f}'.format(abs(net_cash_flow))"/>)
                                         </t>
                                     </td>
                                 </tr>
@@ -339,7 +232,7 @@
                         </table>
 
                         <!-- Footer Note -->
-                        <div class="currency-note">
+                        <div style="text-align: right; font-size: 10px; color: #757575; margin-top: 15px; font-style: italic;">
                             All amounts are expressed in United States Dollars (USD)
                         </div>
                     </div>
