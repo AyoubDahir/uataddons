@@ -3,7 +3,7 @@
 
 <menuitem id="menu_idil_home"
         name=" BizCore"
-        web_icon="Idil,static/description/icon.png"
+        web_icon="idil,static/description/icon.png"
         sequence="1"/>
         
         <menuitem id="menu_inventory_purchase_root"
