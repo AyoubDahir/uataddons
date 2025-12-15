@@ -27,6 +27,11 @@ class ReportCashFlow(models.AbstractModel):
         end_date = data.get('end_date')
         company_id = data.get('company_id')
 
+        # Get USD currency for conversion target
+        usd_currency = self.env['res.currency'].search([('name', '=', 'USD')], limit=1)
+        if not usd_currency:
+            raise ValueError("USD currency not found in the system")
+
         # 1. Get Cash Accounts
         cash_accounts = self.env['idil.chart.account'].search([
             ('account_type', 'in', ['cash', 'bank_transfer']),
@@ -94,6 +99,34 @@ class ReportCashFlow(models.AbstractModel):
             
             if amount == 0:
                 continue
+
+            # Get the currency and convert amount to USD using the exchange rate at transaction time
+            transaction_currency = line.transaction_booking_id.currency_id or line.company_id.currency_id
+            transaction_date = line.transaction_date
+            
+            # Convert to USD using the rate at transaction date
+            if transaction_currency and transaction_currency != usd_currency:
+                # Use the rate from the transaction if available
+                if line.transaction_booking_id.rate and line.transaction_booking_id.rate > 0:
+                    # Convert using transaction's stored rate
+                    amount = amount / line.transaction_booking_id.rate
+                else:
+                    # Otherwise, look up the rate at the transaction date
+                    currency_rate = self.env['res.currency.rate'].search([
+                        ('currency_id', '=', transaction_currency.id),
+                        ('name', '<=', transaction_date),
+                    ], order='name desc', limit=1)
+                    
+                    if currency_rate and currency_rate.rate > 0:
+                        amount = amount / currency_rate.rate
+                    else:
+                        # If no rate found, use the company's default rate
+                        company_currency_rate = self.env['res.currency.rate'].search([
+                            ('currency_id', '=', transaction_currency.id),
+                        ], order='name desc', limit=1)
+                        
+                        if company_currency_rate and company_currency_rate.rate > 0:
+                            amount = amount / company_currency_rate.rate
 
             # Classify by account type
             category = 'operating'  # Default
