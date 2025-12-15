@@ -14,97 +14,334 @@
         <template id="report_cashflow_template">
             <t t-call="web.html_container">
                 <t t-call="web.external_layout">
-                    <div class="page">
-                        <div class="text-center">
-                            <h2>Cash Flow Statement</h2>
-                            <h4><t t-esc="company_name"/></h4>
-                            <p>From <span t-esc="start_date"/> To <span t-esc="end_date"/></p>
+                    <div class="page" style="font-family: 'Segoe UI', Arial, sans-serif;">
+                        <!-- Custom Styles -->
+                        <style>
+                            .cashflow-header {
+                                background: linear-gradient(135deg, #1a237e 0%, #3949ab 100%);
+                                color: white;
+                                padding: 25px;
+                                margin: -20px -20px 30px -20px;
+                                border-radius: 0 0 10px 10px;
+                            }
+                            .cashflow-header h1 {
+                                font-size: 28px;
+                                font-weight: 600;
+                                margin: 0 0 5px 0;
+                            }
+                            .cashflow-header .subtitle {
+                                font-size: 16px;
+                                opacity: 0.9;
+                            }
+                            .cashflow-header .period {
+                                font-size: 14px;
+                                opacity: 0.8;
+                                margin-top: 10px;
+                            }
+                            .cashflow-table {
+                                width: 100%;
+                                border-collapse: collapse;
+                                margin-top: 20px;
+                                font-size: 11px;
+                            }
+                            .cashflow-table th {
+                                background-color: #f8f9fa;
+                                border-bottom: 2px solid #dee2e6;
+                                padding: 12px 15px;
+                                text-align: left;
+                                font-weight: 600;
+                                color: #495057;
+                                text-transform: uppercase;
+                                font-size: 10px;
+                                letter-spacing: 0.5px;
+                            }
+                            .cashflow-table th.amount-col {
+                                text-align: right;
+                                width: 25%;
+                            }
+                            .cashflow-table td {
+                                padding: 10px 15px;
+                                border-bottom: 1px solid #e9ecef;
+                            }
+                            .section-header {
+                                background-color: #e8eaf6;
+                                font-weight: 700;
+                                font-size: 12px;
+                                color: #1a237e;
+                                text-transform: uppercase;
+                                letter-spacing: 0.5px;
+                            }
+                            .section-header td {
+                                padding: 14px 15px;
+                                border-bottom: 2px solid #c5cae9;
+                            }
+                            .subsection-header td {
+                                font-weight: 600;
+                                color: #5c6bc0;
+                                padding-left: 25px;
+                                font-style: italic;
+                                background-color: #fafafa;
+                            }
+                            .line-item td {
+                                padding-left: 40px;
+                                color: #424242;
+                            }
+                            .line-item td.amount {
+                                text-align: right;
+                                font-family: 'Consolas', 'Monaco', monospace;
+                                font-size: 11px;
+                            }
+                            .subtotal-row {
+                                background-color: #f5f5f5;
+                                font-weight: 600;
+                            }
+                            .subtotal-row td {
+                                padding: 12px 15px;
+                                border-top: 1px solid #bdbdbd;
+                                border-bottom: 2px solid #9e9e9e;
+                            }
+                            .subtotal-row td.amount {
+                                text-align: right;
+                                font-family: 'Consolas', 'Monaco', monospace;
+                            }
+                            .grand-total {
+                                background: linear-gradient(135deg, #1a237e 0%, #3949ab 100%);
+                                color: white;
+                                font-weight: 700;
+                                font-size: 13px;
+                            }
+                            .grand-total td {
+                                padding: 16px 15px;
+                                border: none;
+                            }
+                            .grand-total td.amount {
+                                text-align: right;
+                                font-family: 'Consolas', 'Monaco', monospace;
+                                font-size: 14px;
+                            }
+                            .positive { color: #2e7d32; }
+                            .negative { color: #c62828; }
+                            .currency-note {
+                                text-align: right;
+                                font-size: 10px;
+                                color: #757575;
+                                margin-top: 15px;
+                                font-style: italic;
+                            }
+                        </style>
+
+                        <!-- Report Header -->
+                        <div class="cashflow-header">
+                            <h1>Statement of Cash Flows</h1>
+                            <div class="subtitle"><t t-esc="company_name"/></div>
+                            <div class="period">
+                                For the Period: <strong><t t-esc="start_date"/></strong> to <strong><t t-esc="end_date"/></strong>
+                            </div>
                         </div>
-                        
-                        <table class="table table-sm table-striped mt-4">
+
+                        <!-- Cash Flow Table -->
+                        <table class="cashflow-table">
                             <thead>
                                 <tr>
                                     <th>Description</th>
-                                    <th class="text-right">Amount</th>
+                                    <th class="amount-col">Amount (USD)</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <!-- OPERATING ACTIVITIES -->
-                                <tr class="table-primary">
-                                    <td colspan="2" class="font-weight-bold">OPERATING ACTIVITIES</td>
+                                <!-- ═══════════════ OPERATING ACTIVITIES ═══════════════ -->
+                                <tr class="section-header">
+                                    <td colspan="2">
+                                        <span style="margin-right: 8px;">▶</span> Cash Flows from Operating Activities
+                                    </td>
                                 </tr>
-                                <tr t-if="operating_inflows">
-                                    <td colspan="2" class="pl-3 font-weight-bold">Cash Inflows:</td>
-                                </tr>
-                                <tr t-foreach="operating_inflows" t-as="item">
-                                    <td class="pl-5"><t t-esc="item['name']"/></td>
-                                    <td class="text-right"><span t-esc="item['amount']" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/></td>
-                                </tr>
-                                <tr t-if="operating_outflows">
-                                    <td colspan="2" class="pl-3 font-weight-bold">Cash Outflows:</td>
-                                </tr>
-                                <tr t-foreach="operating_outflows" t-as="item">
-                                    <td class="pl-5"><t t-esc="item['name']"/></td>
-                                    <td class="text-right">(<span t-esc="item['amount']" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/> )</td>
-                                </tr>
-                                <tr class="font-weight-bold bg-light">
-                                    <td class="pl-3">Net Cash from Operating Activities</td>
-                                    <td class="text-right"><span t-esc="net_operating" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/></td>
-                                </tr>
-
-                                <!-- INVESTING ACTIVITIES -->
-                                <tr class="table-info">
-                                    <td colspan="2" class="font-weight-bold">INVESTING ACTIVITIES</td>
-                                </tr>
-                                <tr t-if="investing_inflows">
-                                    <td colspan="2" class="pl-3 font-weight-bold">Cash Inflows:</td>
-                                </tr>
-                                <tr t-foreach="investing_inflows" t-as="item">
-                                    <td class="pl-5"><t t-esc="item['name']"/></td>
-                                    <td class="text-right"><span t-esc="item['amount']" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/></td>
-                                </tr>
-                                <tr t-if="investing_outflows">
-                                    <td colspan="2" class="pl-3 font-weight-bold">Cash Outflows:</td>
-                                </tr>
-                                <tr t-foreach="investing_outflows" t-as="item">
-                                    <td class="pl-5"><t t-esc="item['name']"/></td>
-                                    <td class="text-right">(<span t-esc="item['amount']" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/> )</td>
-                                </tr>
-                                <tr class="font-weight-bold bg-light">
-                                    <td class="pl-3">Net Cash from Investing Activities</td>
-                                    <td class="text-right"><span t-esc="net_investing" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/></td>
-                                </tr>
-
-                                <!-- FINANCING ACTIVITIES -->
-                                <tr class="table-warning">
-                                    <td colspan="2" class="font-weight-bold">FINANCING ACTIVITIES</td>
-                                </tr>
-                                <tr t-if="financing_inflows">
-                                    <td colspan="2" class="pl-3 font-weight-bold">Cash Inflows:</td>
-                                </tr>
-                                <tr t-foreach="financing_inflows" t-as="item">
-                                    <td class="pl-5"><t t-esc="item['name']"/></td>
-                                    <td class="text-right"><span t-esc="item['amount']" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/></td>
-                                </tr>
-                                <tr t-if="financing_outflows">
-                                    <td colspan="2" class="pl-3 font-weight-bold">Cash Outflows:</td>
-                                </tr>
-                                <tr t-foreach="financing_outflows" t-as="item">
-                                    <td class="pl-5"><t t-esc="item['name']"/></td>
-                                    <td class="text-right">(<span t-esc="item['amount']" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/> )</td>
-                                </tr>
-                                <tr class="font-weight-bold bg-light">
-                                    <td class="pl-3">Net Cash from Financing Activities</td>
-                                    <td class="text-right"><span t-esc="net_financing" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/></td>
+                                
+                                <!-- Operating Inflows -->
+                                <t t-if="operating_inflows">
+                                    <tr class="subsection-header">
+                                        <td colspan="2">Cash Received:</td>
+                                    </tr>
+                                    <t t-foreach="operating_inflows" t-as="item">
+                                        <tr class="line-item">
+                                            <td><t t-esc="item['name']"/></td>
+                                            <td class="amount positive">
+                                                <t t-esc="'${:,.2f}'.format(item['amount'])"/>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </t>
+                                
+                                <!-- Operating Outflows -->
+                                <t t-if="operating_outflows">
+                                    <tr class="subsection-header">
+                                        <td colspan="2">Cash Paid:</td>
+                                    </tr>
+                                    <t t-foreach="operating_outflows" t-as="item">
+                                        <tr class="line-item">
+                                            <td><t t-esc="item['name']"/></td>
+                                            <td class="amount negative">
+                                                (<t t-esc="'${:,.2f}'.format(item['amount'])"/>)
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </t>
+                                
+                                <!-- Operating Subtotal -->
+                                <tr class="subtotal-row">
+                                    <td style="padding-left: 25px;">Net Cash from Operating Activities</td>
+                                    <td class="amount">
+                                        <t t-if="net_operating >= 0">
+                                            <span class="positive"><t t-esc="'${:,.2f}'.format(net_operating)"/></span>
+                                        </t>
+                                        <t t-else="">
+                                            <span class="negative">(<t t-esc="'${:,.2f}'.format(abs(net_operating))"/>)</span>
+                                        </t>
+                                    </td>
                                 </tr>
 
-                                <!-- NET CHANGE -->
-                                <tr class="table-success font-weight-bold">
-                                    <td class="pl-2">NET CHANGE IN CASH</td>
-                                    <td class="text-right"><span t-esc="net_cash_flow" t-options='{"widget": "monetary", "display_currency": res_company.currency_id}'/></td>
+                                <!-- ═══════════════ INVESTING ACTIVITIES ═══════════════ -->
+                                <tr class="section-header">
+                                    <td colspan="2">
+                                        <span style="margin-right: 8px;">▶</span> Cash Flows from Investing Activities
+                                    </td>
+                                </tr>
+                                
+                                <!-- Investing Inflows -->
+                                <t t-if="investing_inflows">
+                                    <tr class="subsection-header">
+                                        <td colspan="2">Proceeds from:</td>
+                                    </tr>
+                                    <t t-foreach="investing_inflows" t-as="item">
+                                        <tr class="line-item">
+                                            <td><t t-esc="item['name']"/></td>
+                                            <td class="amount positive">
+                                                <t t-esc="'${:,.2f}'.format(item['amount'])"/>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </t>
+                                
+                                <!-- Investing Outflows -->
+                                <t t-if="investing_outflows">
+                                    <tr class="subsection-header">
+                                        <td colspan="2">Payments for:</td>
+                                    </tr>
+                                    <t t-foreach="investing_outflows" t-as="item">
+                                        <tr class="line-item">
+                                            <td><t t-esc="item['name']"/></td>
+                                            <td class="amount negative">
+                                                (<t t-esc="'${:,.2f}'.format(item['amount'])"/>)
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </t>
+                                
+                                <!-- Show empty state if no investing activities -->
+                                <t t-if="not investing_inflows and not investing_outflows">
+                                    <tr class="line-item">
+                                        <td style="color: #9e9e9e; font-style: italic;">No investing activities</td>
+                                        <td class="amount">—</td>
+                                    </tr>
+                                </t>
+                                
+                                <!-- Investing Subtotal -->
+                                <tr class="subtotal-row">
+                                    <td style="padding-left: 25px;">Net Cash from Investing Activities</td>
+                                    <td class="amount">
+                                        <t t-if="net_investing >= 0">
+                                            <span class="positive"><t t-esc="'${:,.2f}'.format(net_investing)"/></span>
+                                        </t>
+                                        <t t-elif="net_investing == 0">
+                                            <span>$0.00</span>
+                                        </t>
+                                        <t t-else="">
+                                            <span class="negative">(<t t-esc="'${:,.2f}'.format(abs(net_investing))"/>)</span>
+                                        </t>
+                                    </td>
+                                </tr>
+
+                                <!-- ═══════════════ FINANCING ACTIVITIES ═══════════════ -->
+                                <tr class="section-header">
+                                    <td colspan="2">
+                                        <span style="margin-right: 8px;">▶</span> Cash Flows from Financing Activities
+                                    </td>
+                                </tr>
+                                
+                                <!-- Financing Inflows -->
+                                <t t-if="financing_inflows">
+                                    <tr class="subsection-header">
+                                        <td colspan="2">Proceeds from:</td>
+                                    </tr>
+                                    <t t-foreach="financing_inflows" t-as="item">
+                                        <tr class="line-item">
+                                            <td><t t-esc="item['name']"/></td>
+                                            <td class="amount positive">
+                                                <t t-esc="'${:,.2f}'.format(item['amount'])"/>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </t>
+                                
+                                <!-- Financing Outflows -->
+                                <t t-if="financing_outflows">
+                                    <tr class="subsection-header">
+                                        <td colspan="2">Payments for:</td>
+                                    </tr>
+                                    <t t-foreach="financing_outflows" t-as="item">
+                                        <tr class="line-item">
+                                            <td><t t-esc="item['name']"/></td>
+                                            <td class="amount negative">
+                                                (<t t-esc="'${:,.2f}'.format(item['amount'])"/>)
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </t>
+                                
+                                <!-- Show empty state if no financing activities -->
+                                <t t-if="not financing_inflows and not financing_outflows">
+                                    <tr class="line-item">
+                                        <td style="color: #9e9e9e; font-style: italic;">No financing activities</td>
+                                        <td class="amount">—</td>
+                                    </tr>
+                                </t>
+                                
+                                <!-- Financing Subtotal -->
+                                <tr class="subtotal-row">
+                                    <td style="padding-left: 25px;">Net Cash from Financing Activities</td>
+                                    <td class="amount">
+                                        <t t-if="net_financing >= 0">
+                                            <span class="positive"><t t-esc="'${:,.2f}'.format(net_financing)"/></span>
+                                        </t>
+                                        <t t-elif="net_financing == 0">
+                                            <span>$0.00</span>
+                                        </t>
+                                        <t t-else="">
+                                            <span class="negative">(<t t-esc="'${:,.2f}'.format(abs(net_financing))"/>)</span>
+                                        </t>
+                                    </td>
+                                </tr>
+
+                                <!-- ═══════════════ GRAND TOTAL ═══════════════ -->
+                                <tr style="height: 15px;"><td colspan="2"></td></tr>
+                                <tr class="grand-total">
+                                    <td>
+                                        <strong>NET INCREASE (DECREASE) IN CASH</strong>
+                                    </td>
+                                    <td class="amount">
+                                        <t t-if="net_cash_flow >= 0">
+                                            <strong><t t-esc="'${:,.2f}'.format(net_cash_flow)"/></strong>
+                                        </t>
+                                        <t t-else="">
+                                            <strong>(<t t-esc="'${:,.2f}'.format(abs(net_cash_flow))"/>)</strong>
+                                        </t>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
+
+                        <!-- Footer Note -->
+                        <div class="currency-note">
+                            All amounts are expressed in United States Dollars (USD)
+                        </div>
                     </div>
                 </t>
             </t>
