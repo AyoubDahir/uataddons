@@ -261,14 +261,12 @@
                         <menuitem id="menu_view_all_sales_root"
                                 name="View All Sales"
                                 parent="menu_sales"
-                                groups="idil.group_idil_all_sales_access"
                                 sequence="4"/>
 
                                 <menuitem id="menu_view_all_sales"
                                         name="All Sales"
                                         parent="menu_view_all_sales_root"
                                         action="action_view_all_sales"
-                                        groups="idil.group_idil_all_sales_access"
                                         sequence="1"/>
 
                         <menuitem id="menu_general_Operations"

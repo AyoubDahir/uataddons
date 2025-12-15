@@ -36,7 +36,6 @@
               name="Kitchen Quantity Report"
               parent="idil.menu_sales"
               action="action_kitchen_report_wizard"
-              groups="idil.group_idil_kitchen_report_access"
               sequence="50"/>
 
     <!-- Report Action -->
