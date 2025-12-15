@@ -178,10 +178,17 @@
               parent="menu_idil_home"
               sequence="6"/>
               
+                <menuitem id="menu_view_all_sales"
+                        name="All Sales"
+                        parent="menu_sales"
+                        groups="base.group_user"
+                        action="action_view_all_sales"
+                        sequence="1"/>
+                        
                 <menuitem id="menu_orders"
                         name="Orders Managment"
                         parent="menu_sales"
-                        sequence="1"/>
+                        sequence="2"/>
                                 <menuitem id="menu_place_an_order"
                                         name="Place an Order"
                                         parent="menu_orders"
@@ -258,13 +265,13 @@
                                         parent="menu_employee_sales_root" 
                                         action="action_idil_staff_sales" 
                                         sequence="1"/>
-
-                        <menuitem id="menu_view_all_sales"
-                                name="All Sales"
-                                parent="menu_sales"
-                                groups="base.group_user"
-                                action="action_view_all_sales"
-                                sequence="4"/>
+                                        
+                                <menuitem id="menu_view_all_sales"
+                                        name="All Sales"
+                                        parent="menu_employee_sales_root"
+                                        groups="base.group_user"
+                                        action="action_view_all_sales"
+                                        sequence="2"/>
 
                         <menuitem id="menu_general_Operations"
                                 name="General Operations"
