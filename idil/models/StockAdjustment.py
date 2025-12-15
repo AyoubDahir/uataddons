@@ -74,10 +74,8 @@ class StockAdjustment(models.Model):
     currency_id = fields.Many2one(
         "res.currency",
         string="Currency",
-        required=True,
-        default=lambda self: self.env["res.currency"].search(
-            [("name", "=", "SL")], limit=1
-        ),
+        compute="_compute_currency_from_item",
+        store=True,
         readonly=True,
         tracking=True,
     )
@@ -128,6 +126,15 @@ class StockAdjustment(models.Model):
         )
         sequence = sequence[-3:] if sequence else "000"
         return f"ADJ/{item_code}{date_str}{day_night}{sequence}"
+
+    @api.depends("item_id", "item_id.currency_id")
+    def _compute_currency_from_item(self):
+        for record in self:
+            if record.item_id and record.item_id.currency_id:
+                record.currency_id = record.item_id.currency_id
+            else:
+                # Fallback to SL if no item or item has no currency
+                record.currency_id = self.env["res.currency"].search([("name", "=", "SL")], limit=1)
 
     @api.depends("adjustment_qty", "cost_price")
     def _compute_total_amount(self):
