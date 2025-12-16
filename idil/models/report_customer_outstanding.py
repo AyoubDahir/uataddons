@@ -23,14 +23,20 @@ class CustomerOutstandingWizard(models.TransientModel):
         help="Leave empty for all salespersons",
     )
     min_balance = fields.Float(
-        string="Minimum Balance",
+        string="Minimum Balance (USD)",
         default=0,
-        help="Only show balances greater than this amount",
+        help="Only show balances greater than this amount (in USD)",
     )
     include_salesperson_ar = fields.Boolean(
         string="Include Salesperson AR",
         default=True,
         help="Include salesperson accounts receivable",
+    )
+    company_id = fields.Many2one(
+        'res.company', 
+        string='Company', 
+        required=True, 
+        default=lambda self: self.env.company
     )
 
     def action_print_report(self):
@@ -42,6 +48,8 @@ class CustomerOutstandingWizard(models.TransientModel):
             "salesperson_name": self.salesperson_id.name if self.salesperson_id else "All Salespersons",
             "min_balance": self.min_balance,
             "include_salesperson_ar": self.include_salesperson_ar,
+            "company_id": self.company_id.id,
+            "company_name": self.company_id.name,
         }
         return self.env.ref("idil.action_report_customer_outstanding").report_action(
             self, data=data
@@ -51,6 +59,34 @@ class CustomerOutstandingWizard(models.TransientModel):
 class ReportCustomerOutstanding(models.AbstractModel):
     _name = "report.idil.report_customer_outstanding_template"
     _description = "Customer Outstanding Balance Report"
+
+    def _get_exchange_rate(self, company_id, as_of_date):
+        """Get exchange rate (SL to USD) for the given date"""
+        sl_currency = self.env['res.currency'].search([('name', '=', 'SL')], limit=1)
+        if not sl_currency:
+            return 1.0
+        
+        rate_rec = self.env['res.currency.rate'].search([
+            ('currency_id', '=', sl_currency.id),
+            ('name', '<=', as_of_date),
+            ('company_id', 'in', [company_id, False]),
+        ], order='company_id desc, name desc', limit=1)
+        
+        if rate_rec and rate_rec.rate > 0:
+            return rate_rec.rate
+        
+        # Fallback to most recent rate
+        fallback_rate = self.env['res.currency.rate'].search([
+            ('currency_id', '=', sl_currency.id),
+        ], order='name desc', limit=1)
+        
+        return fallback_rate.rate if fallback_rate and fallback_rate.rate > 0 else 1.0
+
+    def _convert_to_usd(self, amount, rate):
+        """Convert amount from SL to USD"""
+        if rate and rate > 0:
+            return amount / rate
+        return amount
 
     @api.model
     def _get_report_values(self, docids, data=None):
@@ -62,9 +98,13 @@ class ReportCustomerOutstanding(models.AbstractModel):
         salesperson_id = data.get("salesperson_id")
         min_balance = data.get("min_balance", 0)
         include_salesperson_ar = data.get("include_salesperson_ar", True)
+        company_id = data.get("company_id", self.env.company.id)
+        company_name = data.get("company_name", self.env.company.name)
 
         today = fields.Date.today()
-        outstanding_data = []
+        
+        # Get exchange rate for USD conversion
+        exchange_rate = self._get_exchange_rate(company_id, as_of_date or today)
 
         # Customer Outstanding from Sales Receipts
         receipt_domain = [("payment_status", "=", "pending")]
@@ -78,8 +118,11 @@ class ReportCustomerOutstanding(models.AbstractModel):
         # Group by customer
         customer_balances = {}
         for receipt in receipts:
-            balance = receipt.due_amount - receipt.paid_amount
-            if balance <= min_balance:
+            balance_sl = receipt.due_amount - receipt.paid_amount
+            balance_usd = self._convert_to_usd(balance_sl, exchange_rate)
+            
+            # Filter by min_balance (in USD)
+            if balance_usd <= min_balance:
                 continue
 
             # Determine the key (customer or salesperson)
@@ -107,9 +150,13 @@ class ReportCustomerOutstanding(models.AbstractModel):
                     "receipts": [],
                 }
 
-            customer_balances[key]["total_due"] += receipt.due_amount
-            customer_balances[key]["total_paid"] += receipt.paid_amount
-            customer_balances[key]["outstanding"] += balance
+            # Convert amounts to USD
+            due_usd = self._convert_to_usd(receipt.due_amount, exchange_rate)
+            paid_usd = self._convert_to_usd(receipt.paid_amount, exchange_rate)
+            
+            customer_balances[key]["total_due"] += due_usd
+            customer_balances[key]["total_paid"] += paid_usd
+            customer_balances[key]["outstanding"] += balance_usd
             customer_balances[key]["receipt_count"] += 1
 
             receipt_date = receipt.receipt_date.date() if receipt.receipt_date else today
@@ -119,13 +166,14 @@ class ReportCustomerOutstanding(models.AbstractModel):
             customer_balances[key]["receipts"].append({
                 "reference": f"REC-{receipt.id}",
                 "date": receipt_date.strftime("%Y-%m-%d"),
-                "due_amount": receipt.due_amount,
-                "paid_amount": receipt.paid_amount,
-                "balance": balance,
+                "due_amount": due_usd,
+                "paid_amount": paid_usd,
+                "balance": balance_usd,
                 "age_days": (today - receipt_date).days,
             })
 
         # Calculate aging buckets and prepare final data
+        outstanding_data = []
         for key, data_item in customer_balances.items():
             if data_item["oldest_date"]:
                 data_item["days_outstanding"] = (today - data_item["oldest_date"]).days
@@ -134,7 +182,7 @@ class ReportCustomerOutstanding(models.AbstractModel):
                 data_item["days_outstanding"] = 0
                 data_item["oldest_date"] = ""
 
-            # Aging buckets
+            # Aging buckets (already in USD)
             data_item["bucket_0_30"] = sum(r["balance"] for r in data_item["receipts"] if r["age_days"] <= 30)
             data_item["bucket_31_60"] = sum(r["balance"] for r in data_item["receipts"] if 31 <= r["age_days"] <= 60)
             data_item["bucket_61_90"] = sum(r["balance"] for r in data_item["receipts"] if 61 <= r["age_days"] <= 90)
@@ -145,7 +193,7 @@ class ReportCustomerOutstanding(models.AbstractModel):
         # Sort by outstanding amount descending
         outstanding_data.sort(key=lambda x: x["outstanding"], reverse=True)
 
-        # Calculate totals
+        # Calculate totals (already in USD)
         total_outstanding = sum(d["outstanding"] for d in outstanding_data)
         total_0_30 = sum(d["bucket_0_30"] for d in outstanding_data)
         total_31_60 = sum(d["bucket_31_60"] for d in outstanding_data)
@@ -156,6 +204,9 @@ class ReportCustomerOutstanding(models.AbstractModel):
             "doc_ids": docids,
             "doc_model": "idil.customer.outstanding.wizard",
             "docs": self,
+            "company_name": company_name,
+            "as_of_date": as_of_date,
+            "exchange_rate": exchange_rate,
             "data": {
                 "as_of_date": as_of_date,
                 "customer_name": data.get("customer_name"),

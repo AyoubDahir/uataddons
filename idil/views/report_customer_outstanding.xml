@@ -48,95 +48,153 @@
     <template id="report_customer_outstanding_template">
         <t t-call="web.html_container">
             <t t-call="web.external_layout">
-                <div class="page">
-                    <div class="text-center mb-4">
-                        <h2>💰 Customer Outstanding Balance Report</h2>
-                        <p>
-                            <strong>As of Date:</strong> <span t-esc="data['as_of_date']"/>
-                            <br/>
-                            <strong>Customer:</strong> <span t-esc="data['customer_name']"/>
-                            |
-                            <strong>Salesperson:</strong> <span t-esc="data['salesperson_name']"/>
-                        </p>
-                    </div>
-
-                    <!-- Aging Summary Cards -->
-                    <div class="row mb-4">
-                        <div class="col-2 text-center">
-                            <div style="background: #e8f5e9; padding: 10px; border-radius: 8px;">
-                                <h6>0-30 Days</h6>
-                                <h4 style="color: #2e7d32;" t-esc="'{:,.2f}'.format(data['total_0_30'])"/>
-                            </div>
-                        </div>
-                        <div class="col-2 text-center">
-                            <div style="background: #fff3e0; padding: 10px; border-radius: 8px;">
-                                <h6>31-60 Days</h6>
-                                <h4 style="color: #ef6c00;" t-esc="'{:,.2f}'.format(data['total_31_60'])"/>
-                            </div>
-                        </div>
-                        <div class="col-2 text-center">
-                            <div style="background: #fff8e1; padding: 10px; border-radius: 8px;">
-                                <h6>61-90 Days</h6>
-                                <h4 style="color: #f9a825;" t-esc="'{:,.2f}'.format(data['total_61_90'])"/>
-                            </div>
-                        </div>
-                        <div class="col-2 text-center">
-                            <div style="background: #ffebee; padding: 10px; border-radius: 8px;">
-                                <h6>90+ Days</h6>
-                                <h4 style="color: #c62828;" t-esc="'{:,.2f}'.format(data['total_90_plus'])"/>
-                            </div>
-                        </div>
-                        <div class="col-4 text-center">
-                            <div style="background: #e3f2fd; padding: 10px; border-radius: 8px;">
-                                <h6>Total Outstanding</h6>
-                                <h3 style="color: #1565c0;" t-esc="'{:,.2f}'.format(data['total_outstanding'])"/>
-                            </div>
+                <div class="page" style="font-family: 'Segoe UI', Arial, sans-serif;">
+                    <!-- Report Header -->
+                    <div style="background-color: #1a237e; color: white; padding: 20px; margin-bottom: 25px; border-bottom: 4px solid #3949ab;">
+                        <h1 style="font-size: 24px; font-weight: bold; margin: 0 0 8px 0; color: white;">Customer Outstanding Balance Report</h1>
+                        <div style="font-size: 16px; color: white; margin-bottom: 5px;"><t t-esc="company_name"/></div>
+                        <div style="font-size: 12px; color: #c5cae9;">
+                            As of Date: <strong style="color: white;"><t t-esc="as_of_date"/></strong>
                         </div>
                     </div>
 
-                    <!-- Customer Summary Table -->
-                    <table class="table table-sm table-bordered">
-                        <thead class="thead-light">
-                            <tr>
-                                <th>Type</th>
-                                <th>Name</th>
-                                <th>Contact</th>
-                                <th class="text-right">Receipts</th>
-                                <th class="text-right">0-30</th>
-                                <th class="text-right">31-60</th>
-                                <th class="text-right">61-90</th>
-                                <th class="text-right">90+</th>
-                                <th class="text-right">Total Outstanding</th>
+                    <!-- Filter Summary -->
+                    <div style="background-color: #f5f5f5; padding: 12px 15px; margin-bottom: 20px; border-radius: 4px; font-size: 11px;">
+                        <strong>Filters:</strong>
+                        Customer: <span style="color: #1a237e;"><t t-esc="data['customer_name']"/></span> |
+                        Salesperson: <span style="color: #1a237e;"><t t-esc="data['salesperson_name']"/></span> |
+                        Min Balance: <span style="color: #1a237e;">$<t t-esc="'{:,.2f}'.format(data['min_balance'])"/></span>
+                    </div>
+
+                    <!-- Aging Summary Table -->
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 11px;">
+                        <thead>
+                            <tr style="background-color: #f5f5f5;">
+                                <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: left; font-weight: bold; color: #333; width: 50%;">Aging Category</th>
+                                <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: right; font-weight: bold; color: #333; width: 50%;">Amount (USD)</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr t-foreach="data['customers']" t-as="cust">
-                                <td><span t-esc="cust['type']"/></td>
-                                <td><strong><span t-esc="cust['name']"/></strong></td>
-                                <td><span t-esc="cust['contact']"/></td>
-                                <td class="text-right"><span t-esc="cust['receipt_count']"/></td>
-                                <td class="text-right"><span t-esc="'{:,.2f}'.format(cust['bucket_0_30'])"/></td>
-                                <td class="text-right"><span t-esc="'{:,.2f}'.format(cust['bucket_31_60'])"/></td>
-                                <td class="text-right"><span t-esc="'{:,.2f}'.format(cust['bucket_61_90'])"/></td>
-                                <td class="text-right">
-                                    <span t-if="cust['bucket_90_plus'] > 0" style="color: #c62828; font-weight: bold;" t-esc="'{:,.2f}'.format(cust['bucket_90_plus'])"/>
-                                    <span t-else="" t-esc="'{:,.2f}'.format(cust['bucket_90_plus'])"/>
+                            <!-- 0-30 Days -->
+                            <tr style="background-color: #e8eaf6;">
+                                <td colspan="2" style="padding: 12px 10px; font-weight: bold; font-size: 12px; color: #1a237e; border-bottom: 2px solid #c5cae9;">
+                                    ► AGING SUMMARY
                                 </td>
-                                <td class="text-right"><strong><span t-esc="'{:,.2f}'.format(cust['outstanding'])"/></strong></td>
                             </tr>
-                            <tr t-if="not data['customers']">
-                                <td colspan="9" class="text-center">✅ No outstanding balances found.</td>
+                            <tr>
+                                <td style="padding: 8px 10px 8px 35px; color: #424242; border-bottom: 1px solid #eeeeee; font-weight: 500;">Current (0-30 Days)</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #2e7d32; border-bottom: 1px solid #eeeeee; font-weight: 500;">
+                                    $<t t-esc="'{:,.2f}'.format(data['total_0_30'])"/>
+                                </td>
                             </tr>
-                            <tr class="font-weight-bold" style="background: #f5f5f5;">
-                                <td colspan="4">Total (<span t-esc="data['total_customers']"/> accounts)</td>
-                                <td class="text-right"><span t-esc="'{:,.2f}'.format(data['total_0_30'])"/></td>
-                                <td class="text-right"><span t-esc="'{:,.2f}'.format(data['total_31_60'])"/></td>
-                                <td class="text-right"><span t-esc="'{:,.2f}'.format(data['total_61_90'])"/></td>
-                                <td class="text-right"><span t-esc="'{:,.2f}'.format(data['total_90_plus'])"/></td>
-                                <td class="text-right"><span t-esc="'{:,.2f}'.format(data['total_outstanding'])"/></td>
+                            <tr>
+                                <td style="padding: 8px 10px 8px 35px; color: #424242; border-bottom: 1px solid #eeeeee; font-weight: 500;">31-60 Days</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #ef6c00; border-bottom: 1px solid #eeeeee; font-weight: 500;">
+                                    $<t t-esc="'{:,.2f}'.format(data['total_31_60'])"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 10px 8px 35px; color: #424242; border-bottom: 1px solid #eeeeee; font-weight: 500;">61-90 Days</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #f9a825; border-bottom: 1px solid #eeeeee; font-weight: 500;">
+                                    $<t t-esc="'{:,.2f}'.format(data['total_61_90'])"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 10px 8px 35px; color: #424242; border-bottom: 1px solid #eeeeee; font-weight: 500;">Over 90 Days</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #c62828; border-bottom: 1px solid #eeeeee; font-weight: 500;">
+                                    $<t t-esc="'{:,.2f}'.format(data['total_90_plus'])"/>
+                                </td>
+                            </tr>
+                            <!-- Total -->
+                            <tr style="background-color: #1a237e;">
+                                <td style="padding: 15px 10px; font-weight: bold; font-size: 13px; color: white;">
+                                    TOTAL OUTSTANDING
+                                </td>
+                                <td style="padding: 15px 10px; text-align: right; font-weight: bold; font-size: 14px; color: white;">
+                                    $<t t-esc="'{:,.2f}'.format(data['total_outstanding'])"/>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
+
+                    <!-- Spacer -->
+                    <div style="height: 15px;"></div>
+
+                    <!-- Customer Detail Table -->
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px;">
+                        <thead>
+                            <tr style="background-color: #f5f5f5;">
+                                <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: left; font-weight: bold; color: #333;">Type</th>
+                                <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: left; font-weight: bold; color: #333;">Name</th>
+                                <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: left; font-weight: bold; color: #333;">Contact</th>
+                                <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: right; font-weight: bold; color: #333;">Receipts</th>
+                                <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: right; font-weight: bold; color: #333;">0-30</th>
+                                <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: right; font-weight: bold; color: #333;">31-60</th>
+                                <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: right; font-weight: bold; color: #333;">61-90</th>
+                                <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: right; font-weight: bold; color: #333;">90+</th>
+                                <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: right; font-weight: bold; color: #333;">Total (USD)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Section Header -->
+                            <tr style="background-color: #e8eaf6;">
+                                <td colspan="9" style="padding: 12px 10px; font-weight: bold; font-size: 12px; color: #1a237e; border-bottom: 2px solid #c5cae9;">
+                                    ► CUSTOMER/SALESPERSON DETAILS
+                                </td>
+                            </tr>
+
+                            <!-- Customer Rows -->
+                            <t t-foreach="data['customers']" t-as="cust">
+                                <tr>
+                                    <td style="padding: 8px 10px; color: #424242; border-bottom: 1px solid #eeeeee;">
+                                        <span t-if="cust['type'] == 'Customer'" style="background-color: #e3f2fd; color: #1565c0; padding: 2px 6px; border-radius: 3px; font-size: 10px;">Customer</span>
+                                        <span t-else="" style="background-color: #fff3e0; color: #ef6c00; padding: 2px 6px; border-radius: 3px; font-size: 10px;">Salesperson</span>
+                                    </td>
+                                    <td style="padding: 8px 10px; color: #424242; border-bottom: 1px solid #eeeeee; font-weight: 600;"><t t-esc="cust['name']"/></td>
+                                    <td style="padding: 8px 10px; color: #757575; border-bottom: 1px solid #eeeeee; font-size: 10px;"><t t-esc="cust['contact']"/></td>
+                                    <td style="padding: 8px 10px; text-align: right; color: #424242; border-bottom: 1px solid #eeeeee;"><t t-esc="cust['receipt_count']"/></td>
+                                    <td style="padding: 8px 10px; text-align: right; color: #2e7d32; border-bottom: 1px solid #eeeeee;">$<t t-esc="'{:,.2f}'.format(cust['bucket_0_30'])"/></td>
+                                    <td style="padding: 8px 10px; text-align: right; color: #ef6c00; border-bottom: 1px solid #eeeeee;">$<t t-esc="'{:,.2f}'.format(cust['bucket_31_60'])"/></td>
+                                    <td style="padding: 8px 10px; text-align: right; color: #f9a825; border-bottom: 1px solid #eeeeee;">$<t t-esc="'{:,.2f}'.format(cust['bucket_61_90'])"/></td>
+                                    <td style="padding: 8px 10px; text-align: right; border-bottom: 1px solid #eeeeee;">
+                                        <t t-if="cust['bucket_90_plus'] > 0">
+                                            <span style="color: #c62828; font-weight: bold;">$<t t-esc="'{:,.2f}'.format(cust['bucket_90_plus'])"/></span>
+                                        </t>
+                                        <t t-else="">
+                                            <span style="color: #9e9e9e;">$0.00</span>
+                                        </t>
+                                    </td>
+                                    <td style="padding: 8px 10px; text-align: right; color: #1a237e; border-bottom: 1px solid #eeeeee; font-weight: bold;">$<t t-esc="'{:,.2f}'.format(cust['outstanding'])"/></td>
+                                </tr>
+                            </t>
+
+                            <!-- Empty State -->
+                            <t t-if="not data['customers']">
+                                <tr>
+                                    <td colspan="9" style="padding: 20px 10px; text-align: center; color: #9e9e9e; font-style: italic; border-bottom: 1px solid #eeeeee;">
+                                        No outstanding balances found matching the criteria.
+                                    </td>
+                                </tr>
+                            </t>
+
+                            <!-- Totals Row -->
+                            <tr style="background-color: #f5f5f5;">
+                                <td colspan="4" style="padding: 12px 10px; font-weight: bold; border-top: 1px solid #bdbdbd; border-bottom: 2px solid #9e9e9e;">
+                                    Total (<t t-esc="data['total_customers']"/> accounts)
+                                </td>
+                                <td style="padding: 12px 10px; text-align: right; font-weight: bold; color: #2e7d32; border-top: 1px solid #bdbdbd; border-bottom: 2px solid #9e9e9e;">$<t t-esc="'{:,.2f}'.format(data['total_0_30'])"/></td>
+                                <td style="padding: 12px 10px; text-align: right; font-weight: bold; color: #ef6c00; border-top: 1px solid #bdbdbd; border-bottom: 2px solid #9e9e9e;">$<t t-esc="'{:,.2f}'.format(data['total_31_60'])"/></td>
+                                <td style="padding: 12px 10px; text-align: right; font-weight: bold; color: #f9a825; border-top: 1px solid #bdbdbd; border-bottom: 2px solid #9e9e9e;">$<t t-esc="'{:,.2f}'.format(data['total_61_90'])"/></td>
+                                <td style="padding: 12px 10px; text-align: right; font-weight: bold; color: #c62828; border-top: 1px solid #bdbdbd; border-bottom: 2px solid #9e9e9e;">$<t t-esc="'{:,.2f}'.format(data['total_90_plus'])"/></td>
+                                <td style="padding: 12px 10px; text-align: right; font-weight: bold; color: #1a237e; border-top: 1px solid #bdbdbd; border-bottom: 2px solid #9e9e9e;">$<t t-esc="'{:,.2f}'.format(data['total_outstanding'])"/></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Footer Note -->
+                    <div style="text-align: right; font-size: 10px; color: #757575; margin-top: 15px; font-style: italic;">
+                        All amounts are expressed in United States Dollars (USD)
+                    </div>
                 </div>
             </t>
         </t>
