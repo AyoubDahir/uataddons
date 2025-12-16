@@ -46,83 +46,115 @@
     <template id="report_expiring_inventory_template">
         <t t-call="web.html_container">
             <t t-call="web.external_layout">
-                <div class="page">
-                    <div class="text-center mb-4">
-                        <h2>📅 Expiring Inventory Report</h2>
-                        <p>
-                            <strong>Report Date:</strong> <span t-esc="data['report_date']"/>
-                            <br/>
-                            <strong>Showing:</strong> Items expiring within <span t-esc="data['days_ahead']"/> days
-                            <br/>
-                            <strong>Category:</strong> <span t-esc="data['category_name']"/>
-                        </p>
-                    </div>
-
-                    <!-- Summary Cards -->
-                    <div class="row mb-4">
-                        <div class="col-3 text-center">
-                            <div style="background: #ffebee; padding: 15px; border-radius: 8px;">
-                                <h5>🔴 Expired</h5>
-                                <h3 style="color: #c62828;" t-esc="data['expired_count']"/>
-                            </div>
-                        </div>
-                        <div class="col-3 text-center">
-                            <div style="background: #fff3e0; padding: 15px; border-radius: 8px;">
-                                <h5>🟠 Critical (≤7 days)</h5>
-                                <h3 style="color: #ef6c00;" t-esc="data['critical_count']"/>
-                            </div>
-                        </div>
-                        <div class="col-3 text-center">
-                            <div style="background: #fffde7; padding: 15px; border-radius: 8px;">
-                                <h5>🟡 Warning (≤30 days)</h5>
-                                <h3 style="color: #f9a825;" t-esc="data['warning_count']"/>
-                            </div>
-                        </div>
-                        <div class="col-3 text-center">
-                            <div style="background: #ffcdd2; padding: 15px; border-radius: 8px;">
-                                <h5>💰 Value at Risk</h5>
-                                <h3 t-esc="'{:,.2f}'.format(data['total_value_at_risk'])"/>
-                            </div>
+                <div class="page" style="font-family: 'Segoe UI', Arial, sans-serif;">
+                    <!-- Report Header -->
+                    <div style="background-color: #1a237e; color: white; padding: 20px; margin-bottom: 25px; border-bottom: 4px solid #3949ab;">
+                        <h1 style="font-size: 24px; font-weight: bold; margin: 0 0 8px 0; color: white;">Expiring Inventory Report</h1>
+                        <div style="font-size: 12px; color: #c5cae9;">
+                            Report Date: <strong style="color: white;"><t t-esc="data['report_date']"/></strong>
                         </div>
                     </div>
 
-                    <!-- Items Table -->
-                    <table class="table table-sm table-bordered">
-                        <thead class="thead-light">
-                            <tr>
-                                <th>Item</th>
-                                <th>Category</th>
-                                <th class="text-center">Expiration Date</th>
-                                <th class="text-right">Days Left</th>
-                                <th class="text-right">Quantity</th>
-                                <th class="text-right">Cost/Unit</th>
-                                <th class="text-right">Value at Risk</th>
-                                <th class="text-center">Status</th>
+                    <!-- Filter Summary -->
+                    <div style="background-color: #f5f5f5; padding: 12px 15px; margin-bottom: 20px; border-radius: 4px; font-size: 11px;">
+                        <strong>Filters:</strong>
+                        Items expiring within: <span style="color: #1a237e;"><t t-esc="data['days_ahead']"/> days</span> |
+                        Category: <span style="color: #1a237e;"><t t-esc="data['category_name']"/></span>
+                    </div>
+
+                    <!-- Summary Table -->
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 11px;">
+                        <thead>
+                            <tr style="background-color: #f5f5f5;">
+                                <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: left; font-weight: bold; color: #333; width: 50%;">Summary</th>
+                                <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: right; font-weight: bold; color: #333; width: 50%;">Value</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr t-foreach="data['items']" t-as="item">
-                                <td><span t-esc="item['item_name']"/></td>
-                                <td><span t-esc="item['category']"/></td>
-                                <td class="text-center"><span t-esc="item['expiration_date']"/></td>
-                                <td class="text-right">
-                                    <span t-if="item['days_until_expiry'] &lt; 0" style="color: #c62828;">
-                                        <span t-esc="abs(item['days_until_expiry'])"/> days ago
-                                    </span>
-                                    <span t-else="" t-esc="item['days_until_expiry']"/>
-                                </td>
-                                <td class="text-right"><span t-esc="'{:,.2f}'.format(item['quantity'])"/></td>
-                                <td class="text-right"><span t-esc="'{:,.2f}'.format(item['cost_price'])"/></td>
-                                <td class="text-right"><span t-esc="'{:,.2f}'.format(item['value_at_risk'])"/></td>
-                                <td class="text-center">
-                                    <span t-attf-style="color: #{item['status_color']}; font-weight: bold;">
-                                        <span t-esc="item['status']"/>
-                                    </span>
+                            <tr style="background-color: #e8eaf6;">
+                                <td colspan="2" style="padding: 12px 10px; font-weight: bold; font-size: 12px; color: #1a237e; border-bottom: 2px solid #c5cae9;">
+                                    ► EXPIRY SUMMARY
                                 </td>
                             </tr>
-                            <tr t-if="not data['items']">
-                                <td colspan="8" class="text-center">✅ No items expiring within the specified period.</td>
+                            <tr>
+                                <td style="padding: 8px 10px 8px 35px; color: #424242; border-bottom: 1px solid #eeeeee; font-weight: 500;">Expired Items</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #c62828; border-bottom: 1px solid #eeeeee; font-weight: bold;">
+                                    <t t-esc="data['expired_count']"/>
+                                </td>
                             </tr>
+                            <tr>
+                                <td style="padding: 8px 10px 8px 35px; color: #424242; border-bottom: 1px solid #eeeeee; font-weight: 500;">Critical (≤7 days)</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #ef6c00; border-bottom: 1px solid #eeeeee; font-weight: 500;">
+                                    <t t-esc="data['critical_count']"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 10px 8px 35px; color: #424242; border-bottom: 1px solid #eeeeee; font-weight: 500;">Warning (≤30 days)</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #f9a825; border-bottom: 1px solid #eeeeee; font-weight: 500;">
+                                    <t t-esc="data['warning_count']"/>
+                                </td>
+                            </tr>
+                            <tr style="background-color: #1a237e;">
+                                <td style="padding: 15px 10px; font-weight: bold; font-size: 13px; color: white;">
+                                    VALUE AT RISK
+                                </td>
+                                <td style="padding: 15px 10px; text-align: right; font-weight: bold; font-size: 14px; color: white;">
+                                    <t t-esc="'{:,.2f}'.format(data['total_value_at_risk'])"/>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Items Table -->
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px;">
+                        <thead>
+                            <tr style="background-color: #e8eaf6;">
+                                <td colspan="8" style="padding: 12px 10px; font-weight: bold; font-size: 12px; color: #1a237e; border-bottom: 2px solid #c5cae9;">
+                                    ► ITEM DETAILS
+                                </td>
+                            </tr>
+                            <tr style="background-color: #f5f5f5;">
+                                <th style="border-bottom: 2px solid #1a237e; padding: 10px; text-align: left; font-weight: bold; color: #333;">Item</th>
+                                <th style="border-bottom: 2px solid #1a237e; padding: 10px; text-align: left; font-weight: bold; color: #333;">Category</th>
+                                <th style="border-bottom: 2px solid #1a237e; padding: 10px; text-align: center; font-weight: bold; color: #333;">Expiration Date</th>
+                                <th style="border-bottom: 2px solid #1a237e; padding: 10px; text-align: right; font-weight: bold; color: #333;">Days Left</th>
+                                <th style="border-bottom: 2px solid #1a237e; padding: 10px; text-align: right; font-weight: bold; color: #333;">Quantity</th>
+                                <th style="border-bottom: 2px solid #1a237e; padding: 10px; text-align: right; font-weight: bold; color: #333;">Cost/Unit</th>
+                                <th style="border-bottom: 2px solid #1a237e; padding: 10px; text-align: right; font-weight: bold; color: #333;">Value at Risk</th>
+                                <th style="border-bottom: 2px solid #1a237e; padding: 10px; text-align: center; font-weight: bold; color: #333;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="data['items']" t-as="item">
+                                <tr>
+                                    <td style="padding: 8px 10px; color: #424242; border-bottom: 1px solid #eeeeee; font-weight: 500;"><t t-esc="item['item_name']"/></td>
+                                    <td style="padding: 8px 10px; color: #757575; border-bottom: 1px solid #eeeeee;"><t t-esc="item['category']"/></td>
+                                    <td style="padding: 8px 10px; text-align: center; color: #424242; border-bottom: 1px solid #eeeeee;"><t t-esc="item['expiration_date']"/></td>
+                                    <td style="padding: 8px 10px; text-align: right; border-bottom: 1px solid #eeeeee;">
+                                        <t t-if="item['days_until_expiry'] &lt; 0">
+                                            <span style="color: #c62828; font-weight: bold;"><t t-esc="abs(item['days_until_expiry'])"/> days ago</span>
+                                        </t>
+                                        <t t-else="">
+                                            <span t-att-style="'color: ' + ('#c62828' if item['days_until_expiry'] &lt;= 7 else '#ef6c00' if item['days_until_expiry'] &lt;= 30 else '#2e7d32')"><t t-esc="item['days_until_expiry']"/></span>
+                                        </t>
+                                    </td>
+                                    <td style="padding: 8px 10px; text-align: right; color: #5c6bc0; border-bottom: 1px solid #eeeeee;"><t t-esc="'{:,.2f}'.format(item['quantity'])"/></td>
+                                    <td style="padding: 8px 10px; text-align: right; color: #424242; border-bottom: 1px solid #eeeeee;"><t t-esc="'{:,.2f}'.format(item['cost_price'])"/></td>
+                                    <td style="padding: 8px 10px; text-align: right; color: #c62828; border-bottom: 1px solid #eeeeee; font-weight: 500;"><t t-esc="'{:,.2f}'.format(item['value_at_risk'])"/></td>
+                                    <td style="padding: 8px 10px; text-align: center; border-bottom: 1px solid #eeeeee;">
+                                        <span t-attf-style="background-color: #{item['status_color']}20; color: #{item['status_color']}; padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: bold;">
+                                            <t t-esc="item['status']"/>
+                                        </span>
+                                    </td>
+                                </tr>
+                            </t>
+                            <t t-if="not data['items']">
+                                <tr>
+                                    <td colspan="8" style="padding: 20px 10px; text-align: center; color: #9e9e9e; font-style: italic; border-bottom: 1px solid #eeeeee;">
+                                        No items expiring within the specified period.
+                                    </td>
+                                </tr>
+                            </t>
                         </tbody>
                     </table>
                 </div>

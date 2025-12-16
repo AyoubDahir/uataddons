@@ -47,90 +47,144 @@
     <template id="report_pending_orders_template">
         <t t-call="web.html_container">
             <t t-call="web.external_layout">
-                <div class="page">
-                    <div class="text-center mb-4">
-                        <h2>📋 Pending Orders Report</h2>
-                        <p>
-                            <strong>Report Date:</strong> <span t-esc="data['report_date']"/>
-                            <br/>
-                            <strong>Order Type:</strong> <span t-esc="data['order_type'].replace('_', ' ').title()"/>
-                            <br/>
-                            <strong>Salesperson:</strong> <span t-esc="data['salesperson_name']"/>
-                            |
-                            <strong>Customer:</strong> <span t-esc="data['customer_name']"/>
-                        </p>
-                    </div>
-
-                    <!-- Summary Cards -->
-                    <div class="row mb-4">
-                        <div class="col-3 text-center">
-                            <div style="background: #fff3e0; padding: 15px; border-radius: 8px;">
-                                <h5>Pending Orders</h5>
-                                <h3 style="color: #ef6c00;" t-esc="data['total_orders']"/>
-                            </div>
-                        </div>
-                        <div class="col-3 text-center">
-                            <div style="background: #e3f2fd; padding: 15px; border-radius: 8px;">
-                                <h5>Total Value</h5>
-                                <h3 t-esc="'{:,.2f}'.format(data['total_value'])"/>
-                            </div>
-                        </div>
-                        <div class="col-3 text-center">
-                            <div style="background: #f3e5f5; padding: 15px; border-radius: 8px;">
-                                <h5>Avg Age (Days)</h5>
-                                <h3 t-esc="'{:.1f}'.format(data['avg_age'])"/>
-                            </div>
-                        </div>
-                        <div class="col-3 text-center">
-                            <div style="background: #ffebee; padding: 15px; border-radius: 8px;">
-                                <h5>Old (&gt;7 days)</h5>
-                                <h3 style="color: #c62828;" t-esc="data['old_orders_count']"/>
-                            </div>
+                <div class="page" style="font-family: 'Segoe UI', Arial, sans-serif;">
+                    <!-- Report Header -->
+                    <div style="background-color: #1a237e; color: white; padding: 20px; margin-bottom: 25px; border-bottom: 4px solid #3949ab;">
+                        <h1 style="font-size: 24px; font-weight: bold; margin: 0 0 8px 0; color: white;">Pending Orders Report</h1>
+                        <div style="font-size: 16px; color: white; margin-bottom: 5px;"><t t-esc="company_name"/></div>
+                        <div style="font-size: 12px; color: #c5cae9;">
+                            Report Date: <strong style="color: white;"><t t-esc="report_date"/></strong>
                         </div>
                     </div>
 
-                    <!-- Orders Table -->
-                    <table class="table table-sm table-bordered">
-                        <thead class="thead-light">
-                            <tr>
-                                <th>Type</th>
-                                <th>Reference</th>
-                                <th>Date</th>
-                                <th>Salesperson</th>
-                                <th>Customer</th>
-                                <th class="text-right">Total</th>
-                                <th class="text-right">Age (Days)</th>
-                                <th class="text-center">Status</th>
+                    <!-- Filter Summary -->
+                    <div style="background-color: #f5f5f5; padding: 12px 15px; margin-bottom: 20px; border-radius: 4px; font-size: 11px;">
+                        <strong>Filters:</strong>
+                        Order Type: <span style="color: #1a237e;"><t t-esc="data['order_type'].replace('_', ' ').title()"/></span> |
+                        Salesperson: <span style="color: #1a237e;"><t t-esc="data['salesperson_name']"/></span> |
+                        Customer: <span style="color: #1a237e;"><t t-esc="data['customer_name']"/></span> |
+                        Older Than: <span style="color: #1a237e;"><t t-esc="data['days_old']"/> days</span>
+                    </div>
+
+                    <!-- Summary Table -->
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 11px;">
+                        <thead>
+                            <tr style="background-color: #f5f5f5;">
+                                <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: left; font-weight: bold; color: #333; width: 50%;">Summary</th>
+                                <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: right; font-weight: bold; color: #333; width: 50%;">Value</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr t-foreach="data['orders']" t-as="order">
-                                <td><span t-esc="order['type']"/></td>
-                                <td><span t-esc="order['reference']"/></td>
-                                <td><span t-esc="order['date']"/></td>
-                                <td><span t-esc="order['salesperson']"/></td>
-                                <td><span t-esc="order['customer']"/></td>
-                                <td class="text-right"><span t-esc="'{:,.2f}'.format(order['total'])"/></td>
-                                <td class="text-right">
-                                    <span t-if="order['age_days'] > 7" style="color: #c62828; font-weight: bold;" t-esc="order['age_days']"/>
-                                    <span t-elif="order['age_days'] > 3" style="color: #ef6c00;" t-esc="order['age_days']"/>
-                                    <span t-else="" t-esc="order['age_days']"/>
-                                </td>
-                                <td class="text-center">
-                                    <span style="color: #ef6c00;">⏳ <span t-esc="order['status']"/></span>
+                            <tr style="background-color: #e8eaf6;">
+                                <td colspan="2" style="padding: 12px 10px; font-weight: bold; font-size: 12px; color: #1a237e; border-bottom: 2px solid #c5cae9;">
+                                    ► ORDER SUMMARY
                                 </td>
                             </tr>
-                            <tr t-if="not data['orders']">
-                                <td colspan="8" class="text-center">✅ No pending orders found.</td>
+                            <tr>
+                                <td style="padding: 8px 10px 8px 35px; color: #424242; border-bottom: 1px solid #eeeeee; font-weight: 500;">Total Pending Orders</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #ef6c00; border-bottom: 1px solid #eeeeee; font-weight: bold; font-size: 14px;">
+                                    <t t-esc="data['total_orders']"/>
+                                </td>
                             </tr>
-                            <tr class="font-weight-bold" style="background: #f5f5f5;">
-                                <td colspan="5">Total</td>
-                                <td class="text-right"><span t-esc="'{:,.2f}'.format(data['total_value'])"/></td>
-                                <td></td>
-                                <td></td>
+                            <tr>
+                                <td style="padding: 8px 10px 8px 35px; color: #424242; border-bottom: 1px solid #eeeeee; font-weight: 500;">Total Value (USD)</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #2e7d32; border-bottom: 1px solid #eeeeee; font-weight: 500;">
+                                    $<t t-esc="'{:,.2f}'.format(data['total_value'])"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 10px 8px 35px; color: #424242; border-bottom: 1px solid #eeeeee; font-weight: 500;">Average Age (Days)</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #5c6bc0; border-bottom: 1px solid #eeeeee; font-weight: 500;">
+                                    <t t-esc="'{:.1f}'.format(data['avg_age'])"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 10px 8px 35px; color: #424242; border-bottom: 1px solid #eeeeee; font-weight: 500;">Old Orders (&gt;7 days)</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #c62828; border-bottom: 1px solid #eeeeee; font-weight: bold;">
+                                    <t t-esc="data['old_orders_count']"/>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
+
+                    <!-- Orders Detail Table -->
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px;">
+                        <thead>
+                            <tr style="background-color: #f5f5f5;">
+                                <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: left; font-weight: bold; color: #333;">Type</th>
+                                <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: left; font-weight: bold; color: #333;">Reference</th>
+                                <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: left; font-weight: bold; color: #333;">Date</th>
+                                <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: left; font-weight: bold; color: #333;">Salesperson</th>
+                                <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: left; font-weight: bold; color: #333;">Customer</th>
+                                <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: right; font-weight: bold; color: #333;">Total (USD)</th>
+                                <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: right; font-weight: bold; color: #333;">Age</th>
+                                <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: center; font-weight: bold; color: #333;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Section Header -->
+                            <tr style="background-color: #e8eaf6;">
+                                <td colspan="8" style="padding: 12px 10px; font-weight: bold; font-size: 12px; color: #1a237e; border-bottom: 2px solid #c5cae9;">
+                                    ► ORDER DETAILS
+                                </td>
+                            </tr>
+
+                            <!-- Order Rows -->
+                            <t t-foreach="data['orders']" t-as="order">
+                                <tr>
+                                    <td style="padding: 8px 10px; color: #424242; border-bottom: 1px solid #eeeeee;">
+                                        <span t-if="order['type'] == 'Sales Order'" style="background-color: #e3f2fd; color: #1565c0; padding: 2px 6px; border-radius: 3px; font-size: 10px;">Sales</span>
+                                        <span t-elif="order['type'] == 'Customer Order'" style="background-color: #e8f5e9; color: #2e7d32; padding: 2px 6px; border-radius: 3px; font-size: 10px;">Customer</span>
+                                        <span t-else="" style="background-color: #fff3e0; color: #ef6c00; padding: 2px 6px; border-radius: 3px; font-size: 10px;">Place</span>
+                                    </td>
+                                    <td style="padding: 8px 10px; color: #424242; border-bottom: 1px solid #eeeeee; font-weight: 600;"><t t-esc="order['reference']"/></td>
+                                    <td style="padding: 8px 10px; color: #757575; border-bottom: 1px solid #eeeeee;"><t t-esc="order['date']"/></td>
+                                    <td style="padding: 8px 10px; color: #424242; border-bottom: 1px solid #eeeeee;"><t t-esc="order['salesperson']"/></td>
+                                    <td style="padding: 8px 10px; color: #424242; border-bottom: 1px solid #eeeeee;"><t t-esc="order['customer']"/></td>
+                                    <td style="padding: 8px 10px; text-align: right; color: #2e7d32; border-bottom: 1px solid #eeeeee; font-weight: 500;">$<t t-esc="'{:,.2f}'.format(order['total'])"/></td>
+                                    <td style="padding: 8px 10px; text-align: right; border-bottom: 1px solid #eeeeee;">
+                                        <t t-if="order['age_days'] > 7">
+                                            <span style="color: #c62828; font-weight: bold;"><t t-esc="order['age_days']"/></span>
+                                        </t>
+                                        <t t-elif="order['age_days'] > 3">
+                                            <span style="color: #ef6c00;"><t t-esc="order['age_days']"/></span>
+                                        </t>
+                                        <t t-else="">
+                                            <span style="color: #2e7d32;"><t t-esc="order['age_days']"/></span>
+                                        </t>
+                                    </td>
+                                    <td style="padding: 8px 10px; text-align: center; border-bottom: 1px solid #eeeeee;">
+                                        <span style="background-color: #fff3e0; color: #ef6c00; padding: 2px 8px; border-radius: 3px; font-size: 10px;"><t t-esc="order['status']"/></span>
+                                    </td>
+                                </tr>
+                            </t>
+
+                            <!-- Empty State -->
+                            <t t-if="not data['orders']">
+                                <tr>
+                                    <td colspan="8" style="padding: 20px 10px; text-align: center; color: #9e9e9e; font-style: italic; border-bottom: 1px solid #eeeeee;">
+                                        No pending orders found matching the criteria.
+                                    </td>
+                                </tr>
+                            </t>
+
+                            <!-- Totals Row -->
+                            <tr style="background-color: #1a237e;">
+                                <td colspan="5" style="padding: 15px 10px; font-weight: bold; font-size: 13px; color: white;">
+                                    TOTAL (<t t-esc="data['total_orders']"/> orders)
+                                </td>
+                                <td style="padding: 15px 10px; text-align: right; font-weight: bold; font-size: 14px; color: white;">
+                                    $<t t-esc="'{:,.2f}'.format(data['total_value'])"/>
+                                </td>
+                                <td colspan="2"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Footer Note -->
+                    <div style="text-align: right; font-size: 10px; color: #757575; margin-top: 15px; font-style: italic;">
+                        All amounts are expressed in United States Dollars (USD)
+                    </div>
                 </div>
             </t>
         </t>
