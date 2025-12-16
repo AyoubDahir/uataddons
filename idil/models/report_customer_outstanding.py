@@ -32,12 +32,6 @@ class CustomerOutstandingWizard(models.TransientModel):
         default=True,
         help="Include salesperson accounts receivable",
     )
-    company_id = fields.Many2one(
-        'res.company', 
-        string='Company', 
-        required=True, 
-        default=lambda self: self.env.company
-    )
 
     def action_print_report(self):
         data = {
@@ -48,8 +42,8 @@ class CustomerOutstandingWizard(models.TransientModel):
             "salesperson_name": self.salesperson_id.name if self.salesperson_id else "All Salespersons",
             "min_balance": self.min_balance,
             "include_salesperson_ar": self.include_salesperson_ar,
-            "company_id": self.company_id.id,
-            "company_name": self.company_id.name,
+            "company_id": self.env.company.id,
+            "company_name": self.env.company.name,
         }
         return self.env.ref("idil.action_report_customer_outstanding").report_action(
             self, data=data
