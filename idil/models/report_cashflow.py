@@ -53,6 +53,7 @@ class ReportCashFlow(models.AbstractModel):
         lines = self.env['idil.transaction_bookingline'].search(domain)
 
         # 3. Categorize into Operating, Investing, Financing
+        # Structure: {source_name: {'amount': total, 'ledgers': {ledger_key: {'code': x, 'name': y, 'amount': z}}}}
         operating_inflows = {}
         operating_outflows = {}
         investing_inflows = {}
@@ -167,36 +168,64 @@ class ReportCashFlow(models.AbstractModel):
             source = line.transaction_booking_id.trx_source_id
             source_name = source.name if source else "Other"
             
+            # Get ledger details (the "other" non-cash account)
+            ledger_code = other_account.code or ''
+            ledger_name = other_account.name or ''
+            ledger_key = f"{ledger_code}|{ledger_name}"
+            
+            # Helper function to add to category dict with ledger details
+            def add_to_category(cat_dict, src_name, led_key, led_code, led_name, amt):
+                if src_name not in cat_dict:
+                    cat_dict[src_name] = {'amount': 0.0, 'ledgers': {}}
+                cat_dict[src_name]['amount'] += amt
+                if led_key not in cat_dict[src_name]['ledgers']:
+                    cat_dict[src_name]['ledgers'][led_key] = {'code': led_code, 'name': led_name, 'amount': 0.0}
+                cat_dict[src_name]['ledgers'][led_key]['amount'] += amt
+            
             # Add to appropriate category
             if category == 'operating':
                 if is_inflow:
                     total_operating_in += amount
-                    operating_inflows[source_name] = operating_inflows.get(source_name, 0) + amount
+                    add_to_category(operating_inflows, source_name, ledger_key, ledger_code, ledger_name, amount)
                 else:
                     total_operating_out += amount
-                    operating_outflows[source_name] = operating_outflows.get(source_name, 0) + amount
+                    add_to_category(operating_outflows, source_name, ledger_key, ledger_code, ledger_name, amount)
             elif category == 'investing':
                 if is_inflow:
                     total_investing_in += amount
-                    investing_inflows[source_name] = investing_inflows.get(source_name, 0) + amount
+                    add_to_category(investing_inflows, source_name, ledger_key, ledger_code, ledger_name, amount)
                 else:
                     total_investing_out += amount
-                    investing_outflows[source_name] = investing_outflows.get(source_name, 0) + amount
+                    add_to_category(investing_outflows, source_name, ledger_key, ledger_code, ledger_name, amount)
             elif category == 'financing':
                 if is_inflow:
                     total_financing_in += amount
-                    financing_inflows[source_name] = financing_inflows.get(source_name, 0) + amount
+                    add_to_category(financing_inflows, source_name, ledger_key, ledger_code, ledger_name, amount)
                 else:
                     total_financing_out += amount
-                    financing_outflows[source_name] = financing_outflows.get(source_name, 0) + amount
+                    add_to_category(financing_outflows, source_name, ledger_key, ledger_code, ledger_name, amount)
 
-        # Format for report
-        operating_in_list = [{'name': k, 'amount': v} for k, v in operating_inflows.items()]
-        operating_out_list = [{'name': k, 'amount': v} for k, v in operating_outflows.items()]
-        investing_in_list = [{'name': k, 'amount': v} for k, v in investing_inflows.items()]
-        investing_out_list = [{'name': k, 'amount': v} for k, v in investing_outflows.items()]
-        financing_in_list = [{'name': k, 'amount': v} for k, v in financing_inflows.items()]
-        financing_out_list = [{'name': k, 'amount': v} for k, v in financing_outflows.items()]
+        # Format for report - include ledger details
+        def format_category(cat_dict):
+            result = []
+            for source_name, data in cat_dict.items():
+                ledger_list = [
+                    {'code': v['code'], 'name': v['name'], 'amount': v['amount']}
+                    for k, v in sorted(data['ledgers'].items(), key=lambda x: x[1]['code'])
+                ]
+                result.append({
+                    'name': source_name,
+                    'amount': data['amount'],
+                    'ledgers': ledger_list
+                })
+            return result
+        
+        operating_in_list = format_category(operating_inflows)
+        operating_out_list = format_category(operating_outflows)
+        investing_in_list = format_category(investing_inflows)
+        investing_out_list = format_category(investing_outflows)
+        financing_in_list = format_category(financing_inflows)
+        financing_out_list = format_category(financing_outflows)
         
         net_operating = total_operating_in - total_operating_out
         net_investing = total_investing_in - total_investing_out
