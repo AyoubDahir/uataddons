@@ -194,10 +194,14 @@ class ReportCustomerOutstanding(models.AbstractModel):
         total_61_90 = sum(d["bucket_61_90"] for d in outstanding_data)
         total_90_plus = sum(d["bucket_90_plus"] for d in outstanding_data)
 
+        # Get company record for external_layout template
+        company = self.env['res.company'].browse(company_id)
+
         return {
             "doc_ids": docids,
             "doc_model": "idil.customer.outstanding.wizard",
             "docs": self,
+            "company": company,
             "company_name": company_name,
             "as_of_date": as_of_date,
             "exchange_rate": exchange_rate,
