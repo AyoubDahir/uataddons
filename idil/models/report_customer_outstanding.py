@@ -117,7 +117,7 @@ class ReportCustomerOutstanding(models.AbstractModel):
                 customer_balances[key]["oldest_date"] = receipt_date
 
             customer_balances[key]["receipts"].append({
-                "reference": receipt.name or f"REC-{receipt.id}",
+                "reference": f"REC-{receipt.id}",
                 "date": receipt_date.strftime("%Y-%m-%d"),
                 "due_amount": receipt.due_amount,
                 "paid_amount": receipt.paid_amount,
