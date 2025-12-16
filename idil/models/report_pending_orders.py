@@ -113,9 +113,9 @@ class ReportPendingOrders(models.AbstractModel):
 
         # Salesperson Place Orders (Draft)
         if order_type in ["all", "salesperson"]:
-            domain = [("status", "=", "draft")]
+            domain = [("state", "=", "draft")]
             if salesperson_id:
-                domain.append(("sales_person_id", "=", salesperson_id))
+                domain.append(("salesperson_id", "=", salesperson_id))
             if cutoff_date:
                 domain.append(("order_date", "<=", cutoff_date))
 
@@ -126,9 +126,9 @@ class ReportPendingOrders(models.AbstractModel):
                     "type": "Place Order",
                     "reference": order.name or f"PO-{order.id}",
                     "date": order.order_date.strftime("%Y-%m-%d") if order.order_date else "",
-                    "salesperson": order.sales_person_id.name if order.sales_person_id else "",
+                    "salesperson": order.salesperson_id.name if order.salesperson_id else "",
                     "customer": "",
-                    "total": order.order_total if hasattr(order, 'order_total') else 0,
+                    "total": order.total_quantity if hasattr(order, 'total_quantity') else 0,
                     "age_days": age,
                     "status": "Draft",
                 })
