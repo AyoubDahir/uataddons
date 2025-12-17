@@ -54,7 +54,7 @@ class ItemSummaryReportWizard(models.TransientModel):
         # Styles
         styles = getSampleStyleSheet()
         header_style = ParagraphStyle(name='Header', parent=styles['Title'], fontSize=18,
-                                      textColor=colors.HexColor("#B6862D"), alignment=1)
+                                      textColor=colors.HexColor("#1a237e"), alignment=1)
         subtitle_style = ParagraphStyle(name='Subtitle', parent=styles['Normal'], fontSize=12, alignment=1)
         left_align_style = ParagraphStyle(name='LeftAlign', parent=styles['Normal'], fontSize=12, alignment=0)
 
@@ -142,9 +142,9 @@ class ItemSummaryReportWizard(models.TransientModel):
         # Table Styling
         table = Table(data, colWidths=[80, 200, 100, 100, 100])
         table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#B6862D")),  # Header color
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1a237e")),  # Header color
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),  # Header text color
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),  # Grid styling
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),  # Grid styling
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),  # Center-align all cells
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),  # Bold header font
             ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),  # Regular font for data
@@ -152,8 +152,8 @@ class ItemSummaryReportWizard(models.TransientModel):
             ('LEFTPADDING', (0, 0), (-1, -1), 5),
             ('RIGHTPADDING', (0, 0), (-1, -1), 5),
             # Styling for Grand Total Row
-            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#FFD700")),  # Gold background
-            ('TEXTCOLOR', (0, -1), (-1, -1), colors.black),  # Black text
+            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#1a237e")),
+            ('TEXTCOLOR', (0, -1), (-1, -1), colors.white),
             ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),  # Bold font
         ]))
 

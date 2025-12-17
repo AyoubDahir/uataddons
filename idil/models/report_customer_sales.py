@@ -43,7 +43,7 @@ class CustomerSalesReportWizard(models.TransientModel):
             name="Header",
             parent=styles["Title"],
             fontSize=18,
-            textColor=colors.HexColor("#B6862D"),
+            textColor=colors.HexColor("#1a237e"),
             alignment=1,
         )
         subtitle_style = ParagraphStyle(
@@ -251,13 +251,14 @@ class CustomerSalesReportWizard(models.TransientModel):
         table = Table(data, colWidths=col_widths)
         style = TableStyle(
             [
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#B6862D")),
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1a237e")),
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
                 ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                 ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
-                ("BACKGROUND", (0, -1), (-1, -1), colors.lightgrey),
+                ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#1a237e")),
+                ("TEXTCOLOR", (0, -1), (-1, -1), colors.white),
             ]
         )
         table.setStyle(style)

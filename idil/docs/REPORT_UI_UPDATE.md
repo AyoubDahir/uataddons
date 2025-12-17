@@ -72,7 +72,7 @@ All PDF reports in the IDIL module have been updated to use a consistent, modern
 
 ## Updated Reports
 
-### Financial Reports
+### QWeb Template Reports (XML)
 
 | Report | File Location |
 |--------|---------------|
@@ -81,21 +81,25 @@ All PDF reports in the IDIL module have been updated to use a consistent, modern
 | Balance Sheet | `views/report_balance_sheet.xml` |
 | Income Statement | `views/report_income_statement.xml` |
 | Daily Cash Collection | `views/report_daily_cash_collection.xml` |
-
-### Sales Reports
-
-| Report | File Location |
-|--------|---------------|
 | Daily Sales | `reports/report_daily_sales.xml` |
 | Pending Orders | `views/report_pending_orders.xml` |
-
-### Inventory Reports
-
-| Report | File Location |
-|--------|---------------|
 | Expiring Inventory | `views/report_expiring_inventory.xml` |
 | Low Stock Alert | `views/report_low_stock_alert.xml` |
 | Kitchen Quantity | `views/report_kitchen_quantity.xml` |
+
+### ReportLab PDF Reports (Python)
+
+| Report | File Location |
+|--------|---------------|
+| Product Profitability | `models/report_productprofitability.py` |
+| Sales Summary by Person | `models/report_sales_summary_by_person.py` |
+| Product Inventory Summary | `models/report_product_inventory_summary.py` |
+| Item Summary by Vendor | `models/Report_item_summary_by_vendor.py` |
+| Customer Sales | `models/report_customer_sales.py` |
+| Employee Salary | `models/Idil_employee_Salary.py` |
+| Employee Payroll List | `models/EmployeePayrollListwithSalaryAdvance.py` |
+| HRM Salary Report | `models/idil_employee_hrm_report.py` |
+| HRM Department Report | `models/idil_employee_hrm_report_department.py` |
 
 ## Template Structure
 

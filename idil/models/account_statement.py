@@ -216,51 +216,78 @@ class TransactionReportWizard(models.TransientModel):
         )
         elements = []
 
-        # Add title and header details
+        # Define color scheme (matching cash flow statement)
+        primary_color = colors.HexColor("#1a237e")  # Dark blue
+        secondary_color = colors.HexColor("#3949ab")  # Lighter blue
+        light_bg = colors.HexColor("#e8eaf6")  # Light purple/blue
+        header_text = colors.HexColor("#c5cae9")  # Light text for header
+        success_color = colors.HexColor("#2e7d32")  # Green for positive
+        danger_color = colors.HexColor("#c62828")  # Red for negative
+        gray_bg = colors.HexColor("#f5f5f5")  # Gray background
+        border_color = colors.HexColor("#9e9e9e")  # Border gray
+        text_dark = colors.HexColor("#424242")  # Dark text
+        text_light = colors.HexColor("#757575")  # Light text
+
+        # Get styles
         styles = getSampleStyleSheet()
 
-        # Title: Center-aligned
-        title_style = styles["Title"]
-        title_style.alignment = 1  # Center alignment
-        title = Paragraph("<b>Account Statement's Report</b>", title_style)
+        # Create header table (mimicking the dark blue header from cash flow)
+        header_data = [
+            [Paragraph("<b>Account Statement</b>", ParagraphStyle(
+                'HeaderTitle',
+                fontName='Helvetica-Bold',
+                fontSize=20,
+                textColor=colors.white,
+                alignment=0,
+            ))],
+            [Paragraph(f"<b>{account_name}</b> ({account_code})", ParagraphStyle(
+                'HeaderSubtitle',
+                fontName='Helvetica',
+                fontSize=14,
+                textColor=colors.white,
+                alignment=0,
+            ))],
+            [Paragraph(
+                f"For the Period: <b>{self.start_date.strftime('%m/%d/%Y') if self.start_date else 'N/A'}</b> to "
+                f"<b>{self.end_date.strftime('%m/%d/%Y') if self.end_date else 'N/A'}</b>",
+                ParagraphStyle(
+                    'HeaderPeriod',
+                    fontName='Helvetica',
+                    fontSize=11,
+                    textColor=header_text,
+                    alignment=0,
+                )
+            )],
+        ]
+        header_table = Table(header_data, colWidths=[730])
+        header_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), primary_color),
+            ('TOPPADDING', (0, 0), (-1, 0), 15),
+            ('BOTTOMPADDING', (0, -1), (-1, -1), 15),
+            ('LEFTPADDING', (0, 0), (-1, -1), 15),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 15),
+            ('LINEBELOW', (0, -1), (-1, -1), 4, secondary_color),
+        ]))
+        elements.append(header_table)
+        elements.append(Spacer(1, 15))
 
-        # Subtitle: From and To Transaction Dates, Center-aligned
-        subtitle_style = styles["Normal"]
-        subtitle_style.alignment = 1  # Center alignment
-        subtitle = Paragraph(
-            f"From Transaction Date: <b>{self.start_date.strftime('%m/%d/%Y') if self.start_date else 'N/A'}</b> "
-            f"| To Transaction Date: <b>{self.end_date.strftime('%m/%d/%Y') if self.end_date else 'N/A'}</b>",
-            subtitle_style,
-        )
-
-        # Account Info: Wallet ID, Name, Currency, and Type, Center-aligned
-        account_info_style = styles["Normal"]
-        account_info_style.alignment = 1  # Center alignment
-        account_info = Paragraph(
-            f"Account No: <b>{account_code}</b> | Account Name: <b>{account_name}</b><br/>"
-            f"Currency ID: <b>{account_currency}</b> | Account Type: <b>{account_type}</b>",
-            account_info_style,
-        )
-
-        # Append elements to ensure all are center-aligned
-        elements.append(title)
-        elements.append(subtitle)
-        elements.append(account_info)
-        elements.append(Spacer(1, 20))  # Add spacing below account info
-
-        # Footer details
-        current_user = self.env.user.name
-        current_datetime = datetime.now().strftime("%d-%b-%Y %H:%M:%S")
-        footer_style = styles["Normal"]
-        footer_style.fontSize = 10
-        footer_style.alignment = 2  # Right alignment
-        footer = Paragraph(
-            f"<b>Printed By:</b> {current_user}<br/><b>Report Printed Date:</b> {current_datetime}",
-            footer_style,
-        )
-
-        # Add table header and data (if needed)
-        data = [["Transaction Date", "TRS NO", "Description", "Dr", "Cr", "Balance"]]
+        # Account Info Section
+        account_info_data = [[
+            Paragraph(f"<b>Account Type:</b> {account_type}", ParagraphStyle(
+                'AccountInfo', fontName='Helvetica', fontSize=10, textColor=text_dark)),
+            Paragraph(f"<b>Currency:</b> {account_currency}", ParagraphStyle(
+                'AccountInfo', fontName='Helvetica', fontSize=10, textColor=text_dark)),
+        ]]
+        account_info_table = Table(account_info_data, colWidths=[365, 365])
+        account_info_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), light_bg),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+            ('LEFTPADDING', (0, 0), (-1, -1), 15),
+            ('LINEBELOW', (0, 0), (-1, -1), 2, colors.HexColor("#c5cae9")),
+        ]))
+        elements.append(account_info_table)
+        elements.append(Spacer(1, 15))
 
         # Query to fetch transactions
         transaction_query = """
@@ -291,85 +318,129 @@ class TransactionReportWizard(models.TransientModel):
         )
         transactions = self.env.cr.fetchall()
 
+        # Create styled header for table
+        header_style = ParagraphStyle(
+            'TableHeader',
+            fontName='Helvetica-Bold',
+            fontSize=10,
+            textColor=colors.white,
+            alignment=1,
+        )
+        
+        # Table header
+        data = [[
+            Paragraph("Transaction Date", header_style),
+            Paragraph("TRS NO", header_style),
+            Paragraph("Description", header_style),
+            Paragraph("Debit", header_style),
+            Paragraph("Credit", header_style),
+            Paragraph("Balance", header_style),
+        ]]
+
+        # Cell styles
+        cell_style = ParagraphStyle('Cell', fontName='Helvetica', fontSize=9, textColor=text_dark, alignment=1)
+        cell_style_left = ParagraphStyle('CellLeft', fontName='Helvetica', fontSize=9, textColor=text_dark, alignment=0)
+        debit_style = ParagraphStyle('Debit', fontName='Helvetica', fontSize=9, textColor=success_color, alignment=2)
+        credit_style = ParagraphStyle('Credit', fontName='Helvetica', fontSize=9, textColor=danger_color, alignment=2)
+        balance_style = ParagraphStyle('Balance', fontName='Helvetica-Bold', fontSize=9, textColor=text_dark, alignment=2)
+
         for transaction in transactions:
-            data.append(
-                [
-                    transaction[0].strftime("%m/%d/%Y") if transaction[0] else "",
-                    transaction[1] or "",
-                    transaction[2] or "",
-                    f"{transaction[4]:,.2f}" if transaction[4] else "0.00",
-                    f"{transaction[5]:,.2f}" if transaction[5] else "0.00",
-                    f"{transaction[6]:,.2f}" if transaction[6] else "0.00",
-                ]
-            )
+            dr_amount = transaction[4] if transaction[4] else 0.0
+            cr_amount = transaction[5] if transaction[5] else 0.0
+            balance = transaction[6] if transaction[6] else 0.0
+            
+            # Format balance with color based on positive/negative
+            if balance >= 0:
+                balance_cell_style = ParagraphStyle('BalancePos', fontName='Helvetica-Bold', fontSize=9, textColor=success_color, alignment=2)
+                balance_text = f"${balance:,.2f}"
+            else:
+                balance_cell_style = ParagraphStyle('BalanceNeg', fontName='Helvetica-Bold', fontSize=9, textColor=danger_color, alignment=2)
+                balance_text = f"(${abs(balance):,.2f})"
+
+            data.append([
+                Paragraph(transaction[0].strftime("%m/%d/%Y") if transaction[0] else "", cell_style),
+                Paragraph(str(transaction[1]) if transaction[1] else "", cell_style),
+                Paragraph(str(transaction[2]) if transaction[2] else "", cell_style_left),
+                Paragraph(f"${dr_amount:,.2f}" if dr_amount else "-", debit_style),
+                Paragraph(f"(${cr_amount:,.2f})" if cr_amount else "-", credit_style),
+                Paragraph(balance_text, balance_cell_style),
+            ])
 
         # Add totals
         total_debit = sum(row[4] for row in transactions if row[4])
         total_credit = sum(row[5] for row in transactions if row[5])
-        data.append(
-            [
-                "",
-                "",
-                "Grand Total",
-                f"{total_debit:,.2f}",
-                f"{total_credit:,.2f}",
-                f"{total_debit - total_credit:,.2f}",
-            ]
-        )
+        net_balance = total_debit - total_credit
+        
+        total_style = ParagraphStyle('Total', fontName='Helvetica-Bold', fontSize=10, textColor=colors.white, alignment=2)
+        total_label_style = ParagraphStyle('TotalLabel', fontName='Helvetica-Bold', fontSize=10, textColor=colors.white, alignment=0)
+        
+        if net_balance >= 0:
+            net_text = f"${net_balance:,.2f}"
+        else:
+            net_text = f"(${abs(net_balance):,.2f})"
+
+        data.append([
+            Paragraph("", total_style),
+            Paragraph("", total_style),
+            Paragraph("GRAND TOTAL", total_label_style),
+            Paragraph(f"${total_debit:,.2f}", total_style),
+            Paragraph(f"(${total_credit:,.2f})", total_style),
+            Paragraph(net_text, total_style),
+        ])
 
         # Create and style the table
-        table = Table(data, colWidths=[90, 50, 290, 80, 80, 100, 100])
-        table.setStyle(
-            TableStyle(
-                [
-                    (
-                        "BACKGROUND",
-                        (0, 0),
-                        (-1, 0),
-                        colors.HexColor("#B6862D"),
-                    ),  # Header background
-                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),  # Header text color
-                    ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),  # Add grid lines
-                    (
-                        "LINEBELOW",
-                        (0, 0),
-                        (-1, 0),
-                        1.5,
-                        colors.black,
-                    ),  # Bold line below header
-                    (
-                        "LINEABOVE",
-                        (0, -1),
-                        (-1, -1),
-                        1.5,
-                        colors.black,
-                    ),  # Bold line above totals
-                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),  # Center-align all columns
-                    (
-                        "VALIGN",
-                        (0, 0),
-                        (-1, -1),
-                        "MIDDLE",
-                    ),  # Vertically align to the middle
-                    (
-                        "FONTNAME",
-                        (0, 0),
-                        (-1, 0),
-                        "Helvetica-Bold",
-                    ),  # Bold font for header
-                    (
-                        "FONTNAME",
-                        (0, -1),
-                        (-1, -1),
-                        "Helvetica-Bold",
-                    ),  # Bold font for totals
-                ]
-            )
-        )
+        table = Table(data, colWidths=[90, 60, 280, 90, 90, 100])
+        
+        # Build table styles
+        table_styles = [
+            # Header row styling
+            ('BACKGROUND', (0, 0), (-1, 0), primary_color),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('LINEBELOW', (0, 0), (-1, 0), 2, secondary_color),
+            
+            # Grand total row styling (last row)
+            ('BACKGROUND', (0, -1), (-1, -1), primary_color),
+            ('TEXTCOLOR', (0, -1), (-1, -1), colors.white),
+            ('LINEABOVE', (0, -1), (-1, -1), 2, border_color),
+            
+            # General styling
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            
+            # Alternating row colors for data rows
+            ('LINEBELOW', (0, 1), (-1, -2), 0.5, colors.HexColor("#eeeeee")),
+        ]
+        
+        # Add alternating row backgrounds
+        for i in range(1, len(data) - 1):
+            if i % 2 == 0:
+                table_styles.append(('BACKGROUND', (0, i), (-1, i), colors.HexColor("#fafafa")))
+        
+        table.setStyle(TableStyle(table_styles))
 
         elements.append(table)
-        elements.append(Spacer(1, 12))
-        elements.append(footer)
+        elements.append(Spacer(1, 20))
+
+        # Footer with modern styling
+        current_user = self.env.user.name
+        current_datetime = datetime.now().strftime("%d-%b-%Y %H:%M:%S")
+        
+        footer_data = [[
+            Paragraph(f"<i>Printed By: {current_user}</i>", ParagraphStyle(
+                'FooterLeft', fontName='Helvetica', fontSize=9, textColor=text_light, alignment=0)),
+            Paragraph(f"<i>Report Date: {current_datetime}</i>", ParagraphStyle(
+                'FooterRight', fontName='Helvetica', fontSize=9, textColor=text_light, alignment=2)),
+        ]]
+        footer_table = Table(footer_data, colWidths=[365, 365])
+        footer_table.setStyle(TableStyle([
+            ('LINEABOVE', (0, 0), (-1, 0), 1, colors.HexColor("#e0e0e0")),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ]))
+        elements.append(footer_table)
 
         # Build the PDF document
         doc.build(elements)

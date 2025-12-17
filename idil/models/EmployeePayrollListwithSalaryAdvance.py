@@ -147,7 +147,7 @@ class HRMSalaryListReportWizard(models.TransientModel):
 
             table = Table(data, colWidths=[50, 200, 100, 130, 80, 80, 60, 80])
             # table.setStyle(TableStyle([
-            #     ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#B6862D")),
+            #     ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1a237e")),
             #     ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
             #     ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             # ]))
@@ -155,7 +155,7 @@ class HRMSalaryListReportWizard(models.TransientModel):
 
             # Add table style
             table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#B6862D")),  # Header row background
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1a237e")),  # Header row background
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # Header row text color
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),  # Center align all cells
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),  # Header row font

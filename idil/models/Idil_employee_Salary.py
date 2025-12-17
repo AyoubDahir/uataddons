@@ -852,11 +852,11 @@ class IdilEmployeeSalary(models.Model):
                         ("ALIGN", (1, 0), (2, 0), "CENTER"),
                         ("FONTNAME", (1, 0), (2, 0), "Helvetica-Bold"),
                         ("FONTSIZE", (1, 0), (2, 0), 14),
-                        ("TEXTCOLOR", (1, 0), (2, 0), colors.HexColor("#B6862D")),
+                        ("TEXTCOLOR", (1, 0), (2, 0), colors.HexColor("#1a237e")),
                         ("BOTTOMPADDING", (1, 0), (2, 0), 12),
                         # Employee Details Header Styling
                         ("SPAN", (0, 1), (3, 1)),  # Span Employee Details header
-                        ("BACKGROUND", (0, 1), (3, 1), colors.HexColor("#B6862D")),
+                        ("BACKGROUND", (0, 1), (3, 1), colors.HexColor("#1a237e")),
                         ("TEXTCOLOR", (0, 1), (3, 1), colors.white),
                         ("ALIGN", (0, 1), (3, 1), "CENTER"),
                         ("FONTNAME", (0, 1), (3, 1), "Helvetica-Bold"),
@@ -869,7 +869,7 @@ class IdilEmployeeSalary(models.Model):
                         ("FONTSIZE", (0, 2), (-1, 4), 10),
                         ("LEFTPADDING", (0, 2), (-1, 4), 10),
                         # Earnings and Deductions Header Styling
-                        ("BACKGROUND", (0, 5), (-1, 5), colors.HexColor("#B6862D")),
+                        ("BACKGROUND", (0, 5), (-1, 5), colors.HexColor("#1a237e")),
                         ("TEXTCOLOR", (0, 5), (-1, 5), colors.white),
                         ("ALIGN", (0, 5), (-1, 5), "CENTER"),
                         ("FONTNAME", (0, 5), (-1, 5), "Helvetica-Bold"),

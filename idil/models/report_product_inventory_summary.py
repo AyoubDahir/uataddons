@@ -62,7 +62,7 @@ class ProductInventorySummaryWizard(models.TransientModel):
             name="Header",
             parent=styles["Title"],
             fontSize=18,
-            textColor=colors.HexColor("#2C3E50"),
+            textColor=colors.HexColor("#1a237e"),
             alignment=1,
         )
         subtitle_style = ParagraphStyle(
@@ -263,10 +263,10 @@ class ProductInventorySummaryWizard(models.TransientModel):
         col_widths = [110, 55, 55, 55, 65, 55, 55, 55, 60, 65]
         table = Table(data, colWidths=col_widths)
 
-        # Table Style (matching screenshot golden header)
+        # Table Style
         style = TableStyle([
             # Header Row
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#B8860B")),  # Dark Gold
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1a237e")),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
             ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
             ("ALIGN", (0, 0), (0, -1), "LEFT"),
@@ -275,14 +275,15 @@ class ProductInventorySummaryWizard(models.TransientModel):
             ("BOTTOMPADDING", (0, 0), (-1, 0), 10),
             ("TOPPADDING", (0, 0), (-1, 0), 10),
             # Data Rows
-            ("BACKGROUND", (0, 1), (-1, -2), colors.HexColor("#FFFDF5")),
+            ("BACKGROUND", (0, 1), (-1, -2), colors.HexColor("#f5f5f5")),
             ("FONTSIZE", (0, 1), (-1, -1), 8),
-            ("GRID", (0, 0), (-1, -2), 0.5, colors.HexColor("#D4AF37")),
+            ("GRID", (0, 0), (-1, -2), 0.5, colors.HexColor("#e0e0e0")),
             # Totals Row
-            ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#F5E6C8")),
+            ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#1a237e")),
+            ("TEXTCOLOR", (0, -1), (-1, -1), colors.white),
             ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
             ("TOPPADDING", (0, -1), (-1, -1), 10),
-            ("LINEABOVE", (0, -1), (-1, -1), 1, colors.HexColor("#B8860B")),
+            ("LINEABOVE", (0, -1), (-1, -1), 1, colors.HexColor("#1a237e")),
         ])
         table.setStyle(style)
 

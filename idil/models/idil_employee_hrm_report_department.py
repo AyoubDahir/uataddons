@@ -137,7 +137,7 @@ class HRMSalaryDepartmentReportWizard(models.TransientModel):
 
             table = Table(data, colWidths=[100, 100, 100, 100, 100, 100])
             table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#B6862D")),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1a237e")),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             ]))

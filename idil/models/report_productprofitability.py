@@ -54,7 +54,7 @@ class ProductProfitabilityReportWizard(models.TransientModel):
             name="Header",
             parent=styles["Title"],
             fontSize=18,
-            textColor=colors.HexColor("#2C3E50"),
+            textColor=colors.HexColor("#1a237e"),
             alignment=1,
         )
         subtitle_style = ParagraphStyle(
@@ -207,17 +207,18 @@ class ProductProfitabilityReportWizard(models.TransientModel):
         # Style
         style = TableStyle(
             [
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2C3E50")),
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1a237e")),
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
                 ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
                 ("ALIGN", (0, 0), (0, -1), "LEFT"),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                 ("FONTSIZE", (0, 0), (-1, 0), 10),
                 ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
-                ("BACKGROUND", (0, 1), (-1, -2), colors.HexColor("#F8F9F9")),
-                ("GRID", (0, 0), (-1, -2), 0.5, colors.grey),
+                ("BACKGROUND", (0, 1), (-1, -2), colors.HexColor("#f5f5f5")),
+                ("GRID", (0, 0), (-1, -2), 0.5, colors.HexColor("#e0e0e0")),
                 # Totals Row Style
-                ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#EAEDED")),
+                ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#1a237e")),
+                ("TEXTCOLOR", (0, -1), (-1, -1), colors.white),
                 ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
                 ("TOPPADDING", (0, -1), (-1, -1), 12),
             ]

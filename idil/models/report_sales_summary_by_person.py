@@ -483,7 +483,7 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
             name="Header",
             parent=styles["Title"],
             fontSize=18,
-            textColor=colors.HexColor("#B6862D"),
+            textColor=colors.HexColor("#1a237e"),
             alignment=1,
         )
         subtitle_style = ParagraphStyle(
@@ -982,9 +982,9 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
         )
         style = TableStyle(
             [
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#B6862D")),
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1a237e")),
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
                 ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
             ]
@@ -999,7 +999,13 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
             "BACKGROUND",
             (0, final_balance_index),
             (-1, final_balance_index),
-            colors.HexColor("#FFD700"),
+            colors.HexColor("#1a237e"),
+        )
+        style.add(
+            "TEXTCOLOR",
+            (0, final_balance_index),
+            (-1, final_balance_index),
+            colors.white,
         )
 
         table.setStyle(style)
