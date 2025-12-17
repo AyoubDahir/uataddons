@@ -316,18 +316,11 @@ class ProductPurchaseOrderLine(models.Model):
 
                     # Get debit and credit accounts
                     debit_account = product.asset_account_id
-                    credit_account = (
-                        credit_account_id  # already determined based on payment method
-                    )
+                    credit_account = credit_account_id
 
-                    # Ensure both accounts have the same currency
-                    if debit_account.currency_id.id != credit_account.currency_id.id:
-                        raise ValidationError(
-                            f"Currency mismatch:\n"
-                            f"Debit Account '{debit_account.name}' is in {debit_account.currency_id.name},\n"
-                            f"Credit Account '{credit_account.name}' is in {credit_account.currency_id.name}.\n"
-                            f"Both must be the same to proceed."
-                        )
+                    # Get currencies
+                    debit_currency = debit_account.currency_id
+                    credit_currency = credit_account.currency_id
 
                     # Create transaction booking
                     booking = self.env["idil.transaction_booking"].create(
@@ -353,35 +346,138 @@ class ProductPurchaseOrderLine(models.Model):
                         }
                     )
 
-                    # Create debit line (Inventory asset)
-                    self.env["idil.transaction_bookingline"].create(
-                        {
-                            "transaction_booking_id": booking.id,
-                            "product_purchase_order_id": order.id,
-                            "transaction_type": "dr",
-                            "dr_amount": line.amount,
-                            "cr_amount": 0,
-                            "account_number": product.asset_account_id.id,
-                            "product_id": product.id,
-                            "transaction_date": order.purchase_date,
-                            "company_id": self.env.company.id,
-                        }
-                    )
+                    # Check if currencies match
+                    if debit_currency.id == credit_currency.id:
+                        # Same currency - simple 2-line booking
+                        # Create debit line (Inventory asset)
+                        self.env["idil.transaction_bookingline"].create(
+                            {
+                                "transaction_booking_id": booking.id,
+                                "product_purchase_order_id": order.id,
+                                "transaction_type": "dr",
+                                "dr_amount": line.amount,
+                                "cr_amount": 0,
+                                "account_number": product.asset_account_id.id,
+                                "product_id": product.id,
+                                "transaction_date": order.purchase_date,
+                                "company_id": self.env.company.id,
+                            }
+                        )
 
-                    # Create credit line (Cash or A/P)
-                    self.env["idil.transaction_bookingline"].create(
-                        {
-                            "transaction_booking_id": booking.id,
-                            "product_purchase_order_id": order.id,
-                            "transaction_type": "cr",
-                            "dr_amount": 0,
-                            "cr_amount": line.amount,
-                            "account_number": credit_account_id.id,
-                            "product_id": product.id,
-                            "transaction_date": order.purchase_date,
-                            "company_id": self.env.company.id,
-                        }
-                    )
+                        # Create credit line (Cash or A/P)
+                        self.env["idil.transaction_bookingline"].create(
+                            {
+                                "transaction_booking_id": booking.id,
+                                "product_purchase_order_id": order.id,
+                                "transaction_type": "cr",
+                                "dr_amount": 0,
+                                "cr_amount": line.amount,
+                                "account_number": credit_account_id.id,
+                                "product_id": product.id,
+                                "transaction_date": order.purchase_date,
+                                "company_id": self.env.company.id,
+                            }
+                        )
+                    else:
+                        # Different currencies - use 4-line clearing account pattern
+                        if not order.rate or order.rate <= 0:
+                            raise ValidationError(
+                                "Exchange rate is required for cross-currency purchases."
+                            )
+
+                        # Calculate amounts in both currencies
+                        amount_debit_currency = line.amount  # Amount in product's currency
+
+                        # Convert to payment/credit currency
+                        if debit_currency.name == "USD" and credit_currency.name == "SL":
+                            amount_credit_currency = line.amount * order.rate
+                        elif debit_currency.name == "SL" and credit_currency.name == "USD":
+                            amount_credit_currency = line.amount / order.rate
+                        else:
+                            raise ValidationError(
+                                f"Unhandled currency conversion from {debit_currency.name} to {credit_currency.name}"
+                            )
+
+                        # Get clearing accounts
+                        source_clearing = self.env["idil.chart.account"].search(
+                            [
+                                ("name", "=", "Exchange Clearing Account"),
+                                ("currency_id", "=", debit_currency.id),
+                            ],
+                            limit=1,
+                        )
+                        target_clearing = self.env["idil.chart.account"].search(
+                            [
+                                ("name", "=", "Exchange Clearing Account"),
+                                ("currency_id", "=", credit_currency.id),
+                            ],
+                            limit=1,
+                        )
+
+                        if not source_clearing or not target_clearing:
+                            raise ValidationError(
+                                "Exchange Clearing Accounts are required for cross-currency purchases."
+                            )
+
+                        # Line 1: DR Product Asset (product currency)
+                        self.env["idil.transaction_bookingline"].create(
+                            {
+                                "transaction_booking_id": booking.id,
+                                "product_purchase_order_id": order.id,
+                                "transaction_type": "dr",
+                                "dr_amount": amount_debit_currency,
+                                "cr_amount": 0,
+                                "account_number": product.asset_account_id.id,
+                                "product_id": product.id,
+                                "transaction_date": order.purchase_date,
+                                "company_id": self.env.company.id,
+                            }
+                        )
+
+                        # Line 2: CR Source Clearing (product currency)
+                        self.env["idil.transaction_bookingline"].create(
+                            {
+                                "transaction_booking_id": booking.id,
+                                "product_purchase_order_id": order.id,
+                                "transaction_type": "cr",
+                                "dr_amount": 0,
+                                "cr_amount": amount_debit_currency,
+                                "account_number": source_clearing.id,
+                                "product_id": product.id,
+                                "transaction_date": order.purchase_date,
+                                "company_id": self.env.company.id,
+                            }
+                        )
+
+                        # Line 3: DR Target Clearing (payment currency)
+                        self.env["idil.transaction_bookingline"].create(
+                            {
+                                "transaction_booking_id": booking.id,
+                                "product_purchase_order_id": order.id,
+                                "transaction_type": "dr",
+                                "dr_amount": amount_credit_currency,
+                                "cr_amount": 0,
+                                "account_number": target_clearing.id,
+                                "product_id": product.id,
+                                "transaction_date": order.purchase_date,
+                                "company_id": self.env.company.id,
+                            }
+                        )
+
+                        # Line 4: CR Payment/AP Account (payment currency)
+                        self.env["idil.transaction_bookingline"].create(
+                            {
+                                "transaction_booking_id": booking.id,
+                                "product_purchase_order_id": order.id,
+                                "transaction_type": "cr",
+                                "dr_amount": 0,
+                                "cr_amount": amount_credit_currency,
+                                "account_number": credit_account_id.id,
+                                "product_id": product.id,
+                                "transaction_date": order.purchase_date,
+                                "company_id": self.env.company.id,
+                            }
+                        )
 
                     # Book vendor transaction if payment is A/P
                     if order.payment_method == "ap":

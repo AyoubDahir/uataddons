@@ -41,6 +41,13 @@ class BOM(models.Model):
         tracking=True,
     )
 
+    is_mixed_currency = fields.Boolean(
+        string="Mixed Currency BOM",
+        compute="_compute_is_mixed_currency",
+        store=True,
+        help="Indicates if BOM contains items with different currencies",
+    )
+
     @api.depends("bom_line_ids", "bom_line_ids.Item_id")
     def _compute_currency_id(self):
         for bom in self:
@@ -53,24 +60,22 @@ class BOM(models.Model):
                 elif line_currency != currency:
                     all_same = False
                     break
+            # For mixed currency BOMs, set to False (will be handled per-line)
             bom.currency_id = currency if all_same else False
 
-    @api.depends("bom_line_ids.total")
-    def _compute_total_cost(self):
-        for bom in self:
-            bom.total_cost = round(sum(line.total for line in bom.bom_line_ids), 5)
-
-    @api.constrains("bom_line_ids")
-    def _check_uniform_currency(self):
+    @api.depends("bom_line_ids", "bom_line_ids.currency_id")
+    def _compute_is_mixed_currency(self):
         for bom in self:
             currencies = set()
             for line in bom.bom_line_ids:
                 if line.Item_id and line.Item_id.asset_account_id.currency_id:
                     currencies.add(line.Item_id.asset_account_id.currency_id.id)
-            if len(currencies) > 1:
-                raise ValidationError(
-                    "All BOM line items must use the same asset account currency."
-                )
+            bom.is_mixed_currency = len(currencies) > 1
+
+    @api.depends("bom_line_ids.total")
+    def _compute_total_cost(self):
+        for bom in self:
+            bom.total_cost = round(sum(line.total for line in bom.bom_line_ids), 5)
 
 
 # BOM Line Model

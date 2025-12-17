@@ -136,32 +136,17 @@ class VendorTransaction(models.Model):
         return available_balance >= paid_amount
 
     def _update_booking_payment(self, new_paid_amount, payment_id):
-        # ✅ Validate currency match
         # Use vendor's account payable for the debit transaction
         try:
             with self.env.cr.savepoint():
                 account_payable = self.vendor_id.account_payable_id
-
-                if account_payable.currency_id != self.cash_account_id.currency_id:
-                    raise ValidationError(
-                        (
-                            "Currency mismatch between Cash Account (%s) and Account Payable (%s). Please use accounts with the same currency."
-                        )
-                        % (
-                            self.cash_account_id.currency_id.name or "Undefined",
-                            account_payable.currency_id.name or "Undefined",
-                        )
-                    )
+                payable_currency = account_payable.currency_id
+                cash_currency = self.cash_account_id.currency_id
 
                 if self.transaction_booking_id:
                     previous_paid_amount = self.transaction_booking_id.amount_paid
                     updated_paid_amount = previous_paid_amount + new_paid_amount
-                    # self.transaction_booking_id.amount_paid = updated_paid_amount
 
-                    remaining_amount = (
-                        self.transaction_booking_id.amount - updated_paid_amount
-                    )
-                    # self.transaction_booking_id.remaining_amount = remaining_amount
                     self.transaction_booking_id.write(
                         {
                             "amount_paid": updated_paid_amount,
@@ -170,31 +155,128 @@ class VendorTransaction(models.Model):
                         }
                     )
 
-                    # Create the debit line
-                    self.env["idil.transaction_bookingline"].create(
-                        {
-                            "transaction_booking_id": self.transaction_booking_id.id,
-                            "account_number": account_payable.id,
-                            "transaction_type": "dr",
-                            "dr_amount": new_paid_amount,
-                            "cr_amount": 0,
-                            "transaction_date": fields.Date.today(),
-                            "vendor_payment_id": payment_id,
-                        }
-                    )
+                    # Check if currencies match
+                    if payable_currency.id == cash_currency.id:
+                        # Same currency - simple 2-line booking
+                        # Create the debit line
+                        self.env["idil.transaction_bookingline"].create(
+                            {
+                                "transaction_booking_id": self.transaction_booking_id.id,
+                                "account_number": account_payable.id,
+                                "transaction_type": "dr",
+                                "dr_amount": new_paid_amount,
+                                "cr_amount": 0,
+                                "transaction_date": fields.Date.today(),
+                                "vendor_payment_id": payment_id,
+                            }
+                        )
 
-                    # Create the credit line
-                    self.env["idil.transaction_bookingline"].create(
-                        {
-                            "transaction_booking_id": self.transaction_booking_id.id,
-                            "account_number": self.cash_account_id.id,
-                            "transaction_type": "cr",
-                            "cr_amount": new_paid_amount,
-                            "dr_amount": 0,
-                            "transaction_date": fields.Date.today(),
-                            "vendor_payment_id": payment_id,
-                        }
-                    )
+                        # Create the credit line
+                        self.env["idil.transaction_bookingline"].create(
+                            {
+                                "transaction_booking_id": self.transaction_booking_id.id,
+                                "account_number": self.cash_account_id.id,
+                                "transaction_type": "cr",
+                                "cr_amount": new_paid_amount,
+                                "dr_amount": 0,
+                                "transaction_date": fields.Date.today(),
+                                "vendor_payment_id": payment_id,
+                            }
+                        )
+                    else:
+                        # Different currencies - use 4-line clearing account pattern
+                        # Get exchange rate
+                        rate = self.transaction_booking_id.rate
+                        if not rate or rate <= 0:
+                            raise ValidationError(
+                                "Exchange rate is required for cross-currency payments."
+                            )
+
+                        # Calculate amounts in both currencies
+                        amount_payable_currency = new_paid_amount  # Amount in vendor's payable currency
+
+                        # Convert to cash currency
+                        if payable_currency.name == "USD" and cash_currency.name == "SL":
+                            amount_cash_currency = new_paid_amount * rate
+                        elif payable_currency.name == "SL" and cash_currency.name == "USD":
+                            amount_cash_currency = new_paid_amount / rate
+                        else:
+                            raise ValidationError(
+                                f"Unhandled currency conversion from {payable_currency.name} to {cash_currency.name}"
+                            )
+
+                        # Get clearing accounts
+                        source_clearing = self.env["idil.chart.account"].search(
+                            [
+                                ("name", "=", "Exchange Clearing Account"),
+                                ("currency_id", "=", payable_currency.id),
+                            ],
+                            limit=1,
+                        )
+                        target_clearing = self.env["idil.chart.account"].search(
+                            [
+                                ("name", "=", "Exchange Clearing Account"),
+                                ("currency_id", "=", cash_currency.id),
+                            ],
+                            limit=1,
+                        )
+
+                        if not source_clearing or not target_clearing:
+                            raise ValidationError(
+                                "Exchange Clearing Accounts are required for cross-currency payments."
+                            )
+
+                        # Line 1: DR Account Payable (payable currency)
+                        self.env["idil.transaction_bookingline"].create(
+                            {
+                                "transaction_booking_id": self.transaction_booking_id.id,
+                                "account_number": account_payable.id,
+                                "transaction_type": "dr",
+                                "dr_amount": amount_payable_currency,
+                                "cr_amount": 0,
+                                "transaction_date": fields.Date.today(),
+                                "vendor_payment_id": payment_id,
+                            }
+                        )
+
+                        # Line 2: CR Source Clearing (payable currency)
+                        self.env["idil.transaction_bookingline"].create(
+                            {
+                                "transaction_booking_id": self.transaction_booking_id.id,
+                                "account_number": source_clearing.id,
+                                "transaction_type": "cr",
+                                "dr_amount": 0,
+                                "cr_amount": amount_payable_currency,
+                                "transaction_date": fields.Date.today(),
+                                "vendor_payment_id": payment_id,
+                            }
+                        )
+
+                        # Line 3: DR Target Clearing (cash currency)
+                        self.env["idil.transaction_bookingline"].create(
+                            {
+                                "transaction_booking_id": self.transaction_booking_id.id,
+                                "account_number": target_clearing.id,
+                                "transaction_type": "dr",
+                                "dr_amount": amount_cash_currency,
+                                "cr_amount": 0,
+                                "transaction_date": fields.Date.today(),
+                                "vendor_payment_id": payment_id,
+                            }
+                        )
+
+                        # Line 4: CR Cash Account (cash currency)
+                        self.env["idil.transaction_bookingline"].create(
+                            {
+                                "transaction_booking_id": self.transaction_booking_id.id,
+                                "account_number": self.cash_account_id.id,
+                                "transaction_type": "cr",
+                                "dr_amount": 0,
+                                "cr_amount": amount_cash_currency,
+                                "transaction_date": fields.Date.today(),
+                                "vendor_payment_id": payment_id,
+                            }
+                        )
 
                     # Recompute remaining amount after booking lines are created
                     existing_payments = sum(

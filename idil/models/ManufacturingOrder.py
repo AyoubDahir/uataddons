@@ -431,8 +431,27 @@ class ManufacturingOrder(models.Model):
                     if order.rate <= 0:
                         raise ValidationError("Rate cannot be zero")
 
-                    cost_amount_usd = line.cost_price * line.quantity
-                    cost_amount_sos = cost_amount_usd * order.rate
+                    # Get currencies for item and product
+                    item_currency = line.item_id.asset_account_id.currency_id
+                    product_currency = order.product_id.asset_account_id.currency_id
+                    
+                    # Calculate cost in item's currency
+                    cost_amount_item = line.cost_price * line.quantity
+                    
+                    # Convert to product currency based on actual currencies
+                    if item_currency.id == product_currency.id:
+                        # Same currency - no conversion needed
+                        cost_amount_product = cost_amount_item
+                    elif item_currency.name == "USD" and product_currency.name == "SL":
+                        # USD to SL - multiply by rate
+                        cost_amount_product = cost_amount_item * order.rate
+                    elif item_currency.name == "SL" and product_currency.name == "USD":
+                        # SL to USD - divide by rate
+                        cost_amount_product = cost_amount_item / order.rate
+                    else:
+                        raise ValidationError(
+                            f"Unhandled currency conversion from {item_currency.name} to {product_currency.name}"
+                        )
 
                     # Get clearing accounts
                     source_clearing_account = self.env["idil.chart.account"].search(
@@ -441,7 +460,7 @@ class ManufacturingOrder(models.Model):
                             (
                                 "currency_id",
                                 "=",
-                                line.item_id.asset_account_id.currency_id.id,
+                                item_currency.id,
                             ),
                         ],
                         limit=1,
@@ -452,7 +471,7 @@ class ManufacturingOrder(models.Model):
                             (
                                 "currency_id",
                                 "=",
-                                order.product_id.asset_account_id.currency_id.id,
+                                product_currency.id,
                             ),
                         ],
                         limit=1,
@@ -463,7 +482,7 @@ class ManufacturingOrder(models.Model):
                             "Exchange Clearing Account are required for currency conversion."
                         )
 
-                    # Debit line for increasing product stock
+                    # Debit line for increasing product stock (in product's currency)
                     self.env["idil.transaction_bookingline"].create(
                         {
                             "transaction_booking_id": transaction_booking.id,
@@ -472,13 +491,13 @@ class ManufacturingOrder(models.Model):
                             "product_id": order.product_id.id,
                             "account_number": order.product_id.asset_account_id.id,
                             "transaction_type": "dr",
-                            "dr_amount": float(cost_amount_sos),
+                            "dr_amount": float(cost_amount_product),
                             "cr_amount": 0.0,
                             "transaction_date": order.scheduled_start_date,
                         }
                     )
 
-                    # Credit target clearing account for currency adjustment
+                    # Credit target clearing account for currency adjustment (in product's currency)
                     self.env["idil.transaction_bookingline"].create(
                         {
                             "transaction_booking_id": transaction_booking.id,
@@ -488,12 +507,12 @@ class ManufacturingOrder(models.Model):
                             "account_number": target_clearing_account.id,
                             "transaction_type": "cr",
                             "dr_amount": 0.0,
-                            "cr_amount": float(cost_amount_sos),
+                            "cr_amount": float(cost_amount_product),
                             "transaction_date": order.scheduled_start_date,
                         }
                     )
 
-                    # Debit source clearing account for currency adjustment
+                    # Debit source clearing account for currency adjustment (in item's currency)
                     self.env["idil.transaction_bookingline"].create(
                         {
                             "transaction_booking_id": transaction_booking.id,
@@ -502,13 +521,13 @@ class ManufacturingOrder(models.Model):
                             "product_id": order.product_id.id,
                             "account_number": source_clearing_account.id,
                             "transaction_type": "dr",
-                            "dr_amount": float(line.row_total),
+                            "dr_amount": float(cost_amount_item),
                             "cr_amount": 0.0,
                             "transaction_date": order.scheduled_start_date,
                         }
                     )
 
-                    # Credit item asset account to decrease stock in USD
+                    # Credit item asset account to decrease stock (in item's currency)
                     self.env["idil.transaction_bookingline"].create(
                         {
                             "transaction_booking_id": transaction_booking.id,
@@ -518,7 +537,7 @@ class ManufacturingOrder(models.Model):
                             "account_number": line.item_id.asset_account_id.id,
                             "transaction_type": "cr",
                             "dr_amount": 0.0,
-                            "cr_amount": float(line.row_total),
+                            "cr_amount": float(cost_amount_item),
                             "transaction_date": order.scheduled_start_date,
                         }
                     )

@@ -40,17 +40,26 @@ class ProductPurchaseReturn(models.Model):
         [("draft", "Draft"), ("confirmed", "Confirmed"), ("cancel", "Cancelled")],
         default="draft",
     )
-    # Currency fields
+    # Currency fields - inherited from original order
     currency_id = fields.Many2one(
         "res.currency",
         string="Currency",
-        required=True,
-        default=lambda self: self.env["res.currency"].search(
-            [("name", "=", "SL")], limit=1
-        ),
+        compute="_compute_currency_from_order",
+        store=True,
         readonly=True,
         tracking=True,
     )
+
+    @api.depends("original_order_id", "original_order_id.currency_id")
+    def _compute_currency_from_order(self):
+        for record in self:
+            if record.original_order_id and record.original_order_id.currency_id:
+                record.currency_id = record.original_order_id.currency_id
+            else:
+                # Fallback to SL if no order selected
+                record.currency_id = self.env["res.currency"].search(
+                    [("name", "=", "SL")], limit=1
+                )
     rate = fields.Float(
         string="Exchange Rate",
         compute="_compute_exchange_rate",
