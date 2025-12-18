@@ -639,10 +639,48 @@ class PurchaseOrder(models.Model):
             # Fallback if no BOM is provided
             return self.env["ir.sequence"].next_by_code("idil.purchase_order.sequence")
 
-    @api.depends("order_lines.amount")
+    @api.depends("order_lines.amount", "order_lines.item_id.asset_account_id.currency_id", "account_number.currency_id", "rate")
     def _compute_total_amount(self):
         for order in self:
-            order.amount = sum(line.amount for line in order.order_lines.exists())
+            if not order.account_number or not order.order_lines.exists():
+                order.amount = 0.0
+                continue
+                
+            payment_currency = order.account_number.currency_id
+            if not payment_currency:
+                order.amount = sum(line.amount for line in order.order_lines.exists())
+                continue
+                
+            total = 0.0
+            for line in order.order_lines.exists():
+                if not line.item_id or not line.item_id.asset_account_id.currency_id:
+                    total += line.amount  # Add as-is if no currency information
+                    continue
+                    
+                line_currency = line.item_id.asset_account_id.currency_id
+                line_amount = line.amount
+                
+                if line_currency.id == payment_currency.id:
+                    # Same currency - no conversion needed
+                    total += line_amount
+                else:
+                    # Need currency conversion
+                    rate = order.rate
+                    if not rate or rate <= 0:
+                        total += line_amount  # Add as-is if no rate (better than error)
+                        continue
+                        
+                    if line_currency.name == "USD" and payment_currency.name == "SL":
+                        # USD to SL: multiply by rate
+                        total += line_amount * rate
+                    elif line_currency.name == "SL" and payment_currency.name == "USD":
+                        # SL to USD: divide by rate
+                        total += line_amount / rate
+                    else:
+                        # Unknown conversion - add as-is (fallback)
+                        total += line_amount
+            
+            order.amount = round(total, 2)
 
     def unlink(self):
         for order in self:
