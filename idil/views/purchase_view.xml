@@ -138,10 +138,6 @@
                                            readonly="1" class="o_td_right"/>
                                     <field name="expiration_date" class="o_td_center"/>
                                 </tree>
-                                <!-- Replace footer with a proper group for total display -->
-                                <group class="oe_subtotal_footer" string="Total">
-                                    <field name="amount" widget="monetary" options="{'currency_field': 'currency_amount_id'}"/>
-                                </group>
 
                                 <form string="Item">
                                     <group>
