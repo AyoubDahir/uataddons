@@ -72,10 +72,53 @@ class BOM(models.Model):
                     currencies.add(line.Item_id.asset_account_id.currency_id.id)
             bom.is_mixed_currency = len(currencies) > 1
 
-    @api.depends("bom_line_ids.total")
+    @api.depends("bom_line_ids.total", "bom_line_ids.currency_id", "product_id.asset_account_id.currency_id")
     def _compute_total_cost(self):
         for bom in self:
-            bom.total_cost = round(sum(line.total for line in bom.bom_line_ids), 5)
+            if not bom.product_id or not bom.product_id.asset_account_id:
+                bom.total_cost = round(sum(line.total for line in bom.bom_line_ids), 5)
+                continue
+            
+            product_currency = bom.product_id.asset_account_id.currency_id
+            if not product_currency:
+                bom.total_cost = round(sum(line.total for line in bom.bom_line_ids), 5)
+                continue
+            
+            total = 0.0
+            for line in bom.bom_line_ids:
+                line_currency = line.currency_id
+                line_total = line.total or 0.0
+                
+                if not line_currency or line_currency.id == product_currency.id:
+                    # Same currency - no conversion needed
+                    total += line_total
+                else:
+                    # Need currency conversion
+                    rate = self._get_current_exchange_rate()
+                    if rate and rate > 0:
+                        if line_currency.name == "USD" and product_currency.name == "SL":
+                            # USD to SL: multiply by rate
+                            total += line_total * rate
+                        elif line_currency.name == "SL" and product_currency.name == "USD":
+                            # SL to USD: divide by rate
+                            total += line_total / rate
+                        else:
+                            # Unknown conversion - add as-is (fallback)
+                            total += line_total
+                    else:
+                        # No rate available - add as-is
+                        total += line_total
+            
+            bom.total_cost = round(total, 5)
+    
+    def _get_current_exchange_rate(self):
+        """Get current exchange rate (SL per 1 USD)"""
+        rate_record = self.env["res.currency.rate"].search(
+            [("currency_id.name", "=", "SL")],
+            order="name desc",
+            limit=1,
+        )
+        return rate_record.rate if rate_record else 0.0
 
 
 # BOM Line Model
