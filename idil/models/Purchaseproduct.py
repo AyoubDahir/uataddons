@@ -243,10 +243,19 @@ class ProductPurchaseOrderLine(models.Model):
     cost_price = fields.Float(string="Cost Price", digits=(16, 3), required=True)
     amount = fields.Float(string="Total Amount", compute="_compute_amount", store=True)
 
-    @api.depends("quantity", "cost_price")
+    @api.depends("quantity", "cost_price", "product_id.cost_value_currency_id", "order_id.rate")
     def _compute_amount(self):
         for rec in self:
-            rec.amount = rec.quantity * rec.cost_price
+            line_total = rec.quantity * rec.cost_price
+            product_currency = rec.product_id.cost_value_currency_id.name if rec.product_id and rec.product_id.cost_value_currency_id else 'USD'
+            rate = rec.order_id.rate if rec.order_id else 0.0
+
+            if product_currency == 'SL' and rate:
+                # Product cost is in SOS, convert to USD for the amount
+                rec.amount = line_total / rate
+            else:
+                # Product cost is already in USD
+                rec.amount = line_total
 
     @api.onchange("product_id")
     def _onchange_product_id_set_cost(self):
