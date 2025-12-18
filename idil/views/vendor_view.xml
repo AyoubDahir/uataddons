@@ -12,8 +12,8 @@
                 <field name="type"/>
                 <field name="currency_id"/>
                 <field name="account_payable_id"/>
-                <field name="opening_balance" sum="total"/>
-                <field name="total_due_amount" sum="total"/>
+                <field name="opening_balance" sum="total" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                <field name="total_due_amount" sum="total" widget="monetary" options="{'currency_field': 'currency_id'}"/>
                 <field name="status" widget="boolean_toggle"/>
                 <field name="active" invisible="1"/>
             </tree>
