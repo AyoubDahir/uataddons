@@ -1098,11 +1098,22 @@ class ManufacturingOrderLine(models.Model):
         store=True,
     )
 
-    @api.depends("row_total", "manufacturing_order_id.rate")
+    @api.depends("quantity", "cost_price", "item_id.currency_id", "manufacturing_order_id.rate")
     def _compute_cost_amount_sos(self):
         for line in self:
-            if line.manufacturing_order_id:
-                line.cost_amount_sos = line.row_total * line.manufacturing_order_id.rate
+            if not line.manufacturing_order_id or not line.manufacturing_order_id.rate:
+                line.cost_amount_sos = 0.0
+                continue
+
+            line_total = line.quantity * line.cost_price
+            item_currency = line.item_id.currency_id.name if line.item_id and line.item_id.currency_id else 'USD'
+
+            if item_currency == 'SL':
+                # Item cost is already in SOS, no conversion needed
+                line.cost_amount_sos = line_total
+            else:
+                # Item cost is in USD, convert to SOS
+                line.cost_amount_sos = line_total * line.manufacturing_order_id.rate
 
     @api.model
     def create(self, vals):
@@ -1135,7 +1146,16 @@ class ManufacturingOrderLine(models.Model):
         for record in self:
             record.quantity_diff = record.quantity_bom - record.quantity
 
-    @api.depends("quantity", "cost_price")
+    @api.depends("quantity", "cost_price", "item_id.currency_id", "manufacturing_order_id.rate")
     def _compute_row_total(self):
         for line in self:
-            line.row_total = line.quantity * line.cost_price
+            line_total = line.quantity * line.cost_price
+            item_currency = line.item_id.currency_id.name if line.item_id and line.item_id.currency_id else 'USD'
+            rate = line.manufacturing_order_id.rate if line.manufacturing_order_id else 0.0
+
+            if item_currency == 'SL' and rate:
+                # Item cost is in SOS, convert to USD
+                line.row_total = line_total / rate
+            else:
+                # Item cost is already in USD
+                line.row_total = line_total
