@@ -327,8 +327,9 @@ class ProductPurchaseOrderLine(models.Model):
                     debit_account = product.asset_account_id
                     credit_account = credit_account_id
 
-                    # Get currencies
-                    debit_currency = debit_account.currency_id
+                    # Get currencies - use product.cost_value_currency_id for consistency
+                    # line.amount is calculated using product cost which is in cost_value_currency_id
+                    product_currency = product.cost_value_currency_id or self.env.company.currency_id
                     credit_currency = credit_account.currency_id
 
                     # Create transaction booking
@@ -356,7 +357,7 @@ class ProductPurchaseOrderLine(models.Model):
                     )
 
                     # Check if currencies match
-                    if debit_currency.id == credit_currency.id:
+                    if product_currency.id == credit_currency.id:
                         # Same currency - simple 2-line booking
                         # Create debit line (Inventory asset)
                         self.env["idil.transaction_bookingline"].create(
@@ -395,23 +396,23 @@ class ProductPurchaseOrderLine(models.Model):
                             )
 
                         # Calculate amounts in both currencies
-                        amount_debit_currency = line.amount  # Amount in product's currency
+                        amount_product_currency = line.amount  # Amount in product's currency
 
                         # Convert to payment/credit currency
-                        if debit_currency.name == "USD" and credit_currency.name == "SL":
+                        if product_currency.name == "USD" and credit_currency.name == "SL":
                             amount_credit_currency = line.amount * order.rate
-                        elif debit_currency.name == "SL" and credit_currency.name == "USD":
+                        elif product_currency.name == "SL" and credit_currency.name == "USD":
                             amount_credit_currency = line.amount / order.rate
                         else:
                             raise ValidationError(
-                                f"Unhandled currency conversion from {debit_currency.name} to {credit_currency.name}"
+                                f"Unhandled currency conversion from {product_currency.name} to {credit_currency.name}"
                             )
 
                         # Get clearing accounts
                         source_clearing = self.env["idil.chart.account"].search(
                             [
                                 ("name", "=", "Exchange Clearing Account"),
-                                ("currency_id", "=", debit_currency.id),
+                                ("currency_id", "=", product_currency.id),
                             ],
                             limit=1,
                         )
@@ -434,7 +435,7 @@ class ProductPurchaseOrderLine(models.Model):
                                 "transaction_booking_id": booking.id,
                                 "product_purchase_order_id": order.id,
                                 "transaction_type": "dr",
-                                "dr_amount": amount_debit_currency,
+                                "dr_amount": amount_product_currency,
                                 "cr_amount": 0,
                                 "account_number": product.asset_account_id.id,
                                 "product_id": product.id,
@@ -450,7 +451,7 @@ class ProductPurchaseOrderLine(models.Model):
                                 "product_purchase_order_id": order.id,
                                 "transaction_type": "cr",
                                 "dr_amount": 0,
-                                "cr_amount": amount_debit_currency,
+                                "cr_amount": amount_product_currency,
                                 "account_number": source_clearing.id,
                                 "product_id": product.id,
                                 "transaction_date": order.purchase_date,

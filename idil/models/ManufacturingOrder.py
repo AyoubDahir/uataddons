@@ -432,8 +432,10 @@ class ManufacturingOrder(models.Model):
                         raise ValidationError("Rate cannot be zero")
 
                     # Get currencies for item and product
-                    item_currency = line.item_id.asset_account_id.currency_id
-                    product_currency = order.product_id.asset_account_id.currency_id
+                    # Use item.currency_id (not asset_account currency) for consistency
+                    # cost_price is stored in item.currency_id
+                    item_currency = line.item_id.currency_id or self.env.company.currency_id
+                    product_currency = order.product_id.cost_value_currency_id or self.env.company.currency_id
                     
                     # Calculate cost in item's currency
                     cost_amount_item = line.cost_price * line.quantity
@@ -800,6 +802,8 @@ class ManufacturingOrder(models.Model):
                             # (Optionally create if missing)
 
                             # 2. Target clearing account (Credit)
+                            # Use product.cost_value_currency_id for consistency
+                            product_currency = order.product_id.cost_value_currency_id or self.env.company.currency_id
                             target_clearing_account = self.env[
                                 "idil.chart.account"
                             ].search(
@@ -808,7 +812,7 @@ class ManufacturingOrder(models.Model):
                                     (
                                         "currency_id",
                                         "=",
-                                        order.product_id.asset_account_id.currency_id.id,
+                                        product_currency.id,
                                     ),
                                 ],
                                 limit=1,
@@ -837,6 +841,8 @@ class ManufacturingOrder(models.Model):
                                     )
 
                             # 3. Source clearing account (Debit)
+                            # Use item.currency_id for consistency
+                            item_currency = line.item_id.currency_id or self.env.company.currency_id
                             source_clearing_account = self.env[
                                 "idil.chart.account"
                             ].search(
@@ -845,7 +851,7 @@ class ManufacturingOrder(models.Model):
                                     (
                                         "currency_id",
                                         "=",
-                                        line.item_id.asset_account_id.currency_id.id,
+                                        item_currency.id,
                                     ),
                                 ],
                                 limit=1,

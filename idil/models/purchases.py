@@ -114,6 +114,8 @@ class PurchaseOrderLine(models.Model):
 
     @api.depends("item_id", "quantity", "cost_price")
     def _compute_total_price(self):
+        """Compute line amount in item's own currency (NO conversion here).
+        Conversion to vendor account currency happens in order's _compute_total_amount."""
         for line in self.filtered(lambda l: l.exists()):
             if line.item_id:
                 if line.cost_price > 0:
@@ -455,7 +457,9 @@ class PurchaseOrder(models.Model):
                 else self.vendor_id.account_payable_id
             )
 
-            stock_currency = stock_acc.currency_id or stock_acc.company_id.currency_id
+            # Use item's currency_id (not asset_account currency) for consistency
+            # line.amount is calculated using item.cost_price which is in item.currency_id
+            item_currency = line.item_id.currency_id or self.env.company.currency_id
             payment_currency = (
                 payment_acc.currency_id or payment_acc.company_id.currency_id
             )
@@ -470,7 +474,7 @@ class PurchaseOrder(models.Model):
                 purchase_account = self.vendor_id.account_payable_id.id
 
             # Check if currencies match
-            if stock_currency.id == payment_currency.id:
+            if item_currency.id == payment_currency.id:
                 # Same currency - simple 2-line booking
                 # DR line (stock)
                 self.env["idil.transaction_bookingline"].create(
@@ -512,20 +516,20 @@ class PurchaseOrder(models.Model):
                 amount_stock_currency = line.amount  # Amount in item's currency
                 
                 # Convert to payment currency
-                if stock_currency.name == "USD" and payment_currency.name == "SL":
+                if item_currency.name == "USD" and payment_currency.name == "SL":
                     amount_payment_currency = line.amount * self.rate
-                elif stock_currency.name == "SL" and payment_currency.name == "USD":
+                elif item_currency.name == "SL" and payment_currency.name == "USD":
                     amount_payment_currency = line.amount / self.rate
                 else:
                     raise ValidationError(
-                        f"Unhandled currency conversion from {stock_currency.name} to {payment_currency.name}"
+                        f"Unhandled currency conversion from {item_currency.name} to {payment_currency.name}"
                     )
 
                 # Get clearing accounts
                 source_clearing = self.env["idil.chart.account"].search(
                     [
                         ("name", "=", "Exchange Clearing Account"),
-                        ("currency_id", "=", stock_currency.id),
+                        ("currency_id", "=", item_currency.id),
                     ],
                     limit=1,
                 )
@@ -540,7 +544,7 @@ class PurchaseOrder(models.Model):
                 if not source_clearing or not target_clearing:
                     raise ValidationError(
                         "Exchange Clearing Accounts are required for cross-currency purchases. "
-                        f"Missing clearing account for {stock_currency.name if not source_clearing else payment_currency.name}"
+                        f"Missing clearing account for {item_currency.name if not source_clearing else payment_currency.name}"
                     )
 
                 # Line 1: DR Stock Account (item currency)
@@ -639,46 +643,41 @@ class PurchaseOrder(models.Model):
             # Fallback if no BOM is provided
             return self.env["ir.sequence"].next_by_code("idil.purchase_order.sequence")
 
-    @api.depends("order_lines.amount", "order_lines.item_id.asset_account_id.currency_id", "account_number.currency_id", "rate")
+    @api.depends("order_lines.amount", "order_lines.item_id.currency_id", "account_number.currency_id", "rate")
     def _compute_total_amount(self):
+        """Convert all line amounts to vendor account currency for the order total."""
         for order in self:
             if not order.account_number or not order.order_lines.exists():
                 order.amount = 0.0
                 continue
                 
-            payment_currency = order.account_number.currency_id
-            if not payment_currency:
+            vendor_currency = order.account_number.currency_id
+            if not vendor_currency:
                 order.amount = sum(line.amount for line in order.order_lines.exists())
                 continue
                 
             total = 0.0
+            rate = order.rate or 0.0
+            
             for line in order.order_lines.exists():
-                if not line.item_id or not line.item_id.asset_account_id.currency_id:
-                    total += line.amount  # Add as-is if no currency information
+                if not line.item_id:
                     continue
                     
-                line_currency = line.item_id.asset_account_id.currency_id
+                item_currency = line.item_id.currency_id
                 line_amount = line.amount
                 
-                if line_currency.id == payment_currency.id:
-                    # Same currency - no conversion needed
+                if not item_currency or item_currency.id == vendor_currency.id:
+                    # Same currency - no conversion
                     total += line_amount
+                elif vendor_currency.name == 'SL' and item_currency.name == 'USD' and rate > 0:
+                    # Vendor is SL, item is USD → multiply by rate
+                    total += line_amount * rate
+                elif vendor_currency.name == 'USD' and item_currency.name == 'SL' and rate > 0:
+                    # Vendor is USD, item is SL → divide by rate
+                    total += line_amount / rate
                 else:
-                    # Need currency conversion
-                    rate = order.rate
-                    if not rate or rate <= 0:
-                        total += line_amount  # Add as-is if no rate (better than error)
-                        continue
-                        
-                    if line_currency.name == "USD" and payment_currency.name == "SL":
-                        # USD to SL: multiply by rate
-                        total += line_amount * rate
-                    elif line_currency.name == "SL" and payment_currency.name == "USD":
-                        # SL to USD: divide by rate
-                        total += line_amount / rate
-                    else:
-                        # Unknown conversion - add as-is (fallback)
-                        total += line_amount
+                    # Fallback
+                    total += line_amount
             
             order.amount = round(total, 2)
 

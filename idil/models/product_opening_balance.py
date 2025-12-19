@@ -167,7 +167,7 @@ class ProductOpeningBalance(models.Model):
                         else line.product_id.currency_id
                     )
 
-                    product_currency = product.asset_account_id.currency_id
+                    product_currency = product.cost_value_currency_id or product.currency_id
                     equity_currency = EquityAccount.currency_id
 
                     # 3. Convert BOM amount to product currency if needed
@@ -386,7 +386,7 @@ class ProductOpeningBalance(models.Model):
                             if product.bom_id
                             else product.currency_id
                         )
-                        product_currency = product.asset_account_id.currency_id
+                        product_currency = product.cost_value_currency_id or product.currency_id
                         equity_currency = EquityAccount.currency_id
                         rate = opening_balance.rate
 

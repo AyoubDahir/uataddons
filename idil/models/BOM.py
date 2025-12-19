@@ -54,7 +54,7 @@ class BOM(models.Model):
             currency = None
             all_same = True
             for line in bom.bom_line_ids:
-                line_currency = line.Item_id.asset_account_id.currency_id
+                line_currency = line.Item_id.currency_id
                 if not currency:
                     currency = line_currency
                 elif line_currency != currency:
@@ -68,18 +68,19 @@ class BOM(models.Model):
         for bom in self:
             currencies = set()
             for line in bom.bom_line_ids:
-                if line.Item_id and line.Item_id.asset_account_id.currency_id:
-                    currencies.add(line.Item_id.asset_account_id.currency_id.id)
+                if line.Item_id and line.Item_id.currency_id:
+                    currencies.add(line.Item_id.currency_id.id)
             bom.is_mixed_currency = len(currencies) > 1
 
-    @api.depends("bom_line_ids.total", "bom_line_ids.currency_id", "product_id.asset_account_id.currency_id")
+    @api.depends("bom_line_ids.total", "bom_line_ids.currency_id", "product_id.cost_value_currency_id")
     def _compute_total_cost(self):
         for bom in self:
-            if not bom.product_id or not bom.product_id.asset_account_id:
+            if not bom.product_id:
                 bom.total_cost = round(sum(line.total for line in bom.bom_line_ids), 5)
                 continue
             
-            product_currency = bom.product_id.asset_account_id.currency_id
+            # Use product.cost_value_currency_id for consistency
+            product_currency = bom.product_id.cost_value_currency_id
             if not product_currency:
                 bom.total_cost = round(sum(line.total for line in bom.bom_line_ids), 5)
                 continue
@@ -146,7 +147,7 @@ class BOMLine(models.Model):
     currency_id = fields.Many2one(
         "res.currency",
         string="Currency",
-        related="Item_id.asset_account_id.currency_id",
+        related="Item_id.currency_id",
         store=True,
         readonly=True,
         tracking=True,
