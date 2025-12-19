@@ -804,10 +804,35 @@ class ManufacturingOrder(models.Model):
 
                         # --- Loop each MO line ---
                         for line in order.manufacturing_order_line_ids:
-                            cost_usd = line.cost_price * line.quantity
-                            cost_sos = cost_usd * (order.rate or 1.0)
+                            # Get currencies - use ACCOUNT currencies for booking
+                            item_currency = line.item_id.currency_id or self.env.company.currency_id
+                            item_account_currency = line.item_id.asset_account_id.currency_id or self.env.company.currency_id
+                            product_account_currency = order.product_id.asset_account_id.currency_id or self.env.company.currency_id
+                            
+                            # Calculate cost in item's currency
+                            cost_amount_item = line.cost_price * line.quantity
+                            
+                            # Convert to item's ACCOUNT currency
+                            if item_currency.id == item_account_currency.id:
+                                cost_for_item_account = cost_amount_item
+                            elif item_currency.name == "USD" and item_account_currency.name == "SL":
+                                cost_for_item_account = cost_amount_item * order.rate
+                            elif item_currency.name == "SL" and item_account_currency.name == "USD":
+                                cost_for_item_account = cost_amount_item / order.rate
+                            else:
+                                cost_for_item_account = cost_amount_item
+                            
+                            # Convert to product's ACCOUNT currency
+                            if item_currency.id == product_account_currency.id:
+                                cost_for_product_account = cost_amount_item
+                            elif item_currency.name == "USD" and product_account_currency.name == "SL":
+                                cost_for_product_account = cost_amount_item * order.rate
+                            elif item_currency.name == "SL" and product_account_currency.name == "USD":
+                                cost_for_product_account = cost_amount_item / order.rate
+                            else:
+                                cost_for_product_account = cost_amount_item
 
-                            # 1. Product asset account (Debit)
+                            # 1. Product asset account (Debit) - use product account currency
                             bl = self.env["idil.transaction_bookingline"].search(
                                 [
                                     ("transaction_booking_id", "=", booking.id),
@@ -824,26 +849,19 @@ class ManufacturingOrder(models.Model):
                             if bl:
                                 bl.write(
                                     {
-                                        "dr_amount": float(cost_sos),
+                                        "dr_amount": float(cost_for_product_account),
                                         "cr_amount": 0.0,
                                         "transaction_date": order.scheduled_start_date,
                                     }
                                 )
-                            # (Optionally create if missing)
 
-                            # 2. Target clearing account (Credit)
-                            # Use product.cost_value_currency_id for consistency
-                            product_currency = order.product_id.cost_value_currency_id or self.env.company.currency_id
+                            # 2. Target clearing account (Credit) - use product account currency
                             target_clearing_account = self.env[
                                 "idil.chart.account"
                             ].search(
                                 [
                                     ("name", "=", "Exchange Clearing Account"),
-                                    (
-                                        "currency_id",
-                                        "=",
-                                        product_currency.id,
-                                    ),
+                                    ("currency_id", "=", product_account_currency.id),
                                 ],
                                 limit=1,
                             )
@@ -865,24 +883,18 @@ class ManufacturingOrder(models.Model):
                                     bl.write(
                                         {
                                             "dr_amount": 0.0,
-                                            "cr_amount": float(cost_sos),
+                                            "cr_amount": float(cost_for_product_account),
                                             "transaction_date": order.scheduled_start_date,
                                         }
                                     )
 
-                            # 3. Source clearing account (Debit)
-                            # Use item.currency_id for consistency
-                            item_currency = line.item_id.currency_id or self.env.company.currency_id
+                            # 3. Source clearing account (Debit) - use item account currency
                             source_clearing_account = self.env[
                                 "idil.chart.account"
                             ].search(
                                 [
                                     ("name", "=", "Exchange Clearing Account"),
-                                    (
-                                        "currency_id",
-                                        "=",
-                                        item_currency.id,
-                                    ),
+                                    ("currency_id", "=", item_account_currency.id),
                                 ],
                                 limit=1,
                             )
@@ -903,13 +915,13 @@ class ManufacturingOrder(models.Model):
                                 if bl:
                                     bl.write(
                                         {
-                                            "dr_amount": float(line.row_total),
+                                            "dr_amount": float(cost_for_item_account),
                                             "cr_amount": 0.0,
                                             "transaction_date": order.scheduled_start_date,
                                         }
                                     )
 
-                            # 4. Item asset account (Credit)
+                            # 4. Item asset account (Credit) - use item account currency
                             bl = self.env["idil.transaction_bookingline"].search(
                                 [
                                     ("transaction_booking_id", "=", booking.id),
@@ -927,7 +939,7 @@ class ManufacturingOrder(models.Model):
                                 bl.write(
                                     {
                                         "dr_amount": 0.0,
-                                        "cr_amount": float(line.row_total),
+                                        "cr_amount": float(cost_for_item_account),
                                         "transaction_date": order.scheduled_start_date,
                                     }
                                 )
