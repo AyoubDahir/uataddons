@@ -431,118 +431,148 @@ class ManufacturingOrder(models.Model):
                     if order.rate <= 0:
                         raise ValidationError("Rate cannot be zero")
 
-                    # Get currencies for item and product
-                    # Use item.currency_id (not asset_account currency) for consistency
-                    # cost_price is stored in item.currency_id
+                    # Get currencies - use ACCOUNT currencies for booking
+                    # This ensures amounts are always in the correct currency for each account
                     item_currency = line.item_id.currency_id or self.env.company.currency_id
-                    product_currency = order.product_id.cost_value_currency_id or self.env.company.currency_id
+                    item_account_currency = line.item_id.asset_account_id.currency_id or self.env.company.currency_id
+                    product_account_currency = order.product_id.asset_account_id.currency_id or self.env.company.currency_id
                     
-                    # Calculate cost in item's currency
+                    # Calculate cost in item's currency (cost_price is stored in item.currency_id)
                     cost_amount_item = line.cost_price * line.quantity
                     
-                    # Convert to product currency based on actual currencies
-                    if item_currency.id == product_currency.id:
-                        # Same currency - no conversion needed
-                        cost_amount_product = cost_amount_item
-                    elif item_currency.name == "USD" and product_currency.name == "SL":
-                        # USD to SL - multiply by rate
-                        cost_amount_product = cost_amount_item * order.rate
-                    elif item_currency.name == "SL" and product_currency.name == "USD":
-                        # SL to USD - divide by rate
-                        cost_amount_product = cost_amount_item / order.rate
+                    # Convert item cost to item's ACCOUNT currency if different
+                    if item_currency.id == item_account_currency.id:
+                        cost_for_item_account = cost_amount_item
+                    elif item_currency.name == "USD" and item_account_currency.name == "SL":
+                        cost_for_item_account = cost_amount_item * order.rate
+                    elif item_currency.name == "SL" and item_account_currency.name == "USD":
+                        cost_for_item_account = cost_amount_item / order.rate
                     else:
-                        raise ValidationError(
-                            f"Unhandled currency conversion from {item_currency.name} to {product_currency.name}"
+                        cost_for_item_account = cost_amount_item
+                    
+                    # Convert item cost to product's ACCOUNT currency
+                    if item_currency.id == product_account_currency.id:
+                        cost_for_product_account = cost_amount_item
+                    elif item_currency.name == "USD" and product_account_currency.name == "SL":
+                        cost_for_product_account = cost_amount_item * order.rate
+                    elif item_currency.name == "SL" and product_account_currency.name == "USD":
+                        cost_for_product_account = cost_amount_item / order.rate
+                    else:
+                        cost_for_product_account = cost_amount_item
+                    
+                    # Check if currencies match - if so, simple 2-line booking
+                    if item_account_currency.id == product_account_currency.id:
+                        # Same account currencies - simple debit/credit
+                        # Debit product asset account
+                        self.env["idil.transaction_bookingline"].create(
+                            {
+                                "transaction_booking_id": transaction_booking.id,
+                                "description": "Manufacturing Order Transaction - Debit",
+                                "item_id": line.item_id.id,
+                                "product_id": order.product_id.id,
+                                "account_number": order.product_id.asset_account_id.id,
+                                "transaction_type": "dr",
+                                "dr_amount": float(cost_for_product_account),
+                                "cr_amount": 0.0,
+                                "transaction_date": order.scheduled_start_date,
+                            }
+                        )
+                        # Credit item asset account
+                        self.env["idil.transaction_bookingline"].create(
+                            {
+                                "transaction_booking_id": transaction_booking.id,
+                                "description": "Manufacturing Order Transaction - Credit",
+                                "item_id": line.item_id.id,
+                                "product_id": order.product_id.id,
+                                "account_number": line.item_id.asset_account_id.id,
+                                "transaction_type": "cr",
+                                "dr_amount": 0.0,
+                                "cr_amount": float(cost_for_item_account),
+                                "transaction_date": order.scheduled_start_date,
+                            }
+                        )
+                    else:
+                        # Different account currencies - use 4-line clearing pattern
+                        # Get clearing accounts based on ACCOUNT currencies
+                        source_clearing_account = self.env["idil.chart.account"].search(
+                            [
+                                ("name", "=", "Exchange Clearing Account"),
+                                ("currency_id", "=", item_account_currency.id),
+                            ],
+                            limit=1,
+                        )
+                        target_clearing_account = self.env["idil.chart.account"].search(
+                            [
+                                ("name", "=", "Exchange Clearing Account"),
+                                ("currency_id", "=", product_account_currency.id),
+                            ],
+                            limit=1,
                         )
 
-                    # Get clearing accounts
-                    source_clearing_account = self.env["idil.chart.account"].search(
-                        [
-                            ("name", "=", "Exchange Clearing Account"),
-                            (
-                                "currency_id",
-                                "=",
-                                item_currency.id,
-                            ),
-                        ],
-                        limit=1,
-                    )
-                    target_clearing_account = self.env["idil.chart.account"].search(
-                        [
-                            ("name", "=", "Exchange Clearing Account"),
-                            (
-                                "currency_id",
-                                "=",
-                                product_currency.id,
-                            ),
-                        ],
-                        limit=1,
-                    )
+                        if not source_clearing_account or not target_clearing_account:
+                            raise ValidationError(
+                                "Exchange Clearing Accounts are required for currency conversion."
+                            )
 
-                    if not source_clearing_account or not target_clearing_account:
-                        raise ValidationError(
-                            "Exchange Clearing Account are required for currency conversion."
+                        # Line 1: Debit product asset account (in product account's currency)
+                        self.env["idil.transaction_bookingline"].create(
+                            {
+                                "transaction_booking_id": transaction_booking.id,
+                                "description": "Manufacturing Order Transaction - Debit",
+                                "item_id": line.item_id.id,
+                                "product_id": order.product_id.id,
+                                "account_number": order.product_id.asset_account_id.id,
+                                "transaction_type": "dr",
+                                "dr_amount": float(cost_for_product_account),
+                                "cr_amount": 0.0,
+                                "transaction_date": order.scheduled_start_date,
+                            }
                         )
 
-                    # Debit line for increasing product stock (in product's currency)
-                    self.env["idil.transaction_bookingline"].create(
-                        {
-                            "transaction_booking_id": transaction_booking.id,
-                            "description": "Manufacturing Order Transaction - Debit",
-                            "item_id": line.item_id.id,
-                            "product_id": order.product_id.id,
-                            "account_number": order.product_id.asset_account_id.id,
-                            "transaction_type": "dr",
-                            "dr_amount": float(cost_amount_product),
-                            "cr_amount": 0.0,
-                            "transaction_date": order.scheduled_start_date,
-                        }
-                    )
+                        # Line 2: Credit target clearing account (in product account's currency)
+                        self.env["idil.transaction_bookingline"].create(
+                            {
+                                "transaction_booking_id": transaction_booking.id,
+                                "description": "Manufacturing Order Transaction Exchange - Credit",
+                                "item_id": line.item_id.id,
+                                "product_id": order.product_id.id,
+                                "account_number": target_clearing_account.id,
+                                "transaction_type": "cr",
+                                "dr_amount": 0.0,
+                                "cr_amount": float(cost_for_product_account),
+                                "transaction_date": order.scheduled_start_date,
+                            }
+                        )
 
-                    # Credit target clearing account for currency adjustment (in product's currency)
-                    self.env["idil.transaction_bookingline"].create(
-                        {
-                            "transaction_booking_id": transaction_booking.id,
-                            "description": "Manufacturing Order Transaction Exchange - Credit",
-                            "item_id": line.item_id.id,
-                            "product_id": order.product_id.id,
-                            "account_number": target_clearing_account.id,
-                            "transaction_type": "cr",
-                            "dr_amount": 0.0,
-                            "cr_amount": float(cost_amount_product),
-                            "transaction_date": order.scheduled_start_date,
-                        }
-                    )
+                        # Line 3: Debit source clearing account (in item account's currency)
+                        self.env["idil.transaction_bookingline"].create(
+                            {
+                                "transaction_booking_id": transaction_booking.id,
+                                "description": "Manufacturing Order Transaction Exchange - Debit",
+                                "item_id": line.item_id.id,
+                                "product_id": order.product_id.id,
+                                "account_number": source_clearing_account.id,
+                                "transaction_type": "dr",
+                                "dr_amount": float(cost_for_item_account),
+                                "cr_amount": 0.0,
+                                "transaction_date": order.scheduled_start_date,
+                            }
+                        )
 
-                    # Debit source clearing account for currency adjustment (in item's currency)
-                    self.env["idil.transaction_bookingline"].create(
-                        {
-                            "transaction_booking_id": transaction_booking.id,
-                            "description": "Manufacturing Order Transaction Exchange - Debit",
-                            "item_id": line.item_id.id,
-                            "product_id": order.product_id.id,
-                            "account_number": source_clearing_account.id,
-                            "transaction_type": "dr",
-                            "dr_amount": float(cost_amount_item),
-                            "cr_amount": 0.0,
-                            "transaction_date": order.scheduled_start_date,
-                        }
-                    )
-
-                    # Credit item asset account to decrease stock (in item's currency)
-                    self.env["idil.transaction_bookingline"].create(
-                        {
-                            "transaction_booking_id": transaction_booking.id,
-                            "description": "Manufacturing Order Transaction - Credit",
-                            "item_id": line.item_id.id,
-                            "product_id": order.product_id.id,
-                            "account_number": line.item_id.asset_account_id.id,
-                            "transaction_type": "cr",
-                            "dr_amount": 0.0,
-                            "cr_amount": float(cost_amount_item),
-                            "transaction_date": order.scheduled_start_date,
-                        }
-                    )
+                        # Line 4: Credit item asset account (in item account's currency)
+                        self.env["idil.transaction_bookingline"].create(
+                            {
+                                "transaction_booking_id": transaction_booking.id,
+                                "description": "Manufacturing Order Transaction - Credit",
+                                "item_id": line.item_id.id,
+                                "product_id": order.product_id.id,
+                                "account_number": line.item_id.asset_account_id.id,
+                                "transaction_type": "cr",
+                                "dr_amount": 0.0,
+                                "cr_amount": float(cost_for_item_account),
+                                "transaction_date": order.scheduled_start_date,
+                            }
+                        )
                 # Calculate commission amount for this order using the order and its lines
                 # commission_amount = self._calculate_commission_amount(order)
 
