@@ -8,7 +8,7 @@
     "depends": ["mail", "point_of_sale", "web"],
     "application": True,
     "sequence": -100,
-    "author": "mslt",
+    "author": "IDIL",
     "assets": {
         "web.assets_common": [
         ],
