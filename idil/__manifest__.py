@@ -8,7 +8,7 @@
     "depends": ["mail", "point_of_sale", "web"],
     "application": True,
     "sequence": -100,
-    "author": "m",
+    "author": "test",
     "assets": {
         "web.assets_common": [
         ],
