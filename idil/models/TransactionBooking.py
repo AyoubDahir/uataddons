@@ -132,6 +132,12 @@ class TransactionBooking(models.Model):
     purchase_order_id = fields.Many2one(
         "idil.purchase_order", string="Linked Purchase Order", ondelete="cascade"
     )
+    purchase_receipt_id = fields.Many2one(
+        "idil.purchase.receipt",
+        string="Purchase Receipt",
+        ondelete="set null",
+        index=True,
+    )
     # Link to Sales Payment
     sales_payment_id = fields.Many2one(
         "idil.sales.payment",
@@ -240,6 +246,20 @@ class TransactionBooking(models.Model):
         required=True,
         help="Select the exchange rate for the transaction.",
         tracking=True,
+    )
+    # in idil.transaction_booking model (recommended)
+    purchase_receipt_id = fields.Many2one(
+        "idil.purchase.receipt",
+        string="Purchase Receipt",
+        ondelete="cascade",
+        index=True,
+    )
+
+    received_purchase_id = fields.Many2one(
+        "idil.received.purchase",
+        string="Received Purchase",
+        ondelete="cascade",
+        index=True,
     )
 
     @api.constrains("trx_date")
@@ -436,6 +456,12 @@ class TransactionBookingline(models.Model):
     # order_line = fields.Char(string='Order Line')
     sl_line = fields.Integer(string="Order Line")
     order_line = fields.Many2one("idil.purchase_order.line", ondelete="cascade")
+    purchase_receipt_id = fields.Many2one(
+        "idil.purchase.receipt",
+        string="Purchase Receipt",
+        ondelete="set null",
+        index=True,
+    )
 
     description = fields.Char(string="Description")
     item_id = fields.Many2one("idil.item", string="Item")
@@ -633,7 +659,7 @@ class TransactionBookingline(models.Model):
                 ORDER BY
                     ch.code
             """
-        
+
         self.env.cr.execute(query, tuple(params))
         result = self.env.cr.dictfetchall()
 
@@ -802,7 +828,12 @@ class TransactionBookingline(models.Model):
     #         "target": "new",
     #     }
     def compute_company_trial_balance(
-        self, report_currency_id, company_id, as_of_date, exact_day=False, start_date=None
+        self,
+        report_currency_id,
+        company_id,
+        as_of_date,
+        exact_day=False,
+        start_date=None,
     ):
         # --- normalize to a pure date (no timezone issues) ---
         as_of_date = fields.Date.to_date(as_of_date)
@@ -824,7 +855,7 @@ class TransactionBookingline(models.Model):
 
         # --- fetch raw lines using ONLY transaction_date ---
         comparator = "=" if exact_day else "<="
-        
+
         query = """
             SELECT
                 tb.account_number,

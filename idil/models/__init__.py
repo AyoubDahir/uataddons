@@ -66,6 +66,13 @@ from . import product_opening_balance
 from . import product_purchase_return
 from . import system_clearing
 from . import report_customer_sales
+from . import material_request
+from . import purchase_receipt
+from . import purchase_received
+from . import purchase_receive_wizard
+from . import warehouse_location
+from . import internaltransfer
+from . import BizcoreDbBackup
 
 # from . import model_export_wizard
 # from . import report_production_summary

@@ -25,6 +25,18 @@ class Vendor(models.Model):
         required=True,
         tracking=True,
     )
+
+    # Supplier Details
+    supplier_type = fields.Selection(
+        [
+            ("local", "Local Supplier"),
+            ("international", "International Supplier"),
+        ],
+        string="Supplier Type",
+        required=True,
+        tracking=True,
+    )
+
     status = fields.Boolean(string="Status", tracking=True)
     active = fields.Boolean(string="Active", default=True, tracking=True)
     image = fields.Binary(string="Image")
@@ -76,6 +88,89 @@ class Vendor(models.Model):
         compute="_compute_total_due_amount",
         store=False,  # Change to True if you want it stored
     )
+    # Evaluation
+    evaluation_score = fields.Float(
+        string="Evaluation Score",
+        digits=(3, 2),
+        tracking=True,
+        help="Final vendor evaluation score (0–5).",
+    )
+
+    evaluation_state = fields.Selection(
+        [
+            ("pending", "Pending"),
+            ("approved", "Approved"),
+            ("blocked", "Blocked"),
+        ],
+        string="Evaluation Status",
+        default="pending",
+        tracking=True,
+    )
+    # Payment term
+    payment_term = fields.Selection(
+        [
+            ("cash", "Cash"),
+            ("7_days", "7 Days"),
+            ("15_days", "15 Days"),
+            ("30_days", "30 Days"),
+            ("60_days", "60 Days"),
+        ],
+        string="Payment Term",
+        tracking=True,
+    )
+    is_local_supplier = fields.Boolean(
+        string="Local Procurement",
+        default=False,
+        tracking=True,
+    )
+
+    is_international_supplier = fields.Boolean(
+        string="International Procurement",
+        default=False,
+        tracking=True,
+    )
+
+    default_shipping_port = fields.Char(
+        string="Default Shipping Port",
+        tracking=True,
+    )
+
+    incoterm = fields.Selection(
+        [
+            ("exw", "EXW"),
+            ("fob", "FOB"),
+            ("cif", "CIF"),
+            ("dap", "DAP"),
+        ],
+        string="Incoterm",
+        tracking=True,
+    )
+
+    vendor_status = fields.Selection(
+        [
+            ("active", "Active"),
+            ("suspended", "Suspended"),
+            ("blacklisted", "Blacklisted"),
+        ],
+        string="Vendor Status",
+        default="active",
+        tracking=True,
+    )
+
+    trade_license_no = fields.Char(string="Trade License No")
+    tax_number = fields.Char(string="Tax Number")
+    contract_document = fields.Binary(string="Contract Document")
+
+    @api.onchange("supplier_type")
+    def _onchange_supplier_type(self):
+        self.is_local_supplier = self.supplier_type == "local"
+        self.is_international_supplier = self.supplier_type == "international"
+
+    @api.constrains("evaluation_score")
+    def _check_evaluation_score(self):
+        for v in self:
+            if v.evaluation_score and v.evaluation_score <= 2.5:
+                v.evaluation_state = "blocked"
 
     @api.onchange("currency_id")
     def _onchange_currency_id(self):

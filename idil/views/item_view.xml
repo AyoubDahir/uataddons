@@ -1,80 +1,89 @@
 <odoo>
 
-    <!-- Tree view -->
+    <!-- ========================= -->
+    <!-- TREE -->
+    <!-- ========================= -->
     <record id="view_idil_item_tree" model="ir.ui.view">
         <field name="name">idil.item.tree</field>
         <field name="model">idil.item</field>
         <field name="arch" type="xml">
-            <tree>
-                <field name="image" widget="image" options="{'size': (20, 20)}"/> <!-- Adjust size here -->
+            <tree string="📦 Items" decoration-info="quantity &lt;= min">
+                <field name="image" widget="image" options="{'size': (22, 22)}"/>
 
-                <field name="name"/>
-                <field name="description" optional="hide"/>
-                <field name="unitmeasure_id" string="UOM" optional="show"/>
-                <field name="item_category_id" string="Category" optional="show"/>
-                <field name="quantity" string="QTY"/>
-                <field name="currency_id" string="Currency" optional="hide"/>
-                <field name="cost_price" string="Cost"/>
+                <field name="name" string="📦 Item"/>
+                <field name="item_type" string="🏷️ Type" optional="show"/>
+                <field name="item_category_id" string="🗂️ Category" optional="show"/>
+                <field name="unitmeasure_id" string="📏 UOM" optional="show"/>
 
-                <field name="total_price" string="Total" widget="monetary"
-                       options="{'currency_field': 'currency_id'}" sum="Total"/>
+                <field name="quantity" string="📦 QTY"/>
+                <field name="min" string="🔔 Re-Order" optional="show"/>
 
+                <field name="currency_id" string="💱 Cur" optional="hide"/>
+                <field name="cost_price" string="💵 Cost"/>
 
-                <field name="min" string="Re-Order" optional="show"/>
-                <field name="purchase_account_id" string="COGS" optional="hide"/>
-                <field name="sales_account_id" string="Revenue" optional="hide"/>
-                <field name="asset_account_id" string="Inventory" optional="hide"/>
-                <field name="allergens" optional="hide"/>
-                <field name="purchase_date" string="Date" optional="show"/>
-                <field name="expiration_date" optional="hide"/>
-                <field name="days_until_expiration" string="Expiration" optional="hide"/>
+                <field name="total_price"
+                       string="🧾 Total"
+                       widget="monetary"
+                       options="{'currency_field': 'currency_id'}"
+                       sum="Total"/>
 
-                <field name="order_information" optional="hide"/>
-                <field name="bar_code" optional="hide"/>
+                <field name="purchase_date" string="📅 Purchase" optional="show"/>
+                <field name="expiration_date" string="⏳ Expiry" optional="hide"/>
+                <field name="days_until_expiration" string="⏳ Days" optional="hide"/>
+
+                <field name="bar_code" string="🏷️ Barcode" optional="hide"/>
+                <field name="active" string="✅ Active" optional="hide"/>
             </tree>
         </field>
     </record>
 
-    <!-- Kanban view -->
+    <!-- ========================= -->
+    <!-- KANBAN -->
+    <!-- ========================= -->
     <record id="view_idil_item_kanban" model="ir.ui.view">
         <field name="name">idil.item.kanban</field>
         <field name="model">idil.item</field>
         <field name="arch" type="xml">
-            <kanban>
+            <kanban class="o_kanban_small_column">
                 <field name="name"/>
-                <field name="unitmeasure_id"/>
                 <field name="item_category_id"/>
+                <field name="unitmeasure_id"/>
                 <field name="quantity"/>
+                <field name="min"/>
                 <field name="cost_price"/>
+                <field name="currency_id"/>
                 <field name="image"/>
 
                 <templates>
                     <t t-name="kanban-box">
-                        <div class="oe_kanban_card rectangular_card">
-                            <div class="rectangular_image">
+                        <div class="oe_kanban_card oe_kanban_global_click">
+                            <div class="o_kanban_image">
                                 <img t-if="record.image.raw_value"
                                      t-att-src="kanban_image('idil.item', 'image', record.id.raw_value)"
                                      class="oe_kanban_avatar"/>
                             </div>
-                            <div class="rectangular_body">
-                                <strong class="rectangular_text" t-esc="record.name.value"/>
 
-                                <div class="rectangular_text">
-                                    <b>[</b>
-                                    <t t-esc="record.item_category_id.value"/>
-                                    <b>]</b>
+                            <div class="oe_kanban_details">
+                                <strong class="o_kanban_record_title">
+                                    <t t-esc="record.name.value"/>
+                                </strong>
+
+                                <div class="text-muted">
+                                    🗂️ <t t-esc="record.item_category_id.value"/>
+                                    <span class="mx-1">•</span>
+                                    📏 <t t-esc="record.unitmeasure_id.value"/>
                                 </div>
 
-                                <div class="rectangular_text">
-                                    <b>Quantity:</b>
-                                    <t t-esc="record.quantity.value"/>
+                                <div class="mt-1">
+                                    📦 <b>QTY:</b> <t t-esc="record.quantity.value"/>
+                                    <span class="mx-2">|</span>
+                                    🔔 <b>Min:</b> <t t-esc="record.min.value"/>
                                 </div>
-                                <div class="rectangular_text">
-                                    <b>Cost Price: $</b>
+
+                                <div class="mt-1">
+                                    💵 <b>Cost:</b>
                                     <t t-esc="record.cost_price.value"/>
                                 </div>
-
-
                             </div>
                         </div>
                     </t>
@@ -83,142 +92,185 @@
         </field>
     </record>
 
-    <!-- Search view -->
+    <!-- ========================= -->
+    <!-- SEARCH -->
+    <!-- ========================= -->
     <record id="view_idil_item_search" model="ir.ui.view">
         <field name="name">idil.item.search</field>
         <field name="model">idil.item</field>
         <field name="arch" type="xml">
-            <search>
-                <field name="name" string="Item Name"/>
-                <field name="description" string="Description"/>
-                <field name="unitmeasure_id" string="Unit of Measure"/>
-                <field name="item_category_id" string="Item Category"/>
-                <field name="quantity" string="Quantity"/>
-                <field name="cost_price" string="Price per Unit"/>
-                <field name="allergens" string="Allergens/Ingredients"/>
-                <field name="purchase_date" string="Purchase Date"/>
-                <field name="expiration_date" string="Expiration Date"/>
-                <field name="order_information" string="Order Information"/>
-                <field name="bar_code" string="Bar Code"/>
+            <search string="🔎 Search Items">
+                <field name="name" string="📦 Item"/>
+                <field name="item_type" string="🏷️ Type"/>
+                <field name="item_category_id" string="🗂️ Category"/>
+                <field name="unitmeasure_id" string="📏 UOM"/>
+                <field name="bar_code" string="🏷️ Barcode"/>
+
+                <separator/>
+
+                
+ 
             </search>
         </field>
     </record>
 
-    <!-- Form view -->
+    <!-- ========================= -->
+    <!-- ITEM FORM -->
+    <!-- ========================= -->
     <record id="view_idil_item_form" model="ir.ui.view">
         <field name="name">idil.item.form</field>
         <field name="model">idil.item</field>
         <field name="arch" type="xml">
-            <form>
-
+            <form string="📦 Item">
                 <sheet>
+
+                    <!-- Header -->
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="e.g. Cheese Burger"/>
+                        </h1>
+                        <div class="text-muted">
+                        <group>
+                            🗂️ <field name="item_category_id" class="oe_inline"/>
+                        </group>
+
+                         <group>
+                        📏 <field name="unitmeasure_id" class="oe_inline"/>
+                        </group>
+
+                         <group>
+                            🏷️ <field name="item_type" class="oe_inline"/>
+                        </group>
+
+                            
+                            
+                            
+                        </div>
+                    </div>
+
                     <group>
                         <group>
-                            <div class="oe_title">
-                                <label for="name" string="Item Name"/>
-                                <h1>
-                                    <field name="name" placeholder="e.g. Cheese Burger" class="oe_inline"/>
-                                </h1>
-                            </div>
+                            <field name="image" widget="image" options="{'size': (160, 160)}"/>
+                            <field name="active" string="✅ Active"/>
                         </group>
-                        <group>
-                            <field name="image" widget="image" options="{'size': (150, 150)}"/>
 
+                        <group>
+                            <field name="quantity" string="📦 Current Stock" readonly="1"/>
+                            <field name="min" string="🔔 Re-Order Level"/>
+                            <field name="cost_price" string="💵 Cost per Unit"/>
+                            <field name="total_price"
+                                   string="🧾 Total Value"
+                                   widget="monetary"
+                                   options="{'currency_field': 'currency_id'}"
+                                   readonly="1"/>
+                            <field name="currency_id" string="💱 Currency" options="{'no_create': True}"/>
+                            <field name="is_tfg" string="🏷️ TFG"/>
+                            <field name="is_commission" string="🎯 Commission"/>
                         </group>
                     </group>
-                    <hr>
 
-                    </hr>
                     <notebook>
-                        <page string="Details">
+
+                        <!-- Details -->
+                        <page string="🧾 Details">
                             <group>
                                 <group>
-                                    <field name="item_type" string="Item Type" class="oe_inline"/>
-
-                                    <field name="unitmeasure_id" string="Unit of Measure"/>
-                                    <field name="item_category_id" string="Item Category"/>
+                                    <field name="description"/>
+                                    <field name="allergens" string="⚠️ Allergens"/>
                                 </group>
                                 <group>
-                                    <field name="quantity" readonly="1"/>
-                                    <field name="min"/>
-                                    <field name="cost_price" string="Cost Price"/>
-                                    <field name="is_tfg" string="TFG"/>
-                                    <field name="is_commission" string="Commission"/>
-
+                                    <field name="purchase_date" string="📅 Purchase Date"/>
+                                    <field name="expiration_date" string="⏳ Expiration Date"/>
+                                    <field name="days_until_expiration" string="⏳ Days Left" readonly="1"/>
                                 </group>
-
                             </group>
-                        </page>
-                        <page string="Additional Information">
+
                             <group>
                                 <group>
-                                    <field name="purchase_date" string="Purchase Date"/>
-                                    <field name="expiration_date" string="Expiration Date"/>
+                                    <field name="order_information" string="📝 Order Info"/>
                                 </group>
                                 <group>
-                                    <field name="order_information" string="Order Information"/>
-                                    <field name="bar_code" string="Bar Code"/>
+                                    <field name="bar_code" string="🏷️ Barcode"/>
                                 </group>
                             </group>
                         </page>
-                        <page string="Account Information">
+
+                        <!-- Accounts -->
+                        <page string="🏦 Accounts">
                             <group>
                                 <group>
-                                    <!-- Set currency_id first as it is required for other fields -->
-                                    <field name="currency_id" options="{'no_create': True, 'no_open': True}"/>
-                                    <field name="purchase_account_id" string="Purchase Account" 
-                                           options="{'no_create': True}" 
-                                           domain="[('account_type', 'like', 'COGS'), ('currency_id', '=', currency_id), ('header_name', '=', 'Expenses')]"/>
-                                    <field name="sales_account_id" string="Sales Account" 
-                                           options="{'no_create': True}" 
-                                           domain="[('header_name', '=', 'Income'), ('currency_id', '=', currency_id)]"/>
-                                    <field name="asset_account_id" string="Asset Account" 
-                                           options="{'no_create': True}" 
-                                           domain="[('header_name', '=', 'Assets'),('currency_id', '=', currency_id)]"/>
-                                    <field name="adjustment_account_id" string="Adjustment Account" 
-                                           options="{'no_create': True}" 
-                                           domain="['|', ('header_name', '=', 'Assets'), ('header_name', '=', 'Expenses'), ('currency_id', '=', currency_id), ('account_type', '=', 'Adjustment' )]"/>
-                                    <button name="get_available_accounts" string="Check Available Accounts" type="object" class="oe_link" help="This will check for available accounts in the system based on your currency."/>
+                                    <field name="purchase_account_id" string="📌 Purchase (COGS)" options="{'no_create': True}"/>
+                                    <field name="sales_account_id" string="📌 Sales (Revenue)" options="{'no_create': True}"/>
+                                </group>
+                                <group>
+                                    <field name="asset_account_id" string="📌 Inventory (Asset)" options="{'no_create': True}"/>
+                                    <field name="adjustment_account_id" string="📌 Adjustment" options="{'no_create': True}"/>
+                                    <button name="get_available_accounts"
+                                            string="🧪 Check Available Accounts"
+                                            type="object"
+                                            class="oe_highlight"/>
                                 </group>
                             </group>
                         </page>
-                        <page string="Item Movements">
-                            <field name="movement_ids" readonly="1">
-                                <tree string="Item Movements" create="false" delete="false" edit="false">
 
-                                    <field name="date" readonly="1"/>
-                                    <field name="transaction_number" readonly="1"/>
-                                    <field name="quantity" readonly="1" sum="Total"/>
-                                    <field name="source" readonly="1"/>
-                                    <field name="vendor_id" readonly="1"/>
-                                    <field name="destination" readonly="1"/>
-                                    <field name="product_id" readonly="1"/>
-                                    <field name="movement_type" readonly="1"/>
-                                    <field name="related_document" readonly="1"/>
+                        <!-- History / Movements -->
+                        <page string="📜 Item History">
+                            <field name="movement_ids" context="{'default_item_id': active_id}">
+                                <tree string="📜 Movements"
+                                      create="false" delete="false" edit="false"
+                                      default_order="date desc,id desc">
+                                    <field name="date" string="📅 Date"/>
+                                    <field name="transaction_number" string="🔢 Trx#"/>
+                                    <field name="movement_type" string="🔁 Type"/>
+                                    <field name="quantity" string="📦 Qty" sum="Total"/>
+                                    <field name="vendor_id" string="🏷️ Vendor"/>
+                                    <!-- <field name="product_id" string="🏭 Product"/> -->
+
+                                    <field name="source" string="📤 Source" optional="show"/>
+
+                                    <!-- show structured transfer fields if you added them -->
+                                    <field name="source_warehouse_id" string="🏬 From Warehouse_" optional="show"/>
+                                    <field name="source_location_id" string="📤 From Location" optional="hide"/>
+
+                                    <field name="destination_warehouse_id" string="🏬 To Warehouse_" optional="Show"/>
+                                    <field name="destination_location_id" string="📥 To Location" optional="hide"/>
+
+                                    <!-- fallback text -->
+                                    
+                                    <field name="destination" string="📥 Destination" optional="show"/>
+
+                                    <!-- ✅ click to open original document -->
+                                    <field name="related_document" string="🧾 Source Document" widget="reference"/>
                                 </tree>
                             </field>
+
+                            <div class="text-muted mt16">
+                                ℹ️ Tip: Click <b>Source Document</b> to open the original Purchase Order Line / Return / Opening Balance / etc.
+                            </div>
                         </page>
+
                     </notebook>
+
                     <div class="oe_chatter">
                         <field name="message_follower_ids"/>
                         <field name="message_ids"/>
                         <field name="activity_ids"/>
                     </div>
+
                 </sheet>
             </form>
         </field>
     </record>
 
-    <!-- Action for idil.item model -->
+    <!-- ========================= -->
+    <!-- ACTION -->
+    <!-- ========================= -->
     <record id="action_idil_item" model="ir.actions.act_window">
-        <field name="name">Items</field>
+        <field name="name">📦 Items</field>
         <field name="type">ir.actions.act_window</field>
         <field name="res_model">idil.item</field>
         <field name="view_mode">tree,kanban,form</field>
-        <field name="view_id" ref="view_idil_item_tree"/>
         <field name="search_view_id" ref="view_idil_item_search"/>
-        <field name="context">{}</field>
-
     </record>
 
 </odoo>

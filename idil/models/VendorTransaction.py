@@ -81,6 +81,13 @@ class VendorTransaction(models.Model):
         ondelete="cascade",
     )
 
+    received_purchase_id = fields.Many2one(
+        "idil.received.purchase",
+        string="Received Purchase",
+        ondelete="cascade",
+        index=True,
+    )
+
     def write(self, vals):
         for record in self:
             if "amount_paying" in vals:

@@ -1,96 +1,188 @@
 <odoo>
-    <!-- Tree view -->
+
+    <!-- ============================= -->
+    <!-- Vendor: Tree View -->
+    <!-- ============================= -->
     <record id="view_idil_vendor_tree" model="ir.ui.view">
         <field name="name">idil.vendor.tree</field>
         <field name="model">idil.vendor.registration</field>
         <field name="arch" type="xml">
-            <tree string="Vendor List" decoration-muted="not active">
+            <tree string="🏢 Vendors" decoration-muted="not active">
                 <field name="image" widget="image" options="{'size': [20, 20]}" class="oe_avatar"/>
-                <field name="name"/>
-                <field name="phone"/>
-                <field name="email"/>
-                <field name="type"/>
-                <field name="currency_id"/>
-                <field name="account_payable_id"/>
-                <field name="opening_balance" sum="total"/>
-                <field name="total_due_amount" sum="total"/>
-                <field name="status" widget="boolean_toggle"/>
+                <field name="name" string="👤 Vendor"/>
+                <field name="phone" string="📞 Phone"/>
+                <field name="email" string="✉️ Email" optional="hide"/>
+                <field name="type" string="🏷️ Type"/>
+
+                <field name="supplier_type" string="🌍 Supplier Type" optional="show"/>
+                <field name="evaluation_score" string="⭐ Score" optional="hide"/>
+                <field name="evaluation_state" string="✅ Eval Status" optional="hide"/>
+
+                <field name="is_local_supplier" string="🏠 Local" optional="hide"/>
+                <field name="is_international_supplier" string="🌐 International" optional="hide"/>
+
+                <field name="default_shipping_port" string="⚓ Port" optional="hide"/>
+                <field name="incoterm" string="📦 Incoterm" optional="hide"/>
+
+                <field name="trade_license_no" string="🧾 License" optional="hide"/>
+                <field name="tax_number" string="🏛️ Tax" optional="hide"/>
+                <field name="contract_document" string="📎 Contract" optional="hide"/>
+
+                <field name="currency_id" string="💱 Currency" optional="hide"/>
+                <field name="account_payable_id" string="📒 Payable" optional="hide"/>
+
+                <field name="opening_balance" string="🟦 Opening" sum="total" optional="hide"/>
+                <field name="total_due_amount" string="🟥 Due" sum="total" optional="hide"/>
+
+                <field name="status" string="🔘 Status" widget="boolean_toggle" optional="hide"/>
+                <field name="vendor_status" string="🚦 Vendor Status"/>
+
                 <field name="active" invisible="1"/>
             </tree>
         </field>
     </record>
 
-    <!-- Search view -->
+    <!-- ============================= -->
+    <!-- Vendor: Search View -->
+    <!-- ============================= -->
     <record id="view_idil_vendor_search" model="ir.ui.view">
         <field name="name">idil.vendor.search</field>
         <field name="model">idil.vendor.registration</field>
         <field name="arch" type="xml">
-            <search string="Vendor Search">
-                <field name="name"/>
-                <field name="phone"/>
-                <field name="email"/>
-                <field name="type"/>
-                <filter name="active_vendors" string="Active" domain="[('active', '=', True)]"/>
-                <filter name="inactive_vendors" string="Inactive" domain="[('active', '=', False)]"/>
+            <search string="🔎 Search Vendors">
+                <field name="name" string="👤 Vendor"/>
+                <field name="phone" string="📞 Phone"/>
+                <field name="email" string="✉️ Email"/>
+                <field name="type" string="🏷️ Type"/>
+                <field name="supplier_type" string="🌍 Supplier Type"/>
+                <field name="vendor_status" string="🚦 Vendor Status"/>
+                <field name="evaluation_state" string="✅ Eval Status"/>
+
                 <separator/>
-                <group expand="0" string="Group By">
-                    <filter name="group_by_type" string="Type" domain="[]" context="{'group_by': 'type'}"/>
-                    <filter name="group_by_status" string="Status" domain="[]" context="{'group_by': 'status'}"/>
+
+                <filter name="active_vendors" string="✅ Active" domain="[('active', '=', True)]"/>
+                <filter name="inactive_vendors" string="🚫 Inactive" domain="[('active', '=', False)]"/>
+
+                <separator/>
+
+                <filter name="local_suppliers" string="🏠 Local Suppliers" domain="[('supplier_type', '=', 'local')]"/>
+                <filter name="international_suppliers" string="🌐 International Suppliers" domain="[('supplier_type', '=', 'international')]"/>
+
+                <separator/>
+
+                <group expand="0" string="📌 Group By">
+                    <filter name="group_by_type" string="🏷️ Type" domain="[]" context="{'group_by': 'type'}"/>
+                    <filter name="group_by_supplier_type" string="🌍 Supplier Type" domain="[]" context="{'group_by': 'supplier_type'}"/>
+                    <filter name="group_by_vendor_status" string="🚦 Vendor Status" domain="[]" context="{'group_by': 'vendor_status'}"/>
+                    <filter name="group_by_eval_state" string="✅ Eval Status" domain="[]" context="{'group_by': 'evaluation_state'}"/>
+                    <filter name="group_by_currency" string="💱 Currency" domain="[]" context="{'group_by': 'currency_id'}"/>
                 </group>
+
                 <searchpanel>
-                    <field name="type" string="Vendor Type" enable_counters="1"/>
+                    <field name="supplier_type" string="🌍 Supplier Type" enable_counters="1"/>
+                    <field name="vendor_status" string="🚦 Vendor Status" enable_counters="1"/>
+                    <field name="type" string="🏷️ Vendor Type" enable_counters="1"/>
                 </searchpanel>
             </search>
         </field>
     </record>
 
-    <!-- Form view -->
+    <!-- ============================= -->
+    <!-- Vendor: Form View -->
+    <!-- ============================= -->
     <record id="view_idil_vendor_form" model="ir.ui.view">
         <field name="name">idil.vendor.form</field>
         <field name="model">idil.vendor.registration</field>
         <field name="arch" type="xml">
-            <form string="Vendor Details">
+            <form string="🏢 Vendor Profile">
                 <sheet>
+
+                    <!-- Top header -->
                     <div class="oe_title">
-                        <label for="name" class="oe_edit_only"/>
-                        <h1>
-                            <field name="name"/>
-                        </h1>
+                        <div class="o_row">
+                            <div class="o_col">
+                                <label for="name" class="oe_edit_only"/>
+                                <h1>
+                                    <field name="name" placeholder="Vendor Name..."/>
+                                </h1>
+                            </div>
+                        </div>
                     </div>
-                    <group>
+
+                    <!-- Quick stats -->
+                    <div class="o_row" style="margin-top: 8px; margin-bottom: 10px;">
+                        <div class="o_col">
+                            <group col="6">
+                                <field name="total_due_amount" string="🟥 Total Due" readonly="1"/>
+                                <field name="opening_balance" string="🟦 Opening Balance" readonly="1"/>
+                                <field name="currency_id" string="💱 Currency"/>
+                                <field name="vendor_status" string="🚦 Vendor Status"/>
+                                <field name="status" string="🔘 Status" widget="boolean_toggle"/>
+                                <field name="active" string="✅ Active"/>
+                            </group>
+                        </div>
+                    </div>
+
+                    <!-- Main information blocks -->
+                    <group string="🧾 Vendor Information" col="2">
                         <field name="image" widget="image" class="oe_avatar" options="{'size': [128, 128]}"/>
-                        <field name="type"/>
+                        <field name="type" string="🏷️ Vendor Type"/>
+                        <field name="supplier_type" string="🌍 Supplier Type"/>
+                        <field name="payment_term" string="📅 Payment Term"/>
                     </group>
+
+                    <group string="⭐ Evaluation" col="2">
+                        <field name="evaluation_score" string="⭐ Score"/>
+                        <field name="evaluation_state" string="✅ Status"/>
+                        <field name="is_local_supplier" string="🏠 Local Procurement"/>
+                        <field name="is_international_supplier" string="🌐 International Procurement"/>
+                    </group>
+
                     <notebook>
-                        <!-- Contact Information Page -->
-                        <page string="Contact Information">
-                            <group>
-                                <field name="phone"/>
-                                <field name="email"/>                                
-                                <field name="total_due_amount" />
+
+                        <!-- Contact -->
+                        <page string="📞 Contact">
+                            <group string="📇 Contact Details" col="2">
+                                <field name="phone" string="📞 Phone"/>
+                                <field name="email" string="✉️ Email"/>
                             </group>
 
-                            <group>
-                                <field name="status" widget="boolean_toggle"/>
-                                <field name="active"/>
+                            <group string="🧩 Compliance &amp; Documents" col="2">
+                                <field name="trade_license_no" string="🧾 Trade License No"/>
+                                <field name="tax_number" string="🏛️ Tax Number"/>
+                                <field name="contract_document" string="📎 Contract Document"/>
                             </group>
                         </page>
-                        <!-- Accounting Page -->
-                        <page string="Accounting">
-                            <group>
-                                <field name="currency_id"/>
-                                <field name="account_payable_id"/>
-                            </group>
-                            <group>
-                             <field name="opening_balance" readonly="1"/>
+
+                        <!-- Accounting -->
+                        <page string="💼 Accounting">
+                            <group string="📒 Accounts" col="2">
+                                <field name="account_payable_id" string="📌 Account Payable"/>
+                                <field name="account_receivable_id" string="📌 Account Receivable"/>
                             </group>
 
-                            <group string="Financial Transactions">
+                            <group string="💳 Terms" col="2">
+                                <field name="payment_term" string="📅 Payment Term"/>
+                                <field name="currency_id" string="💱 Vendor Currency"/>
+                            </group>
+
+                            <group string="📊 Financial Transactions">
                                 <field name="financial_transactions" readonly="1"/>
                             </group>
                         </page>
+
+                        <!-- Logistics (for International) -->
+                        <page string="🚢 Logistics">
+                            <group string="📦 Shipping Setup" col="2">
+                                <field name="default_shipping_port" string="⚓ Default Shipping Port"/>
+                                <field name="incoterm" string="📦 Incoterm"/>
+                            </group>
+                        </page>
+
                     </notebook>
                 </sheet>
+
+                <!-- Chatter -->
                 <div class="oe_chatter">
                     <field name="message_follower_ids" widget="mail_followers"/>
                     <field name="message_ids" widget="mail_thread"/>
@@ -100,17 +192,22 @@
         </field>
     </record>
 
-    <!-- Action for idil.vendor.registration model -->
+    <!-- ============================= -->
+    <!-- Vendor: Action -->
+    <!-- ============================= -->
     <record id="action_idil_vendor" model="ir.actions.act_window">
-        <field name="name">Vendor Registration</field>
+        <field name="name">🏢 Vendors</field>
         <field name="type">ir.actions.act_window</field>
         <field name="res_model">idil.vendor.registration</field>
         <field name="view_mode">tree,form</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
-                Click on create to add your first vendor. Manage your vendors efficiently by keeping their information
-                up to date.
+                Create your first vendor and keep procurement operations organized.
+            </p>
+            <p>
+                Track supplier type (Local/International), evaluation score, payment terms, accounting setup, and due balances.
             </p>
         </field>
     </record>
+
 </odoo>

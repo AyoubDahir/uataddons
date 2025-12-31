@@ -125,5 +125,21 @@
             <field name="padding">4</field>
         </record>
 
+        <record id="seq_material_request_preq" model="ir.sequence">
+            <field name="name">Material Request (PREQ)</field>
+            <field name="code">idil.material.request.preq</field>
+            <field name="prefix">PREQ/</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+        </record>
+
+        <record id="seq_purchase_receipt" model="ir.sequence">
+            <field name="name">Purchase Receipt</field>
+            <field name="code">idil.purchase.receipt</field>
+            <field name="prefix">PR/%(year)s/%(month)s/</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+        </record>
+
     </data>
 </odoo>

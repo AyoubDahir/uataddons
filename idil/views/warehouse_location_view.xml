@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- =========================
+         📌 Warehouse Views
+    ========================== -->
+
+    <record id="view_idil_warehouse_tree" model="ir.ui.view">
+        <field name="name">idil.warehouse.tree</field>
+        <field name="model">idil.warehouse</field>
+        <field name="arch" type="xml">
+            <tree string="🏬 Warehouses" decoration-muted="not active">
+                <field name="name"/>
+                <field name="code"/>
+                <field name="manager_id"/>
+                <field name="address"/>
+                <field name="location_count" string="📌 Locations"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_idil_warehouse_search" model="ir.ui.view">
+        <field name="name">idil.warehouse.search</field>
+        <field name="model">idil.warehouse</field>
+        <field name="arch" type="xml">
+            <search string="🏬 Warehouse Search">
+                <field name="name"/>
+                <field name="code"/>
+                <field name="manager_id"/>
+                <filter name="active_wh" string="✅ Active" domain="[('active','=',True)]"/>
+                <filter name="inactive_wh" string="🚫 Inactive" domain="[('active','=',False)]"/>
+                <separator/>
+                <group expand="0" string="Group By">
+                    <filter string="👤 Manager" name="grp_manager" domain="[]" context="{'group_by':'manager_id'}"/>
+                    <filter string="✅ Active" name="grp_active" domain="[]" context="{'group_by':'active'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_idil_warehouse_form" model="ir.ui.view">
+        <field name="name">idil.warehouse.form</field>
+        <field name="model">idil.warehouse</field>
+        <field name="arch" type="xml">
+            <form string="🏬 Warehouse">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="e.g., Mogadishu WH"/>
+                        </h1>
+                        <div class="o_row">
+                            <field name="code" placeholder="e.g., MOG-WH"/>
+                            <field name="active"/>
+                        </div>
+                    </div>
+
+                    <group string="📍 Warehouse Details">
+                        <group>
+                            <field name="manager_id" options="{'no_create': False}"/>
+                            <field name="address"/>
+                        </group>
+                        <group>
+                            <field name="location_count" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="📌 Locations">
+                            <field name="location_ids" context="{'default_warehouse_id': active_id}">
+                                <tree editable="bottom" string="📌 Locations" decoration-muted="not active">
+                                    <field name="name"/>
+                                    <field name="code"/>
+                                    <field name="usage"/>
+                                    <field name="is_default_receiving"/>
+                                    <field name="active"/>
+                                </tree>
+                            </field>
+                        </page>
+
+                        <page string="📝 Notes">
+                            <field name="notes" placeholder="Any special instructions for this warehouse..."/>
+                        </page>
+                    </notebook>
+
+                </sheet>
+
+                <div class="oe_chatter">
+                    <field name="message_follower_ids" widget="mail_followers"/>
+                    <field name="message_ids" widget="mail_thread"/>
+                    <field name="activity_ids" widget="mail_activity"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+
+    <!-- =========================
+         📌 Location Views
+    ========================== -->
+
+    <record id="view_idil_location_tree" model="ir.ui.view">
+        <field name="name">idil.warehouse.location.tree</field>
+        <field name="model">idil.warehouse.location</field>
+        <field name="arch" type="xml">
+            <tree string="📌 Warehouse Locations" decoration-muted="not active">
+                <field name="warehouse_id"/>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="usage"/>
+                <field name="is_default_receiving"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_idil_location_search" model="ir.ui.view">
+        <field name="name">idil.warehouse.location.search</field>
+        <field name="model">idil.warehouse.location</field>
+        <field name="arch" type="xml">
+            <search string="📌 Location Search">
+                <field name="warehouse_id"/>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="usage"/>
+                <filter name="active_loc" string="✅ Active" domain="[('active','=',True)]"/>
+                <filter name="inactive_loc" string="🚫 Inactive" domain="[('active','=',False)]"/>
+                <separator/>
+                <group expand="0" string="Group By">
+                    <filter string="🏬 Warehouse" name="grp_wh" domain="[]" context="{'group_by':'warehouse_id'}"/>
+                    <filter string="🧭 Type" name="grp_usage" domain="[]" context="{'group_by':'usage'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_idil_location_form" model="ir.ui.view">
+        <field name="name">idil.warehouse.location.form</field>
+        <field name="model">idil.warehouse.location</field>
+        <field name="arch" type="xml">
+            <form string="📌 Location">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="e.g., Receiving Area / Shelf A1"/>
+                        </h1>
+                        <div class="o_row">
+                            <field name="warehouse_id"/>
+                            <field name="active"/>
+                        </div>
+                    </div>
+
+                    <group string="📌 Location Details">
+                        <group>
+                            <field name="code"/>
+                            <field name="usage"/>
+                        </group>
+                        <group>
+                            <field name="is_default_receiving"/>
+                        </group>
+                    </group>
+
+                    <group string="📝 Notes">
+                        <field name="notes"/>
+                    </group>
+
+                </sheet>
+
+                <div class="oe_chatter">
+                    <field name="message_follower_ids" widget="mail_followers"/>
+                    <field name="message_ids" widget="mail_thread"/>
+                    <field name="activity_ids" widget="mail_activity"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+
+    <!-- =========================
+         ✅ Actions
+    ========================== -->
+
+    <record id="action_idil_warehouse" model="ir.actions.act_window">
+        <field name="name">🏬 Warehouses</field>
+        <field name="res_model">idil.warehouse</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create warehouses (e.g., Mogadishu WH, China WH) and manage their locations (Receiving, Storage, Cold Room).
+            </p>
+        </field>
+    </record>
+
+    <record id="action_idil_warehouse_location" model="ir.actions.act_window">
+        <field name="name">📌 Warehouse Locations</field>
+        <field name="res_model">idil.warehouse.location</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create locations inside warehouses (Receiving Area, Shelf A1, Cold Storage, Transit).
+            </p>
+        </field>
+    </record>
+
+
+    <!-- =========================
+         🧭 Menus (Workflow-friendly)
+    ========================== -->
+ 
+
+   
+</odoo>

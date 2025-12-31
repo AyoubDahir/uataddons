@@ -22,14 +22,29 @@ class SystemClearingWizard(models.TransientModel):
         Update public.idil_vendor_registration set opening_balance =0;
         Delete from idil_transaction_bookingline;
         Delete from idil_transaction_booking;
+
+       
+
         Delete from idil_purchase_return;
-        Delete FROM public.idil_purchase_order_line;
-        Delete FROM public.idil_purchase_order;
+       
         Delete from idil_product_purchase_return;
         Delete from idil_product_purchase_order;
         Delete from idil_product_purchase_return_line;
         Delete FROM public.idil_vendor_payment;
         Delete from idil_vendor_transaction;
+ 
+        Delete from idil_received_purchase;
+
+        Delete from idil_purchase_receipt_line;
+        Delete from idil_purchase_receipt;
+        Delete FROM public.idil_purchase_order_line;
+        Delete FROM public.idil_purchase_order;
+        Delete from idil_material_request_line;
+        Delete from idil_material_request;
+
+
+       
+        
         Delete from idil_vendor_opening_balance_line;
         Delete from idil_vendor_opening_balance;
         Delete FROM public.idil_vendor_bulk_payment;
@@ -77,6 +92,8 @@ class SystemClearingWizard(models.TransientModel):
         Delete from idil_staff_sales_line;
         Delete from idil_customer_place_order_line;
         Delete from idil_customer_place_order;
+        
+
  
 
         """

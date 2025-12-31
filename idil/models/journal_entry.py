@@ -508,7 +508,6 @@ class JournalEntry(models.Model):
 class JournalEntryLine(models.Model):
     _name = "idil.journal.entry.line"
     _description = "Journal Entry Line"
-    _order = "id desc"
 
     entry_id = fields.Many2one(
         "idil.journal.entry", string="Journal Entry", required=True, ondelete="cascade"

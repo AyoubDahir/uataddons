@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
 
-<menuitem id="menu_idil_home"
+<!-- <menuitem id="menu_idil_home"
         name="BizCore"
         web_icon="idil,static/description/icon.png"
         groups="base.group_user"
@@ -10,30 +10,52 @@
         <menuitem id="menu_inventory_purchase_root"
                 name="Inventory &amp; Purchase Managment"
                 parent="menu_idil_home"
-                sequence="4"/>
+                sequence="1"/>
 
                 <menuitem id="menu_purchase"
                         name="Purchase Managment"
                         parent="menu_inventory_purchase_root"
                         sequence="1"/>
 
+                         <menuitem id="menu_idil_procurement_root"
+                                name="🛒 Procurement"
+                                parent="menu_purchase"
+                                sequence="1"/>
+
+                                        <menuitem id="menu_idil_procurement_operations"
+                                                name="⚙️ Operations"
+                                                parent="menu_idil_procurement_root"
+                                                sequence="1"/>
+
+                                                <menuitem id="menu_material_request_root"
+                                                        name="Material Requests"
+                                                        parent="menu_idil_procurement_root"
+                                                        sequence="2"
+                                                        action="action_material_request"/>
+
+                                                <menuitem id="menu_idil_purchase_receipts"
+                                                        name="📦 Purchase Receipts"
+                                                        parent="menu_idil_procurement_root"
+                                                        action="action_idil_purchase_receipt"
+                                                        sequence="3"/>
+
                         <menuitem id="menu_purchase_orders"
                                 name="Purchase Items"
                                 parent="menu_purchase"
-                                sequence="1"
+                                sequence="2"
                                 action="action_purchase_order"/>
                 
                         <menuitem id="menu_product_purchase_order" 
                                 name="Purchase Products" 
                                 parent="menu_purchase" 
-                                sequence="2"
+                                sequence="3"
                                 action="action_product_purchase_order"/>
 
 
                         <menuitem id="menu_idil_view_purchase_order"
                                 name="View Purchase Oder"
                                 action="action_view_purchase_order"
-                                sequence="3"
+                                sequence="4"
                                 parent="menu_purchase"/>
 
         
@@ -41,32 +63,176 @@
                                 name="Vendor List"
                                 parent="menu_purchase"
                                 action="action_idil_vendor"
-                                sequence="2"/>
+                                sequence="5"/>
 
                         <menuitem id="menu_vendor_transaction"
                                 name="Vendor Transactions"
                                 parent="menu_purchase"
                                 action="action_vendor_transaction"
-                                sequence="3"/>
+                                sequence="6"/>
 
 
                         <menuitem id="menu_vendor_payment_wizard"
                                         name="Vendor Bulk Payment"
                                         parent="menu_purchase"
                                         action="action_vendor_bulk_payment"
-                                        sequence="3"/>
+                                        sequence="7"/>
 
                         <menuitem id="menu_purchase_return" 
                                 name="Item Purchase Returns" 
                                 parent="menu_purchase" 
                                 action="action_purchase_return"
-                                sequence="4"/>
+                                sequence="8"/>
 
                         <menuitem id="menu_product_purchase_return" 
                                 name="Product Purchase Returns"
                                 parent="menu_purchase" 
-                                sequence="5"
-                                action="action_product_purchase_return"/>
+                                sequence="9"
+                                action="action_product_purchase_return"/> -->
+<!-- Root -->
+<menuitem id="menu_idil_home"
+          name="BizCore"
+          web_icon="idil,static/description/icon.png"
+          groups="base.group_user"
+          sequence="1"/>
+
+<menuitem id="menu_inventory_purchase_root"
+          name="📦 Inventory &amp; Procurement"
+          parent="menu_idil_home"
+          sequence="1"/>
+
+<menuitem id="menu_purchase"
+          name="🛒 Procurement"
+          parent="menu_inventory_purchase_root"
+          sequence="1"/>
+
+<!-- =========================================================
+     1) REQUESTS (Start of workflow)
+========================================================= -->
+<menuitem id="menu_procurement_requests"
+          name="📝 Requests"
+          parent="menu_purchase"
+          sequence="1"/>
+
+
+    <menuitem id="menu_idil_internal_transfer"
+              name="🔁 Internal Transfers"
+              parent="menu_procurement_requests"
+              action="action_internal_transfer"
+              sequence="-1"/>
+
+
+<menuitem id="menu_material_request_root"
+          name="🧾 Material Requests"
+          parent="menu_procurement_requests"
+          action="action_material_request"
+          sequence="1"/>
+
+<!-- =========================================================
+     2) PURCHASING (RFQ / PO)
+========================================================= -->
+<menuitem id="menu_procurement_purchasing"
+          name="📑 Purchasing"
+          parent="menu_purchase"
+          sequence="2"/>
+
+<menuitem id="menu_purchase_orders"
+          name="🛍️ Purchase Orders (Items)"
+          parent="menu_procurement_purchasing"
+          action="action_purchase_order"
+          sequence="1"/>
+
+<menuitem id="menu_product_purchase_order"
+          name="🧰 Purchase Orders (Products)"
+          parent="menu_procurement_purchasing"
+          action="action_product_purchase_order"
+          sequence="2"/>
+
+<menuitem id="menu_idil_view_purchase_order"
+          name="🔎 View Purchase Orders"
+          parent="menu_procurement_purchasing"
+          action="action_view_purchase_order"
+          sequence="3"/>
+
+<!-- =========================================================
+     3) RECEIVING (Receipts)
+========================================================= -->
+<menuitem id="menu_procurement_receiving"
+          name="🚚 Receiving"
+          parent="menu_purchase"
+          sequence="3"/>
+
+<menuitem id="menu_idil_purchase_receipts"
+          name="📥 Purchase Receipts"
+          parent="menu_procurement_receiving"
+          action="action_purchase_receipt"
+          sequence="1"/>
+
+<!-- =========================================================
+     4) VENDORS & PAYMENTS
+========================================================= -->
+<menuitem id="menu_procurement_vendors"
+          name="🏷️ Vendors &amp; Payments"
+          parent="menu_purchase"
+          sequence="4"/>
+
+<menuitem id="menu_idil_vendors_registration_root"
+          name="🏢 Vendors"
+          parent="menu_procurement_vendors"
+          action="action_idil_vendor"
+          sequence="1"/>
+
+<menuitem id="menu_vendor_transaction"
+          name="📒 Vendor Statements"
+          parent="menu_procurement_vendors"
+          action="action_vendor_transaction"
+          sequence="2"/>
+
+<menuitem id="menu_vendor_payment_wizard"
+          name="💳 Vendor Bulk Payments"
+          parent="menu_procurement_vendors"
+          action="action_vendor_bulk_payment"
+          sequence="3"/>
+
+<!-- =========================================================
+     5) RETURNS (Exceptions)
+========================================================= -->
+<menuitem id="menu_procurement_returns"
+          name="↩️ Returns"
+          parent="menu_purchase"
+          sequence="5"/>
+
+<menuitem id="menu_purchase_return"
+          name="↩️ Purchase Returns (Items)"
+          parent="menu_procurement_returns"
+          action="action_purchase_return"
+          sequence="1"/>
+
+<menuitem id="menu_product_purchase_return"
+          name="↩️ Purchase Returns (Products)"
+          parent="menu_procurement_returns"
+          action="action_product_purchase_return"
+          sequence="2"/>
+
+<menuitem id="menu_idil_master_data_root"
+        name="🧩 Master Data"
+        parent="menu_purchase"
+        sequence="6"/>
+
+<menuitem id="menu_idil_warehouses"
+        name="🏬 Warehouses"
+        parent="menu_idil_master_data_root"
+        action="action_idil_warehouse"
+        sequence="2"/>
+
+<menuitem id="menu_idil_locations"
+        name="📌 Warehouse Locations"
+        parent="menu_idil_master_data_root"
+        action="action_idil_warehouse_location"
+        sequence="3"/>
+
+
+
 
                 <menuitem id="menu_inventory"
                         name="Inventory Managment"
@@ -560,5 +726,18 @@
               parent="menu_operational_reports"
               action="action_customer_outstanding_wizard"
               sequence="5"/>
+
+
+<menuitem id="menu_bizcore_db_tools"
+              name="Database Tools"      
+              sequence="10"/>
+
+<!-- Backup menu -->
+<menuitem id="menu_bizcore_db_backup"
+        name="Database Backup  "
+        parent="menu_bizcore_db_tools"
+        action="action_bizcore_db_backup_wizard"
+        sequence="1"/>
+
 
 </odoo>

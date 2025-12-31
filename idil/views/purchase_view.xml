@@ -1,166 +1,241 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
 
-    <!-- ========================= -->
-    <!-- Tree (List) View          -->
-    <!-- ========================= -->
+    <!-- ===================================================== -->
+    <!-- 🧾 Purchase Orders | Tree (List) View                   -->
+    <!-- ===================================================== -->
     <record id="view_purchase_order_tree" model="ir.ui.view">
         <field name="name">idil.purchase_order.tree</field>
         <field name="model">idil.purchase_order</field>
         <field name="arch" type="xml">
-            <tree string="Purchase Orders" decoration-info="state in ('draft','pending')" decoration-success="state == 'confirmed'" decoration-danger="state == 'cancel'">
-                <field name="reffno" string="Ref No." readonly="1" class="o_td_center" />
-                <field name="vendor_id" />
-                <field name="payment_method" string="Payment Method" class="o_td_center" optional="hide"/>
-                <field name="account_number" class="o_td_center" optional="hide"/>
-                <!-- Show monetary properly; if your model has currency_id, this will format amounts -->
-                
-                <field name="currency_amount_id" optional="hide"/>
+            <tree string="🧾 Purchase Orders"
+                  decoration-info="state in ('draft','pending')"
+                  decoration-success="state == 'confirmed'"
+                  decoration-danger="state == 'cancel'">
 
-                <field name="amount" sum="Total" widget="monetary" options="{'currency_field': 'currency_amount_id'}" class="o_td_right"/>
+                <field name="reffno" string="🔖 Ref No." readonly="1" class="o_td_center"/>
                 
-
-                <!-- Compact preview of lines count for quick scan -->
-                <field name="order_lines" string="Items" widget="one2many_count" class="o_td_center" optional="show"/>
-                <field name="purchase_date" class="o_td_center"/>
-                <field name="state"/>
+                <field name="material_request_id"/>
+                
+                <field name="vendor_id" string="🏷️ Vendor"/>
+                <field name="currency_amount_id" string="💱 Cur." optional="hide"/>
+                <field name="amount_total_display" string="🧾 Total (Mixed)" class="o_td_right" optional="show"/>
+                <field name="amount_usd" string="💵 USD Total" widget="monetary"
+                    options="{'currency_field': 'currency_usd_id'}" class="o_td_right"/>
+                <field name="amount_sl" string="💱 SL Total" widget="monetary"
+                    options="{'currency_field': 'currency_sl_id'}" class="o_td_right"/>
+                <field name="order_lines" string="📦 Items" widget="one2many_count" class="o_td_center" optional="show"/>
+                
+                <field name="purchase_date" string="📅 Date" class="o_td_center"/>
+                <field name="receipt_state"/>
+                <field name="state" string="✅ Status"/>
 
             </tree>
         </field>
     </record>
 
-    <!-- ========================= -->
-    <!-- Search View               -->
-    <!-- ========================= -->
+    <!-- ===================================================== -->
+    <!-- 🔎 Purchase Orders | Search View                        -->
+    <!-- ===================================================== -->
     <record id="view_purchase_order_search" model="ir.ui.view">
         <field name="name">idil.purchase_order.search</field>
         <field name="model">idil.purchase_order</field>
         <field name="arch" type="xml">
-            <search string="Search Purchase Orders">
-                <field name="reffno" string="Reference"/>
-                <field name="vendor_id"/>
-                <field name="payment_method"/>
-                <field name="account_number"/>
-                <field name="purchase_date"/>
+            <search string="🔎 Search Purchase Orders">
 
-                <filter name="today" string="Today" domain="[('purchase_date', '=', context_today().strftime('%%Y-%%m-%%d'))]"/>
-                <filter name="this_week" string="This Week" domain="[('purchase_date','&gt;=', (context_today() - datetime.timedelta(days=context_today().weekday())).strftime('%%Y-%%m-%%d'))]"/>
+                <!-- Quick Fields -->
+                <field name="reffno" string="🔖 Reference"/>
+                <field name="vendor_id" string="🏷️ Vendor"/>
+             
+                <field name="purchase_date" string="📅 Purchase Date"/>
+
+                <!-- Quick Filters -->
                 <separator/>
-                <filter name="draft" string="Draft/Pending" domain="[('state','in',('draft','pending'))]"/>
-                <filter name="confirmed" string="Confirmed" domain="[('state','=','confirmed')]"/>
-                <filter name="cancel" string="Cancelled" domain="[('state','=','cancel')]"/>
+                <filter name="today" string="📌 Today"
+                        domain="[('purchase_date', '=', context_today().strftime('%%Y-%%m-%%d'))]"/>
+                <filter name="this_week" string="🗓️ This Week"
+                        domain="[('purchase_date','&gt;=', (context_today() - datetime.timedelta(days=context_today().weekday())).strftime('%%Y-%%m-%%d'))]"/>
 
-                <group expand="0" string="Group By">
-                    <filter name="group_vendor" string="Vendor" context="{'group_by':'vendor_id'}"/>
-                    <filter name="group_payment" string="Payment Method" context="{'group_by':'payment_method'}"/>
-                    <filter name="group_date" string="Purchase Date" context="{'group_by':'purchase_date'}"/>
+                <separator/>
+                <filter name="draft" string="📝 Draft / Pending" domain="[('state','in',('draft','pending'))]"/>
+                <filter name="confirmed" string="✅ Confirmed" domain="[('state','=','confirmed')]"/>
+                <filter name="cancel" string="⛔ Cancelled" domain="[('state','=','cancel')]"/>
+
+                <!-- Group By -->
+                <group expand="0" string="📊 Group By">
+                    <filter name="group_vendor" string="🏷️ Vendor" context="{'group_by':'vendor_id'}"/>
+                 
+                    <filter name="group_date" string="📅 Purchase Date" context="{'group_by':'purchase_date'}"/>
                 </group>
+
             </search>
         </field>
     </record>
 
-    <!-- ========================= -->
-    <!-- Form View                 --> 
-    <!-- ========================= -->
+    <!-- ===================================================== -->
+    <!-- 🧾 Purchase Orders | Form View                           -->
+    <!-- ===================================================== -->
     <record id="idil_view_purchase_order_form" model="ir.ui.view">
         <field name="name">idil.purchase_order.form</field>
         <field name="model">idil.purchase_order</field>
         <field name="arch" type="xml">
-            <form string="Purchase Order" class="o_form_full o_form_nosheet">
-                <!-- Header Bar -->
-                <header>
-                    <!-- If you have 'state' selection on the model, statusbar looks great -->
-                    <field name="state" widget="statusbar" statusbar_visible="draft,pending,confirmed,cancel" optional="show"/>
+            <form editable="false" create="false" delete="false" string="🧾 Purchase Order" class="o_form_full o_form_nosheet">
 
-                    <!-- Action Buttons (guard with attrs if needed) -->
-                    <!-- <button name="action_confirm" type="object" string="Confirm" class="btn-primary"
-                            attrs="{'invisible': [('state','not in',('draft','pending'))]}"/>
-                    <button name="action_set_pending" type="object" string="Set Pending"
-                            attrs="{'invisible': [('state','!=','draft')]}"/>
-                    <button name="action_cancel" type="object" string="Cancel" class="btn-secondary"
-                            attrs="{'invisible': [('state','in',('cancel','confirmed'))]}"/>
-                    <button name="action_reset_to_draft" type="object" string="Reset to Draft" class="btn-secondary"
-                            attrs="{'invisible': [('state','!=','cancel')]}"/> -->
+                <!-- Header / Status -->
+                <header>
+                    <field name="state"
+                           widget="statusbar"
+                           statusbar_visible="draft,pending,confirmed,cancel"
+                           optional="show"/>
+                           <!-- Buttons -->
+                    <button name="action_submit" type="object"
+                            string="📤 Submit" class="btn-primary"
+                            invisible="state != 'draft'"/>
+
+                    <button name="action_confirm" type="object"
+                            string="✅ Approve" class="btn-primary"
+                            invisible="state != 'pending'"/>
+
+                    <button name="action_cancel" type="object"
+                            string="🛑 Cancel" class="btn-secondary"
+                            invisible="state not in ('draft','pending')"/>
+
+                    <button name="action_reset_to_draft" type="object"
+                            string="↩️ Reset to Draft" class="btn-secondary"
+                            invisible="state != 'cancel'"/>
+ 
+
+
+                    <button name="action_print_purchase_order_pdf"
+                        type="object"
+                        string="Print PO"
+                        class="btn-secondary"
+                         visible="state = 'approved'"/> 
+
                 </header>
 
                 <sheet>
-              
-                    <!-- Primary: Reference + Vendor & Dates -->
+
+                    <!-- ================================================= -->
+                    <!-- 📌 Top Summary: Reference / Vendor / Invoice       -->
+                    <!-- ================================================= -->
                     <group>
-
-                        <group>
-                            <field name="reffno" string="Reference No." readonly="1"/>
-                            <field name="vendor_id" options="{'no_create_edit': True}"/>
-                            <field name="invoice_number"/>
+                        <group string="🧾 Document Details">
+                            <field name="reffno" string="🔖 Reference No." readonly="1"/>
+                            <field name="vendor_id" string="🏷️ Vendor" options="{'no_create_edit': True}"/>
+                            <field name="invoice_number" string="🧾 Invoice No."/>
                         </group>
 
-                        <group>
-                            <field name="purchase_date"/>
-                            <field name="currency_id"/>
-                            <!-- If you use rate only when currency != company currency, you can hide conditionally -->
-                            <field name="rate"  
-                                   help="Exchange rate applied to this purchase"/>
+                        <group string="📅 Date &amp; Currency">
+                            <field name="purchase_date" string="📅 Purchase Date"/>
+                            <field name="currency_id" string="💱 Document Currency"/>
+                            <field name="rate" string="📈 Exchange Rate" help="Exchange rate applied to this purchase"/>
                         </group>
-                        
                     </group>
 
-                    <!-- Payment Information in a clean row -->
-                    <group string="Payment Information">
-                        <field name="payment_method" string="Payment Method"/>
-                        <field name="account_number"/>
-                        <field name="currency_amount_id"/>
-                        
-                        <field  name="amount"
-                                widget="monetary"
-                                options="{'currency_field': 'currency_amount_id'}"
-                                readonly="1"/>
-                        <field name="description" placeholder="Add a short description..."/>
+                    <!-- ================================================= -->
+                    <!-- 💳 Payment Block                                   -->
+                    <!-- ================================================= -->
+                    <group string="💳 Payment Information">
+                     
+                        <field name="currency_amount_id" string="💱 Account Currency"/>
+
+                        <field name="amount"
+                               string="💰 Total Amount"
+                               widget="monetary"
+                               options="{'currency_field': 'currency_amount_id'}"
+                               readonly="1"/>
+
+                        <field name="description" string="📝 Description" placeholder="Add a short description..."/>
                     </group>
 
                     <notebook>
-                        <!-- Items Page -->
-                        <page string="Items">
-                            <field name="order_lines" widget="one2many_list"
+
+                        <!-- ================================================= -->
+                        <!-- 📦 Items Page                                      -->
+                        <!-- ================================================= -->
+                        <page string="📦 Items">
+
+                            <field name="order_lines"
+                                   widget="one2many_list"
+                                    readonly="1"
                                    options="{
                                         'no_open': False,
                                         'no_create_edit': False,
                                         'reload_on_button': true,
                                         'create_edit': true
                                    }">
-                                <tree editable="bottom" string="Items">
-                                    <field name="item_id" widget="many2one_tags"
-                                           options="{'no_create': True}" string="Item" />
-                                    <field name="quantity" class="o_td_center"/>
-                                    <field name="cost_price" string="Unit Cost" class="o_td_right"
+                            
+
+                                <tree editable="false" create="false" delete="false" string="📦 Purchase Items">
+
+                                    <field name="item_id"
+                                           string="📦 Item"
+                                           widget="many2one_tags"
+                                           options="{'no_create': True}"/>
+
+                                    <field name="item_asset_account_id"
+                                           string="🏦 Asset Account"
+                                           widget="many2one_tags"
+                                           options="{'no_create': True}"/>
+
+                                    <field name="item_asset_currency_id"
+                                           string="💱 Currency"
+                                           widget="many2one_tags"
+                                           options="{'no_create': True}"/>
+
+                                    <field name="quantity" string="📊 Qty" class="o_td_center"/>
+                                    
+                                    <field name="received_qty_total" class="o_td_center"/>
+
+                                    <field name="remaining_qty" class="o_td_center"/>
+                                    <field name="not_coming_qty" class="o_td_center"/>
+                                    
+                                     
+
+                                    <field name="cost_price"
+                                           string="💵 Unit Cost"
+                                           class="o_td_right"
                                            digits="[16, 5]"/>
-                                     <field name="amount" string="Total"
-                                           widget="monetary" 
-                                           readonly="1" class="o_td_right"/>
-                                    <field name="expiration_date" class="o_td_center"/>
+
+                                    <field name="amount"
+                                           string="💰 Line Total"
+                                           widget="monetary"
+                                           sum="total"
+                                           readonly="1"
+                                           class="o_td_right"/>
+
+                                    <field name="expiration_date" string="⏳ Expiry" class="o_td_center"/>
+
                                 </tree>
 
-                                <form string="Item">
+                                <form string="📦 Item Line">
                                     <group>
-                                        <group>
-                                            <field name="item_id" options="{'no_create': True}"/>
-                                            <field name="quantity"/>
-                                            <field name="cost_price" digits="[16,5]"/>
+                                        <group string="📦 Item Details">
+                                            <field name="item_id" string="📦 Item" options="{'no_create': True}"/>
+                                            <field name="quantity" string="📊 Quantity"/>
+                                            <field name="cost_price" string="💵 Unit Cost" digits="[16,5]"/>
                                         </group>
-                                        <group>
-                                            <field name="amount" widget="monetary" readonly="1"/>
-                                            <field name="expiration_date"/>
+                                        <group string="💰 Totals &amp; Dates">
+                                            <field name="amount" string="💰 Line Total" widget="monetary" readonly="1"/>
+                                            <field name="expiration_date" string="⏳ Expiration Date"/>
                                         </group>
                                     </group>
                                 </form>
-                            </field>
-                        </page>
-                    </notebook>
-                        <!-- Optional: Notes / Attachments -->
-                         <group>
 
-                            <field name="description" placeholder="Internal notes..." nolabel="1"/>
-                        </group>
-                   
+                            </field>
+
+                        </page>
+
+                    </notebook>
+
+                    <!-- ================================================= -->
+                    <!-- 🗒️ Notes                                            -->
+                    <!-- ================================================= -->
+                    <group string="🗒️ Notes">
+                        <field name="description" placeholder="Internal notes..." nolabel="1"/>
+                    </group>
+
                 </sheet>
 
                 <!-- Chatter -->
@@ -169,15 +244,16 @@
                     <field name="message_ids"/>
                     <field name="activity_ids"/>
                 </div>
+
             </form>
         </field>
     </record>
 
-    <!-- ========================= -->
-    <!-- Action                    -->
-    <!-- ========================= -->
+    <!-- ===================================================== -->
+    <!-- 🚀 Action                                               -->
+    <!-- ===================================================== -->
     <record id="action_purchase_order" model="ir.actions.act_window">
-        <field name="name">Purchase Orders</field>
+        <field name="name">🧾 Purchase Orders</field>
         <field name="type">ir.actions.act_window</field>
         <field name="res_model">idil.purchase_order</field>
         <field name="view_mode">tree,form</field>
@@ -190,5 +266,305 @@
             </p>
         </field>
     </record>
+
+
+
+    <!-- Report Action -->
+    <record id="report_purchase_order_pdf" model="ir.actions.report">
+        <field name="name">Purchase Order</field>
+        <field name="model">idil.purchase_order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">idil.purchase_order_report_template</field>
+        <field name="report_file">idil.purchase_order_report_template</field>
+        <field name="print_report_name">'PO - %s' % (object.reffno or '')</field>
+    </record>
+
+  <template id="purchase_order_report_template">
+    <t t-call="web.basic_layout">
+        <t t-foreach="docs" t-as="o">
+            <t t-set="company" t-value="o.company_id or o.env.company"/>
+
+            <main class="page">
+
+                <!-- =======================
+                     STYLE (wkhtmltopdf safe)
+                     ======================= -->
+                <style type="text/css">
+                    .po-wrap { font-family: Arial, sans-serif; color:#222; }
+                    .po-title { font-size:42px; font-weight:800; color:#19a9b3; margin:0; padding:0; }
+                    .po-subtitle { font-size:12px; color:#666; margin-top:2px; }
+                    .po-line { border-top:3px solid #19a9b3; margin:14px 0 18px 0; }
+                    .po-section-title { font-size:13px; font-weight:800; margin:0 0 6px 0; color:#111; }
+                    .po-muted { color:#666; font-size:12px; line-height:1.35; }
+                    .po-text { font-size:12.5px; line-height:1.45; }
+                    .po-box { background:#f6f8fa; border-radius:8px; padding:12px; }
+                    .po-kv td { padding:2px 0; font-size:12.5px; }
+                    .po-k { color:#666; width:45%; }
+                    .po-v { text-align:right; font-weight:700; color:#111; }
+                    .po-items { width:100%; border-collapse:collapse; margin-top:14px; }
+                    .po-items thead th {
+                        font-size:12px; color:#333; text-align:left;
+                        border-top:2px solid #19a9b3;
+                        border-bottom:1px solid #ddd;
+                        padding:8px 8px;
+                        background:#fcfcfc;
+                    }
+                    .po-items tbody td {
+                        font-size:12.5px;
+                        padding:8px 8px;
+                        border-bottom:1px solid #eee;
+                        vertical-align:top;
+                    }
+                    .po-right { text-align:right; }
+                    .po-center { text-align:center; }
+                    .po-totals { width:100%; border-collapse:collapse; }
+                    .po-totals td { padding:5px 0; font-size:12.5px; }
+                    .po-total-label { color:#666; }
+                    .po-total-val { text-align:right; font-weight:700; }
+                    .po-grand { color:#19a9b3; font-weight:900; font-size:14px; }
+                    .po-footer-line { border-top:2px solid #19a9b3; margin-top:18px; }
+                    .po-sign td { padding-top:26px; font-size:12.5px; }
+                    .po-sign .line { border-top:1px solid #111; width:75%; margin-top:30px; }
+                </style>
+
+                <div class="po-wrap">
+
+                    <!-- =======================
+                         HEADER (Title + Logo)
+                         ======================= -->
+                    <table style="width:100%; border-collapse:collapse;">
+                        <tr>
+                            <td style="width:75%; vertical-align:top;">
+                                <div class="po-title">Purchase Order</div>
+                                <div class="po-subtitle">Official Procurement Document</div>
+                            </td>
+
+                            <td style="width:25%; text-align:right; vertical-align:top;">
+                                <t t-if="company.logo">
+                                    <div style="display:inline-block; width:88px; height:88px; border-radius:44px; border:3px solid #19a9b3; overflow:hidden;">
+                                        <img t-att-src="image_data_uri(company.logo)"
+                                             style="width:88px; height:88px; object-fit:cover;"
+                                             alt="Company Logo"/>
+                                    </div>
+                                </t>
+                                <t t-else="">
+                                    <div style="display:inline-block; width:88px; height:88px; border-radius:44px; border:3px solid #19a9b3;"></div>
+                                </t>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <div class="po-line"></div>
+
+                    <!-- =======================
+                         TOP INFO (Company + Order Box)
+                         ======================= -->
+                    <table style="width:100%; border-collapse:collapse;">
+                        <tr>
+                            <!-- Company (left) -->
+                            <td style="width:55%; vertical-align:top; padding-right:18px;">
+                                <div class="po-section-title">
+                                    <span t-esc="company.name"/>
+                                </div>
+
+                                <div class="po-muted">
+                                    <t t-if="company.street"><div t-esc="company.street"/></t>
+                                    <t t-if="company.street2"><div t-esc="company.street2"/></t>
+
+                                    <t t-if="company.city or company.state_id or company.zip">
+                                        <div>
+                                            <span t-esc="company.city or ''"/>
+                                            <t t-if="company.state_id">, <span t-esc="company.state_id.name"/></t>
+                                            <t t-if="company.zip"> <span t-esc="company.zip"/></t>
+                                        </div>
+                                    </t>
+
+                                    <t t-if="company.country_id"><div t-esc="company.country_id.name"/></t>
+
+                                    <t t-if="company.phone">
+                                        <div><span style="font-style:italic;">Phone:</span> <span t-esc="company.phone"/></div>
+                                    </t>
+                                    <t t-if="company.email">
+                                        <div><span style="font-style:italic;">Email:</span> <span t-esc="company.email"/></div>
+                                    </t>
+                                    <t t-if="company.website">
+                                        <div><span style="font-style:italic;">Web:</span> <span t-esc="company.website"/></div>
+                                    </t>
+                                </div>
+                            </td>
+
+                            <!-- Order details box (right) -->
+                            <td style="width:45%; vertical-align:top;">
+                                <div class="po-box">
+                                    <table class="po-kv" style="width:100%; border-collapse:collapse;">
+                                        <tr>
+                                            <td class="po-k">PO No:</td>
+                                            <td class="po-v"><span t-esc="o.reffno or ''"/></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="po-k">Purchase Order Status:</td>
+                                            <td class="po-v"><span t-esc="o.state or ''"/></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="po-k">Date:</td>
+                                            <td class="po-v"><span t-esc="o.purchase_date or ''"/></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="po-k">Invoice Ref:</td>
+                                            <td class="po-v"><span t-esc="o.invoice_number or ''"/></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="po-k">Payment:</td>
+                                            
+                                        </tr>
+                                    </table>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <!-- =======================
+                         Supplier + Terms (clean)
+                         ======================= -->
+                    <table style="width:100%; border-collapse:collapse; margin-top:18px;">
+                        <tr>
+                            <!-- Supplier (Vendor) - SAFE fields only -->
+                            <td style="width:50%; vertical-align:top; padding-right:18px;">
+                                <div class="po-section-title">Supplier</div>
+                                <div class="po-text">
+                                    <div style="font-weight:700;" t-esc="o.vendor_id.name or ''"/>
+                                    <t t-if="o.vendor_id.phone">
+                                        <div><span style="font-style:italic;">Phone:</span> <span t-esc="o.vendor_id.phone"/></div>
+                                    </t>
+                                    <t t-if="o.vendor_id.email">
+                                        <div><span style="font-style:italic;">Email:</span> <span t-esc="o.vendor_id.email"/></div>
+                                    </t>
+                                </div>
+                            </td>
+
+                            <!-- Terms / comments -->
+                            <td style="width:50%; vertical-align:top;">
+                                <div class="po-section-title">Terms of sale and other comments</div>
+                                <div class="po-muted">
+                                    <t t-if="o.description">
+                                        <span t-esc="o.description"/>
+                                    </t>
+                                    <t t-else="">
+                                        Add any additional instructions or terms here.
+                                    </t>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <!-- =======================
+                         ITEMS TABLE
+                         ======================= -->
+                    <table class="po-items">
+                        <thead>
+                            <tr>
+                                <th style="width:12%;">Item #</th>
+                                <th>Description</th>
+                                <th style="width:10%;" class="po-center">Qty</th>
+                                <th style="width:12%;" class="po-center">Unit</th>
+                                <th style="width:14%;" class="po-right">Unit Price</th>
+                                <th style="width:14%;" class="po-right">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="o.order_lines" t-as="l">
+                                <tr>
+                                    <td>
+                                        <span t-esc="(l.item_id.id ) or ''"/>
+                                    </td>
+                                    <td>
+                                        <div style="font-weight:700;" t-esc="l.item_id.display_name or ''"/>
+                                        <t t-if="l.expiration_date">
+                                            <div class="po-muted">PO. Date: <span t-esc="o.purchase_date"/></div>
+                                        </t>
+                                    </td>
+                                    <td><span t-esc="l.quantity or 0"/></td>
+                                    <td >
+                                        <!-- keep empty unless you have uom field -->
+                                        <span t-esc="l.item_id.unitmeasure_id.name"/>
+                                    </td>
+                                    <td><span t-esc="('%.5f' % (l.cost_price or 0.0))"/></td>
+                                    <td><span t-esc="('%.2f' % (l.amount or 0.0))"/></td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+
+                    <!-- =======================
+                         TOTALS (right)
+                         ======================= -->
+                    <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+                        <tr>
+                            <td style="width:65%;"></td>
+                            <td style="width:35%; vertical-align:top;">
+                                <table class="po-totals">
+                                    <tr>
+                                        <td class="po-total-label">Subtotal</td>
+                                        <td class="po-total-val"><span t-esc="o.amount_total_display or '0'"/></td>
+                                    </tr>
+
+                                    <t t-if="o.amount_usd">
+                                        <tr>
+                                            <td class="po-total-label">IN USD</td>
+                                            <td class="po-total-val"><span t-esc="('%.2f' % o.amount_usd)"/></td>
+                                        </tr>
+                                    </t>
+
+                                    <t t-if="o.amount_sl">
+                                        <tr>
+                                            <td class="po-total-label">IN SL </td>
+                                            <td class="po-total-val"><span t-esc="('%.2f' % o.amount_sl)"/></td>
+                                        </tr>
+                                    </t>
+
+                                    <tr>
+                                        <td colspan="2"><div class="po-footer-line"></div></td>
+                                    </tr>
+
+                                    <tr>
+                                        <td class="po-grand">Total</td>
+                                        <td class="po-total-val po-grand"><span t-esc="o.amount_total_display or '0'"/></td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <!-- =======================
+                         SIGNATURES
+                         ======================= -->
+                    <table class="po-sign" style="width:100%; border-collapse:collapse;">
+                        <tr>
+                            <td style="width:50%;">
+                                <div style="font-weight:800;">Prepared By</div>
+                                <div class="line"><span style="font-style:italic;"></span> <span t-esc="o.create_uid.name"/></div>
+                                <div>
+                                    <span style="font-style:italic; color:#666;">Date:</span>
+                                    <span t-esc="o.create_date"/>
+                                </div>
+                            </td>
+                            
+                            
+                        </tr>
+                    </table>
+
+                    <!-- bottom teal bar like sample -->
+                    <div style="height:12px; background:#19a9b3; margin-top:16px;"></div>
+
+                </div>
+            </main>
+
+            <div class="pagebreak"></div>
+        </t>
+    </t>
+</template>
+
+
+
 
 </odoo>

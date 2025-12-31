@@ -31,6 +31,8 @@
                     <field name="leave_balance" optional="hide"/>
                     <field name="private_phone" optional="hide"/>
                     <field name="private_email" optional="hide"/>
+                    <field name="allow_delete_receipt" optional="hide"/>
+                    
                     <field name="gender" optional="hide"/>
                     <field name="marital" optional="hide"/>
                     <field name="status" widget="statusbar" statusbar_visible="active,inactive"/>
@@ -104,6 +106,7 @@
                                     <group string="Authentication">
                                         <field name="pin"/>
                                         <field name="maker_checker"/>
+                                        <field name="allow_delete_receipt"/>
                                         <field name="user_id"/>
 
                                     </group>

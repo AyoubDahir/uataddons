@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- ========================= -->
+    <!-- Tree View -->
+    <!-- ========================= -->
+    <record id="view_material_request_tree" model="ir.ui.view">
+        <field name="name">idil.material.request.tree</field>
+        <field name="model">idil.material.request</field>
+        <field name="arch" type="xml">
+            <tree string="Material Requests" default_order="id desc">
+                <field name="name"/>
+                <field name="request_date"/>
+                <field name="request_type"/>
+                <field name="supplier_type"/>
+                <field name="vendor_id"/>
+                <field name="state"/>
+                <field name="purchase_order_id"/>
+                
+                <field name="warehouse_id"/>
+                <field name="location_id"/>
+               
+            </tree>
+        </field>
+    </record>
+
+    <!-- ========================= -->
+    <!-- Form View -->
+    <!-- ========================= -->
+    <record id="view_material_request_form" model="ir.ui.view">
+        <field name="name">idil.material.request.form</field>
+        <field name="model">idil.material.request</field>
+        <field name="arch" type="xml">
+            <form string="Material Request">
+                <header>
+
+                <!-- Buttons -->
+        <button name="action_submit" type="object"
+                string="📤 Submit" class="btn-primary"
+                invisible="state != 'draft'"/>
+
+        <button name="action_approve" type="object"
+                string="✅ Approve" class="btn-primary"
+                invisible="state != 'pending'"/>
+
+        <button name="action_reject" type="object"
+                string="🛑 Reject" class="btn-danger"
+                invisible="state not in ('draft','pending')"/>
+
+        <button name="action_reset_to_draft" type="object"
+                string="↩️ Reset to Draft" class="btn-secondary"
+                visible="state in ('cancel','pending','approved')"/>
+ 
+
+        <button name="action_cancel"
+                string="Cancel"
+                type="object"
+                class="btn-secondary"
+                />
+
+                    <!-- Status -->
+                    <field name="state"
+                           widget="statusbar"
+                           statusbar_visible="draft,pending,approved,rejected,cancel"/>
+
+                </header>
+
+                <sheet>
+
+                    <!-- Title -->
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                    </div>
+
+                    <!-- Main Info -->
+                    <group>
+                        <group>
+                            <field name="request_date"/>
+                            <field name="request_type"/>
+                        </group>
+                        <group>
+                            <field name="state" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <!-- ========================= -->
+                    <!-- Purchase Request Section -->
+                    <!-- ========================= -->
+                    <group string="Purchase Request Details"
+                           >
+                        <group>
+                            <field name="supplier_type"/>
+                            <field name="vendor_id"/>
+                        </group>
+                    </group>
+
+                    <!-- ========================= -->
+                    <!-- Transfer Request Section -->
+                    <!-- ========================= -->
+                    <group string="Material Transfer Details">
+                        <group>
+                            <field name="warehouse_id"/>
+                           
+                        </group>
+                        
+                        <group>
+                            <field name="location_id"/>
+                           
+                        </group>
+                        
+                    </group>
+
+                    <!-- ========================= -->
+                    <!-- Product Lines -->
+                    <!-- ========================= -->
+                    <notebook>
+                        <page string="Products">
+                            <field name="line_ids" nolabel="1">
+                                <tree editable="bottom">
+                                    <field name="item_id"/>
+                                    <field name="requested_qty"/>
+
+                                    <!-- Availability -->
+                                    <field name="available_qty" readonly="1"/>
+                                    <field name="stock_indicator"
+                                           widget="badge"
+                                           decoration-success="stock_indicator == 'green'"
+                                           decoration-danger="stock_indicator == 'red'"/>
+
+                                    <!-- Purchase-only helpers -->
+                                    <field name="suggested_cost_price"
+                                           />
+                                    <field name="expiration_date"
+                                          />
+                                </tree>
+                            </field>
+                        </page>
+
+                        <!-- Traceability -->
+                        <page string="Traceability">
+                            <group>
+                                <field name="purchase_order_id" readonly="1"/>
+                                
+                            </group>
+                        </page>
+
+                        <!-- Notes -->
+                        <page string="Notes">
+                            <field name="notes" placeholder="Internal notes..."/>
+                        </page>
+                    </notebook>
+
+                </sheet>
+
+                <!-- Chatter -->
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+
+            </form>
+        </field>
+    </record>
+
+    <!-- ========================= -->
+    <!-- Action -->
+    <!-- ========================= -->
+    <record id="action_material_request" model="ir.actions.act_window">
+        <field name="name">Material Requests</field>
+        <field name="res_model">idil.material.request</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create Material Requests for Purchase or Internal Transfer.
+            </p>
+        </field>
+    </record>
+
+    <!-- ========================= -->
+    <!-- Menu -->
+    <!-- ========================= -->
+
+    <!-- Parent menu already exists: Purchases -->
+    <!-- If not, adjust parent accordingly -->
+  
+
+</odoo>

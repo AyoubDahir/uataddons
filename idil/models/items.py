@@ -329,9 +329,40 @@ class ItemMovement(models.Model):
     )
     quantity = fields.Float(string="Quantity", required=True, tracking=True)
     source = fields.Char(string="Source", required=True, tracking=True)
+
+    source_warehouse_id = fields.Many2one(
+        "idil.warehouse", string="🏬 From Warehouse", tracking=True
+    )
+    source_location_id = fields.Many2one(
+        "idil.warehouse.location",
+        string="📤 From Location",
+        tracking=True,
+        domain="[('warehouse_id', '=', source_warehouse_id), ('active', '=', True)]",
+    )
+
+    destination_warehouse_id = fields.Many2one(
+        "idil.warehouse", string="🏬 To Warehouse", tracking=True
+    )
+    destination_location_id = fields.Many2one(
+        "idil.warehouse.location",
+        string="📥 To Location",
+        tracking=True,
+        domain="[('warehouse_id', '=', destination_warehouse_id), ('active', '=', True)]",
+    )
+
+    state = fields.Selection(
+        [("draft", "Draft"), ("done", "Done"), ("cancel", "Cancelled")],
+        default="done",
+        tracking=True,
+    )
+
     destination = fields.Char(string="Destination", required=True, tracking=True)
     movement_type = fields.Selection(
-        [("in", "In"), ("out", "Out")],
+        [
+            ("in", "In"),
+            ("out", "Out"),
+            ("internal", "Internal Transfer"),
+        ],
         string="Movement Type",
         required=True,
         tracking=True,
@@ -339,10 +370,12 @@ class ItemMovement(models.Model):
     related_document = fields.Reference(
         selection=[
             ("idil.purchase_order.line", "Purchase Order Line"),
+            ("idil.purchase.receipt", "Purchase Receipt"),
             ("idil.manufacturing.order.line", "Manufacturing Order Line"),
             ("idil.stock.adjustment", "Stock Adjustment"),
             ("idil.purchase_return.line", "Purchase Return Line"),
             ("idil.item.opening.balance.line", "Item Opening Balance Line"),
+            ("idil.material.request", "Material Request"),
         ],
         string="Related Document",
     )
@@ -394,6 +427,45 @@ class ItemMovement(models.Model):
         ondelete="cascade",
         index=True,
         tracking=True,
+    )
+    # ✅ Link movement to received purchase history
+    received_purchase_id = fields.Many2one(
+        "idil.received.purchase",
+        string="Received Purchase History",
+        ondelete="cascade",  # ✅ auto delete movements when parent is deleted
+        index=True,
+        tracking=True,
+    )
+
+    @api.constrains(
+        "movement_type",
+        "source_warehouse_id",
+        "destination_warehouse_id",
+        "source_location_id",
+        "destination_location_id",
+    )
+    def _check_internal_transfer_fields(self):
+        for m in self:
+            if m.movement_type != "internal":
+                continue
+
+            if not m.source_warehouse_id or not m.destination_warehouse_id:
+                raise ValidationError(
+                    _("Internal transfer requires From Warehouse and To Warehouse.")
+                )
+
+            if not m.source_location_id or not m.destination_location_id:
+                raise ValidationError(
+                    _("Internal transfer requires From Location and To Location.")
+                )
+
+            # prevent same exact place
+            if (
+                m.source_warehouse_id.id == m.destination_warehouse_id.id
+                and m.source_location_id.id == m.destination_location_id.id
+            ):
+                raise ValidationError(
+                    _("From and To cannot be the same warehouse/location.")
     )
 
     @api.constrains("item_id", "movement_type", "quantity", "date")

@@ -139,6 +139,10 @@ class IdilEmployee(models.Model):
     maker_checker = fields.Boolean(
         string="Maker & Checker", default=False, tracking=True
     )
+    allow_delete_receipt = fields.Boolean(
+        string="Delete Purchase Receipt", default=False, tracking=True
+    )
+
     salary_history_ids = fields.One2many(
         "idil.employee.salary", "employee_id", string="Salary History", tracking=True
     )

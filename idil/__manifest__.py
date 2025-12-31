@@ -140,6 +140,12 @@
         "views/report_expiring_inventory.xml",
         "views/report_pending_orders.xml",
         "views/report_customer_outstanding.xml",
-        "views/menu.xml"
-    ]
+        "views/material_request_views.xml",
+        "views/purchase_receipt_views.xml",
+        "views/purchase_receive_wizard_views.xml",
+        "views/warehouse_location_view.xml",
+        "views/db_backup_views.xml",
+        "views/internal_transfer_views.xml",
+        "views/menu.xml",
+    ],
 }
