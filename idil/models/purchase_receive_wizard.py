@@ -116,20 +116,50 @@ class PurchaseReceiveWizard(models.TransientModel):
                 w.received_qty or 0
             )
 
+    # def action_confirm(self):
+    #     self.ensure_one()
+
+    #     if self.received_qty <= 0 and self.not_coming_qty <= 0:
+    #         raise ValidationError(_("Received Qty must be greater than zero."))
+
+    #     # Create HISTORY RECORD ONLY
+    #     self.env["idil.received.purchase"].create(
+    #         {
+    #             "material_request_id": self.material_request_id.id,
+    #             "purchase_order_id": self.purchase_order_id.id,
+    #             "purchase_order_line_id": self.purchase_order_line_id.id,
+    #             "rate": self.rate,
+    #             "received_date": self.date,
+    #             "pay_account_id": self.pay_account_id.id,
+    #             "receipt_id": self.receipt_id.id,
+    #             "receipt_line_id": self.receipt_line_id.id,
+    #             "received_qty": self.received_qty,
+    #             "cost_price": self.cost_price,
+    #             "landing_cost": self.landing_cost,
+    #             "total_cost": self.total_cost,
+    #             "reason_not_coming": self.reason_not_coming,
+    #             "not_coming_qty": self.not_coming_qty,
+    #             "route_step": self.route_step,
+    #             "condition": self.condition,
+    #             "status": "confirmed",
+    #         }
+    #     )
+
+    #     return {"type": "ir.actions.act_window_close"}
+
     def action_confirm(self):
         self.ensure_one()
 
         if self.received_qty <= 0 and self.not_coming_qty <= 0:
             raise ValidationError(_("Received Qty must be greater than zero."))
 
-        # Create HISTORY RECORD ONLY
-        self.env["idil.received.purchase"].create(
+        history = self.env["idil.received.purchase"].create(
             {
                 "material_request_id": self.material_request_id.id,
                 "purchase_order_id": self.purchase_order_id.id,
                 "purchase_order_line_id": self.purchase_order_line_id.id,
                 "rate": self.rate,
-                "received_date": self.date,
+                "received_date": self.date,  # ✅ your doc_date source
                 "pay_account_id": self.pay_account_id.id,
                 "receipt_id": self.receipt_id.id,
                 "receipt_line_id": self.receipt_line_id.id,
@@ -145,4 +175,36 @@ class PurchaseReceiveWizard(models.TransientModel):
             }
         )
 
-        return {"type": "ir.actions.act_window_close"}
+        item = history.receipt_line_id.item_id
+        qty = float(history.received_qty or 0.0)
+        total = float(history.total_cost or 0.0)
+        landing = float(history.landing_cost or 0.0)
+        pay_acc = history.pay_account_id.name if history.pay_account_id else "N/A"
+
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": _("✅ Receipt Confirmed"),
+                "message": _(
+                    "Item: %(item)s\n"
+                    "Qty Received: %(qty).5f\n"
+                    "Unit Cost: %(unit).5f\n"
+                    "Unit Landing: %(landing).5f\n"
+                    "Total: %(total).5f\n"
+                    "Paid From: %(pay)s"
+                )
+                % {
+                    "item": (item.name if item else "-"),
+                    "qty": qty,
+                    "unit": float(self.cost_price or 0.0),
+                    "landing": landing,
+                    "total": total,
+                    "pay": pay_acc,
+                },
+                "type": "success",  # success | warning | danger | info
+                "sticky": True,  # keep it visible until auto-close below
+                "timeout": 10000,  # ✅ 10 seconds (milliseconds)
+                "next": {"type": "ir.actions.act_window_close"},
+            },
+        }
