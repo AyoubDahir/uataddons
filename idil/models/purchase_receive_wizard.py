@@ -129,6 +129,7 @@ class PurchaseReceiveWizard(models.TransientModel):
                 "purchase_order_id": self.purchase_order_id.id,
                 "purchase_order_line_id": self.purchase_order_line_id.id,
                 "rate": self.rate,
+                "received_date": self.date,
                 "pay_account_id": self.pay_account_id.id,
                 "receipt_id": self.receipt_id.id,
                 "receipt_line_id": self.receipt_line_id.id,

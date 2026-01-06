@@ -86,7 +86,6 @@ class IdilReceivedPurchase(models.Model):
 
     received_date = fields.Datetime(
         string="Received Date",
-        default=fields.Datetime.now,
         required=True,
     )
 
@@ -408,7 +407,7 @@ class IdilReceivedPurchase(models.Model):
                     _("Both Asset and Vendor A/P accounts must have currency.")
                 )
 
-            doc_date = fields.Date.context_today(rec)
+            doc_date = rec.received_date
             rate = float(rec.rate or getattr(rec.receipt_id, "rate", 0.0) or 0.0)
 
             # --------------------------
