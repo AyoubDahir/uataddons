@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
+from odoo.tools import float_compare
 
 
 class IdilReceivedPurchase(models.Model):
@@ -62,6 +63,15 @@ class IdilReceivedPurchase(models.Model):
         string="Vendor Transaction",
         readonly=True,
         ondelete="cascade",
+    )
+
+    pay_account_id = fields.Many2one(
+        "idil.chart.account",
+        string="Landing Paid From (Cash/Bank)",
+        domain=[
+            ("account_type", "in", ["cash", "bank_transfer"])
+        ],  # adjust to your field names
+        required=False,
     )
 
     # --- Business fields ---
@@ -291,16 +301,86 @@ class IdilReceivedPurchase(models.Model):
     # Step 3 + Step 4: Booking + Booking Lines + Vendor Transaction (WORKING)
     # RULE: amount entered is in ASSET currency (item asset account currency)
     # -------------------------------------------------------------------------
+
     def _post_receive_booking_and_vendor_txn(self):
         Booking = self.env["idil.transaction_booking"]
         Line = self.env["idil.transaction_bookingline"]
         VendorTxn = self.env["idil.vendor_transaction"]
+        Chart = self.env["idil.chart.account"]
 
         trx_source = self.env["idil.transaction.source"].search(
             [("name", "=", "Purchase Receipt")], limit=1
         )
         if not trx_source:
             raise ValidationError(_('Transaction source "Purchase Receipt" not found.'))
+
+        def _convert(amount, from_cur, to_cur, rate):
+            """Convert using your convention: if 1 USD = rate SL."""
+            amount = float(amount or 0.0)
+            if from_cur.id == to_cur.id:
+                return amount
+
+            r = float(rate or 0.0)
+            if r <= 0:
+                raise ValidationError(_("Exchange rate is required and must be > 0."))
+
+            if from_cur.name == "SL" and to_cur.name == "USD":
+                return amount / r
+            if from_cur.name == "USD" and to_cur.name == "SL":
+                return amount * r
+
+            raise ValidationError(
+                _("Unsupported currency pair: %s -> %s") % (from_cur.name, to_cur.name)
+            )
+
+        def _get_clearing(cur):
+            acc = Chart.search(
+                [
+                    ("name", "=", "Exchange Clearing Account"),
+                    ("currency_id", "=", cur.id),
+                ],
+                limit=1,
+            )
+            if not acc:
+                raise ValidationError(
+                    _("Exchange clearing account is required for currency: %s")
+                    % cur.name
+                )
+            return acc
+
+        def _get_account_balance(account):
+            """Balance = SUM(DR) - SUM(CR) for this account."""
+            self.env.cr.execute(
+                """
+                SELECT COALESCE(SUM(dr_amount), 0) - COALESCE(SUM(cr_amount), 0)
+                FROM idil_transaction_bookingline
+                WHERE account_number = %s
+                """,
+                (account.id,),
+            )
+            bal = self.env.cr.fetchone()[0] or 0.0
+            return float(bal)
+
+        def _check_pay_balance(pay_account, amount_to_pay, precision=5):
+            """Raise if cash/bank does not have enough balance."""
+            bal = _get_account_balance(pay_account)
+            if (
+                float_compare(
+                    bal, float(amount_to_pay or 0.0), precision_digits=precision
+                )
+                < 0
+            ):
+                raise ValidationError(
+                    _(
+                        "Insufficient balance in Paying Account '%(acc)s'.\n"
+                        "Available: %(bal).5f | Required: %(req).5f"
+                    )
+                    % {
+                        "acc": pay_account.name,
+                        "bal": bal,
+                        "req": float(amount_to_pay or 0.0),
+                    }
+                )
 
         for rec in self:
             if rec.booking_id:
@@ -328,44 +408,34 @@ class IdilReceivedPurchase(models.Model):
                     _("Both Asset and Vendor A/P accounts must have currency.")
                 )
 
-            # Amount is in ASSET currency (your rule)
-            unit_total = float(rec.cost_price or 0.0) + float(rec.landing_cost or 0.0)
-            if unit_total < 0:
-                raise ValidationError(_("Cost + Landing cannot be negative."))
-
-            amount_asset = qty * unit_total
             doc_date = fields.Date.context_today(rec)
-
-            # Convert to vendor currency if mismatch
             rate = float(rec.rate or getattr(rec.receipt_id, "rate", 0.0) or 0.0)
 
-            if asset_cur.id == vendor_cur.id:
-                amount_vendor = amount_asset
-            else:
-                if rate <= 0:
-                    raise ValidationError(
-                        _("Exchange rate is required and must be > 0.")
-                    )
+            # --------------------------
+            # Amount split
+            # --------------------------
+            base_unit = float(rec.cost_price or 0.0)
+            landing_unit = float(rec.landing_cost or 0.0)
 
-                # Same convention you described:
-                # if 1 USD = rate SL
-                if asset_cur.name == "SL" and vendor_cur.name == "USD":
-                    amount_vendor = amount_asset / rate
-                elif asset_cur.name == "USD" and vendor_cur.name == "SL":
-                    amount_vendor = amount_asset * rate
-                else:
-                    raise ValidationError(
-                        _("Unsupported currency pair: %s -> %s")
-                        % (asset_cur.name, vendor_cur.name)
-                    )
+            if base_unit < 0:
+                raise ValidationError(_("Cost Price cannot be negative."))
+            if landing_unit < 0:
+                raise ValidationError(_("Landing Cost cannot be negative."))
 
-            # Booking header
+            amount_base_asset = qty * base_unit
+            landing_total_asset = qty * landing_unit  # if landing is total, change this
+
+            amount_vendor = _convert(amount_base_asset, asset_cur, vendor_cur, rate)
+
+            # --------------------------
+            # Booking header (vendor direct only)
+            # --------------------------
             booking_vals = {
                 "trx_date": doc_date,
                 "reffno": rec.receipt_id.name or rec.purchase_order_id.reffno,
                 "payment_status": "pending",
                 "payment_method": "ap",
-                "amount": amount_vendor,  # store liability amount in vendor currency
+                "amount": amount_vendor,
                 "amount_paid": 0.0,
                 "remaining_amount": amount_vendor,
                 "rate": rate,
@@ -373,8 +443,6 @@ class IdilReceivedPurchase(models.Model):
                 "vendor_id": vendor.id,
                 "purchase_order_id": rec.purchase_order_id.id,
             }
-
-            # Link back if your booking has this field
             if "received_purchase_id" in Booking._fields:
                 booking_vals["received_purchase_id"] = rec.id
             if "purchase_receipt_id" in Booking._fields:
@@ -382,116 +450,221 @@ class IdilReceivedPurchase(models.Model):
 
             booking = Booking.create(booking_vals)
 
-            # Booking lines
-            if asset_cur.id != vendor_cur.id:
-                clearing_asset = self.env["idil.chart.account"].search(
-                    [
-                        ("name", "=", "Exchange Clearing Account"),
-                        ("currency_id", "=", asset_cur.id),
-                    ],
-                    limit=1,
-                )
-                clearing_vendor = self.env["idil.chart.account"].search(
-                    [
-                        ("name", "=", "Exchange Clearing Account"),
-                        ("currency_id", "=", vendor_cur.id),
-                    ],
-                    limit=1,
-                )
-                if not clearing_asset or not clearing_vendor:
-                    raise ValidationError(_("Exchange clearing accounts are required."))
+            # --------------------------
+            # 1) Direct cost: Inventory + Vendor A/P
+            # --------------------------
+            if amount_base_asset > 0:
+                if asset_cur.id != vendor_cur.id:
+                    clearing_asset = _get_clearing(asset_cur)
+                    clearing_vendor = _get_clearing(vendor_cur)
 
-                # CR clearing (asset currency)
-                Line.create(
-                    {
-                        "transaction_booking_id": booking.id,
-                        "account_number": clearing_asset.id,
-                        "transaction_type": "cr",
-                        "dr_amount": 0.0,
-                        "cr_amount": amount_asset,
-                        "transaction_date": doc_date,
-                        "description": f"Receipt FX Clearing ({asset_cur.name}) - {item.name}",
-                        "order_line": rec.purchase_order_line_id.id,
-                        "item_id": item.id,
-                    }
+                    Line.create(
+                        {
+                            "transaction_booking_id": booking.id,
+                            "account_number": clearing_asset.id,
+                            "transaction_type": "cr",
+                            "dr_amount": 0.0,
+                            "cr_amount": amount_base_asset,
+                            "transaction_date": doc_date,
+                            "description": f"Receipt FX Clearing ({asset_cur.name}) - {item.name}",
+                            "order_line": rec.purchase_order_line_id.id,
+                            "item_id": item.id,
+                        }
+                    )
+
+                    Line.create(
+                        {
+                            "transaction_booking_id": booking.id,
+                            "account_number": clearing_vendor.id,
+                            "transaction_type": "dr",
+                            "dr_amount": amount_vendor,
+                            "cr_amount": 0.0,
+                            "transaction_date": doc_date,
+                            "description": f"Receipt FX Clearing ({vendor_cur.name}) - {item.name}",
+                            "order_line": rec.purchase_order_line_id.id,
+                            "item_id": item.id,
+                        }
+                    )
+
+                    Line.create(
+                        {
+                            "transaction_booking_id": booking.id,
+                            "account_number": asset_acc.id,
+                            "transaction_type": "dr",
+                            "dr_amount": amount_base_asset,
+                            "cr_amount": 0.0,
+                            "transaction_date": doc_date,
+                            "description": f"Inventory Receipt (Direct) - {item.name}",
+                            "order_line": rec.purchase_order_line_id.id,
+                            "item_id": item.id,
+                        }
+                    )
+
+                    Line.create(
+                        {
+                            "transaction_booking_id": booking.id,
+                            "account_number": vendor_acc.id,
+                            "transaction_type": "cr",
+                            "dr_amount": 0.0,
+                            "cr_amount": amount_vendor,
+                            "transaction_date": doc_date,
+                            "description": f"Vendor Payable (Direct) - {vendor.name}",
+                            "order_line": rec.purchase_order_line_id.id,
+                            "item_id": item.id,
+                        }
+                    )
+                else:
+                    Line.create(
+                        {
+                            "transaction_booking_id": booking.id,
+                            "account_number": asset_acc.id,
+                            "transaction_type": "dr",
+                            "dr_amount": amount_base_asset,
+                            "cr_amount": 0.0,
+                            "transaction_date": doc_date,
+                            "description": f"Inventory Receipt (Direct) - {item.name}",
+                            "order_line": rec.purchase_order_line_id.id,
+                            "item_id": item.id,
+                        }
+                    )
+                    Line.create(
+                        {
+                            "transaction_booking_id": booking.id,
+                            "account_number": vendor_acc.id,
+                            "transaction_type": "cr",
+                            "dr_amount": 0.0,
+                            "cr_amount": amount_base_asset,
+                            "transaction_date": doc_date,
+                            "description": f"Vendor Payable (Direct) - {vendor.name}",
+                            "order_line": rec.purchase_order_line_id.id,
+                            "item_id": item.id,
+                        }
+                    )
+
+            # --------------------------
+            # 2) Landing: Expense + Cash/Bank (with balance check)
+            # --------------------------
+            if landing_total_asset > 0:
+                pay_acc = rec.pay_account_id
+                if not pay_acc:
+                    raise ValidationError(
+                        _("Please select Paying Account (Cash/Bank) for Landing Cost.")
+                    )
+
+                landing_exp_acc = item.landing_account_id
+                if not landing_exp_acc:
+                    raise ValidationError(
+                        _(
+                            "Item is missing Landing Expense Account (landing_account_id)."
+                        )
+                    )
+
+                pay_cur = pay_acc.currency_id
+                exp_cur = landing_exp_acc.currency_id
+                if not pay_cur or not exp_cur:
+                    raise ValidationError(
+                        _(
+                            "Paying account and Landing expense account must have currency."
+                        )
+                    )
+
+                landing_amount_pay = _convert(
+                    landing_total_asset, asset_cur, pay_cur, rate
+                )
+                landing_amount_exp = _convert(
+                    landing_total_asset, asset_cur, exp_cur, rate
                 )
 
-                # DR clearing (vendor currency)
-                Line.create(
-                    {
-                        "transaction_booking_id": booking.id,
-                        "account_number": clearing_vendor.id,
-                        "transaction_type": "dr",
-                        "dr_amount": amount_vendor,
-                        "cr_amount": 0.0,
-                        "transaction_date": doc_date,
-                        "description": f"Receipt FX Clearing ({vendor_cur.name}) - {item.name}",
-                        "order_line": rec.purchase_order_line_id.id,
-                        "item_id": item.id,
-                    }
-                )
+                # ✅ validate pay account has enough balance (in pay account currency)
+                _check_pay_balance(pay_acc, landing_amount_pay, precision=5)
 
-                # DR inventory asset (asset currency)
-                Line.create(
-                    {
-                        "transaction_booking_id": booking.id,
-                        "account_number": asset_acc.id,
-                        "transaction_type": "dr",
-                        "dr_amount": amount_asset,
-                        "cr_amount": 0.0,
-                        "transaction_date": doc_date,
-                        "description": f"Inventory Receipt - {item.name}",
-                        "order_line": rec.purchase_order_line_id.id,
-                        "item_id": item.id,
-                    }
-                )
+                if pay_cur.id == exp_cur.id:
+                    Line.create(
+                        {
+                            "transaction_booking_id": booking.id,
+                            "account_number": landing_exp_acc.id,
+                            "transaction_type": "dr",
+                            "dr_amount": landing_amount_exp,
+                            "cr_amount": 0.0,
+                            "transaction_date": doc_date,
+                            "description": f"Landing/Freight Expense - {item.name}",
+                            "order_line": rec.purchase_order_line_id.id,
+                            "item_id": item.id,
+                        }
+                    )
+                    Line.create(
+                        {
+                            "transaction_booking_id": booking.id,
+                            "account_number": pay_acc.id,
+                            "transaction_type": "cr",
+                            "dr_amount": 0.0,
+                            "cr_amount": landing_amount_pay,
+                            "transaction_date": doc_date,
+                            "description": f"Landing Paid (Cash/Bank) - {item.name}",
+                            "order_line": rec.purchase_order_line_id.id,
+                            "item_id": item.id,
+                        }
+                    )
+                else:
+                    clearing_pay = _get_clearing(pay_cur)
+                    clearing_exp = _get_clearing(exp_cur)
 
-                # CR vendor payable (vendor currency)
-                Line.create(
-                    {
-                        "transaction_booking_id": booking.id,
-                        "account_number": vendor_acc.id,
-                        "transaction_type": "cr",
-                        "dr_amount": 0.0,
-                        "cr_amount": amount_vendor,
-                        "transaction_date": doc_date,
-                        "description": f"Vendor Payable - Receipt - {vendor.name}",
-                        "order_line": rec.purchase_order_line_id.id,
-                        "item_id": item.id,
-                    }
-                )
+                    Line.create(
+                        {
+                            "transaction_booking_id": booking.id,
+                            "account_number": landing_exp_acc.id,
+                            "transaction_type": "dr",
+                            "dr_amount": landing_amount_exp,
+                            "cr_amount": 0.0,
+                            "transaction_date": doc_date,
+                            "description": f"Landing/Freight Expense - {item.name}",
+                            "order_line": rec.purchase_order_line_id.id,
+                            "item_id": item.id,
+                        }
+                    )
+                    Line.create(
+                        {
+                            "transaction_booking_id": booking.id,
+                            "account_number": pay_acc.id,
+                            "transaction_type": "cr",
+                            "dr_amount": 0.0,
+                            "cr_amount": landing_amount_pay,
+                            "transaction_date": doc_date,
+                            "description": f"Landing Paid (Cash/Bank) - {item.name}",
+                            "order_line": rec.purchase_order_line_id.id,
+                            "item_id": item.id,
+                        }
+                    )
+                    Line.create(
+                        {
+                            "transaction_booking_id": booking.id,
+                            "account_number": clearing_pay.id,
+                            "transaction_type": "cr",
+                            "dr_amount": 0.0,
+                            "cr_amount": landing_amount_pay,
+                            "transaction_date": doc_date,
+                            "description": f"Landing FX Clearing ({pay_cur.name}) - {item.name}",
+                            "order_line": rec.purchase_order_line_id.id,
+                            "item_id": item.id,
+                        }
+                    )
+                    Line.create(
+                        {
+                            "transaction_booking_id": booking.id,
+                            "account_number": clearing_exp.id,
+                            "transaction_type": "dr",
+                            "dr_amount": landing_amount_exp,
+                            "cr_amount": 0.0,
+                            "transaction_date": doc_date,
+                            "description": f"Landing FX Clearing ({exp_cur.name}) - {item.name}",
+                            "order_line": rec.purchase_order_line_id.id,
+                            "item_id": item.id,
+                        }
+                    )
 
-            else:
-                # Same currency
-                Line.create(
-                    {
-                        "transaction_booking_id": booking.id,
-                        "account_number": asset_acc.id,
-                        "transaction_type": "dr",
-                        "dr_amount": amount_asset,
-                        "cr_amount": 0.0,
-                        "transaction_date": doc_date,
-                        "description": f"Inventory Receipt - {item.name}",
-                        "order_line": rec.purchase_order_line_id.id,
-                        "item_id": item.id,
-                    }
-                )
-
-                Line.create(
-                    {
-                        "transaction_booking_id": booking.id,
-                        "account_number": vendor_acc.id,
-                        "transaction_type": "cr",
-                        "dr_amount": 0.0,
-                        "cr_amount": amount_asset,
-                        "transaction_date": doc_date,
-                        "description": f"Vendor Payable - Receipt - {vendor.name}",
-                        "order_line": rec.purchase_order_line_id.id,
-                        "item_id": item.id,
-                    }
-                )
-
-            # Vendor Transaction (vendor currency)
+            # --------------------------
+            # Vendor transaction (direct only)
+            # --------------------------
             vt_vals = {
                 "transaction_number": booking.transaction_number,
                 "transaction_date": doc_date,
@@ -503,7 +676,7 @@ class IdilReceivedPurchase(models.Model):
                 "reffno": booking.reffno,
                 "transaction_booking_id": booking.id,
                 "payment_status": "pending",
-                "received_purchase_id": rec.id,  # ✅ correct
+                "received_purchase_id": rec.id,
             }
             vt = VendorTxn.create(vt_vals)
 
@@ -513,10 +686,10 @@ class IdilReceivedPurchase(models.Model):
     @api.model
     def create(self, vals):
         rec = super().create(vals)
-        # Step 1: create item movement
-        rec._create_received_item_movement()
-        # Step 2: update cost + expiry
+        # Step 1:  update cost + expiry
         rec._update_item_cost_and_expiry_on_receive()
+        # Step 2: create item movement
+        rec._create_received_item_movement()
         # Step 3: create booking
         rec._post_receive_booking_and_vendor_txn()
 
@@ -557,4 +730,63 @@ class IdilReceivedPurchase(models.Model):
                 )
             )
 
-        return super().unlink()
+        items = self.mapped("receipt_line_id.item_id").filtered(lambda x: x)
+
+        res = super().unlink()
+
+        for item in items:
+            self._recompute_item_cost_from_receipts(item)
+
+        return res
+
+    def _recompute_item_cost_from_receipts(self, item):
+        """
+        Recompute item.cost_price after deleting a received purchase record.
+
+        Baseline:
+        - 0 qty, 0 cost (since you don't store opening qty/cost on item)
+
+        Replay:
+        - remaining CONFIRMED idil.received.purchase lines for this item
+        - ordered by received_date asc, id asc
+        - incoming_unit = cost_price + landing_cost (UNIT prices)
+        - moving average:
+            avg = (prev_qty*prev_cost + in_qty*in_unit) / (prev_qty + in_qty)
+        """
+        precision = 5
+
+        qty_on_hand = 0.0
+        avg_cost = 0.0
+
+        receipts = self.search(
+            [
+                ("status", "=", "confirmed"),
+                ("receipt_line_id.item_id", "=", item.id),
+                ("received_qty", ">", 0),
+            ],
+            order="received_date asc, id asc",
+        )
+
+        for r in receipts:
+            in_qty = float(r.received_qty or 0.0)
+            if in_qty <= 0:
+                continue
+
+            unit_cost = float(r.cost_price or 0.0) + float(r.landing_cost or 0.0)
+            if unit_cost < 0:
+                raise ValidationError(_("Incoming unit cost cannot be negative."))
+
+            new_qty = qty_on_hand + in_qty
+            avg_cost = ((qty_on_hand * avg_cost) + (in_qty * unit_cost)) / new_qty
+            qty_on_hand = new_qty
+
+        # If no receipts left, decide what to set:
+        # Option A: set to 0
+        # Option B: keep current item.cost_price
+        # Your example expects: after deleting landing record, cost should become 1.9
+        # That will happen because one receipt remains.
+        final_cost = round(avg_cost, precision) if qty_on_hand > 0 else 0.0
+
+        item.with_context(update_transaction_booking=False).write(
+            {"cost_price": final_cost}
+        )

@@ -86,6 +86,14 @@ class item(models.Model):
         tracking=True,
         domain="[('account_type', 'like', 'COGS'), ('currency_id', '=', currency_id), ('header_name', '=', 'Expenses')]",
     )
+
+    landing_account_id = fields.Many2one(
+        "idil.chart.account",
+        string="Landing/Freight Expense Account",
+        domain="[('currency_id', '=', currency_id), ('header_name', '=', 'Expenses')]",
+        required=False,
+    )
+
     sales_account_id = fields.Many2one(
         "idil.chart.account",
         string="Sales Account",

@@ -36,6 +36,14 @@ class PurchaseReceiveWizard(models.TransientModel):
     total_cost = fields.Float(
         string="Total Cost", compute="_compute_total_cost", required=True
     )
+    pay_account_id = fields.Many2one(
+        "idil.chart.account",
+        string="Landing Paid From (Cash/Bank)",
+        domain=[
+            ("account_type", "in", ["cash", "bank_transfer"])
+        ],  # adjust to your field names
+        required=False,
+    )
 
     not_coming_qty = fields.Float(string="Not Coming Qty")
     reason_not_coming = fields.Text(string="Reason Not Coming")

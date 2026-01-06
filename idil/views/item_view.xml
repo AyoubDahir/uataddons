@@ -30,6 +30,8 @@
                 <field name="purchase_date" string="📅 Purchase" optional="show"/>
                 <field name="expiration_date" string="⏳ Expiry" optional="hide"/>
                 <field name="days_until_expiration" string="⏳ Days" optional="hide"/>
+                
+                <field name="landing_account_id" string="🏷️ Landing Account" optional="hide"/>
 
                 <field name="bar_code" string="🏷️ Barcode" optional="hide"/>
                 <field name="active" string="✅ Active" optional="hide"/>
@@ -203,7 +205,9 @@
                                     <field name="sales_account_id" string="📌 Sales (Revenue)" options="{'no_create': True}"/>
                                 </group>
                                 <group>
+                                
                                     <field name="asset_account_id" string="📌 Inventory (Asset)" options="{'no_create': True}"/>
+                                    <field name="landing_account_id" string="📌 Landing Account (Expenses)" options="{'no_create': True}"/>
                                     <field name="adjustment_account_id" string="📌 Adjustment" options="{'no_create': True}"/>
                                     <button name="get_available_accounts"
                                             string="🧪 Check Available Accounts"
