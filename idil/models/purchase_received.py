@@ -139,7 +139,7 @@ class IdilReceivedPurchase(models.Model):
                 {
                     "received_purchase_id": rec.id,  # ✅ THIS IS THE KEY
                     "item_id": item.id,
-                    "date": fields.Date.context_today(rec),
+                    "date": rec.received_date,
                     "quantity": qty,
                     "movement_type": "in",
                     "source": "Purchase Receipt",
