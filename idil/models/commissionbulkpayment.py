@@ -8,6 +8,9 @@ class CommissionBulkPayment(models.Model):
     _inherit = ["mail.thread", "mail.activity.mixin"]
     _order = "id desc"
 
+    company_id = fields.Many2one(
+        "res.company", default=lambda s: s.env.company, required=True
+    )
     name = fields.Char(string="Reference", default="New", readonly=True, copy=False)
     employee_id = fields.Many2one("idil.employee", string="Employee", required=True)
     amount_to_pay = fields.Float(
@@ -19,7 +22,8 @@ class CommissionBulkPayment(models.Model):
         required=True,
         domain=[("account_type", "in", ["cash", "bank_transfer"])],
     )
-    date = fields.Date(default=fields.Date.context_today, string="Date")
+    date = fields.Datetime(string="Payment Date", default=fields.Datetime.now)
+
     line_ids = fields.One2many(
         "idil.commission.bulk.payment.line",
         "bulk_payment_id",
@@ -40,6 +44,60 @@ class CommissionBulkPayment(models.Model):
         compute="_compute_due_commission",
         store=False,
     )
+    # Currency fields
+    currency_id = fields.Many2one(
+        "res.currency",
+        string="Currency",
+        required=True,
+        default=lambda self: self.env["res.currency"].search(
+            [("name", "=", "SL")], limit=1
+        ),
+        readonly=True,
+    )
+
+    rate = fields.Float(
+        string="Exchange Rate",
+        compute="_compute_exchange_rate",
+        store=True,
+        readonly=True,
+        tracking=True,
+    )
+
+    @api.depends("currency_id", "date", "company_id")
+    def _compute_exchange_rate(self):
+        Rate = self.env["res.currency.rate"].sudo()
+        for rec in self:
+            rec.rate = 0.0
+            if not rec.currency_id:
+                continue
+
+            # ✅ base currency => rate = 1
+            if rec.currency_id.id == rec.company_id.currency_id.id:
+                rec.rate = 1.0
+                continue
+
+            doc_date = (
+                fields.Date.to_date(rec.date) if rec.date else fields.Date.today()
+            )
+
+            rate_rec = Rate.search(
+                [
+                    ("currency_id", "=", rec.currency_id.id),
+                    ("name", "<=", doc_date),
+                    ("company_id", "in", [rec.company_id.id, False]),
+                ],
+                order="company_id desc, name desc",
+                limit=1,
+            )
+
+            # ✅ do NOT allow 0 silently
+            if not rate_rec or not rate_rec.rate:
+                raise ValidationError(
+                    _("Missing exchange rate for %s on/before %s (company: %s).")
+                    % (rec.currency_id.name, doc_date, rec.company_id.display_name)
+                )
+
+            rec.rate = rate_rec.rate
 
     @api.depends("employee_id")
     def _compute_due_commission(self):

@@ -1,187 +1,481 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 <odoo>
     <data>
 
-        <!-- Product Tree View -->
+        <!-- ===================================================== -->
+        <!-- 📦 Product | Tree View (Icons + Clean)                 -->
+        <!-- ===================================================== -->
         <record id="view_product_tree" model="ir.ui.view">
-            <field name="name">product.tree</field>
+            <field name="name">my_product.product.tree.modern</field>
             <field name="model">my_product.product</field>
             <field name="arch" type="xml">
-                <tree string="Products" delete="False" decoration-danger="stock_quantity &lt; 10">
-                    <field name="image_1920" widget="image" options="{'size': (20, 20)}"/>
-                    <field name="name"/>
-                    <field name="internal_reference" optional="hide"/>
+                <tree string="📦 Products"
+                      default_order="id desc"
+                      delete="false"
+                      decoration-danger="stock_quantity &lt; 10">
 
-                    <field name="rate_currency_id" optional="hide"/>
-                    <field name="rate" optional="hide"/>
+                    <field name="image_1920" widget="image"
+                           options="{'size': (24, 24)}"
+                           string="🖼️"/>
 
-                    <field name="stock_quantity" readonly="1" optional="show"/>
-                    <field name="category_id" optional="show"/>
-                    <field name="detailed_type" optional="show"/>
-                    <field name="asset_account_id" optional="hide"/>
+                    <field name="name" string="📦 Product"/>
+                    <field name="internal_reference" string="🔖 Ref" optional="hide"/>
 
-                    <field name="sale_price" optional="show"/>
-                    <field name="usd_currency_id" optional="hide"/>
-                    <field name="total_value_usd" sum="total" optional="show"/>
-                    <field name="actual_cost" sum="total" widget="float" options="{'precision': 4}" optional="hide"/>
+                    <field name="stock_quantity" string="📦 Stock" readonly="1" optional="show"/>
+                    <field name="category_id" string="🗂️ Category" optional="show"/>
+                    <field name="detailed_type" string="⚙️ Type" optional="show"/>
 
-                    <field name="is_commissionable" optional="hide"/>
-                    <field name="account_id" optional="hide"/>
+                    <field name="min_sales_price" string="⬇️ Min Price" optional="show"/>
+                    <field name="max_sales_price" string="⬆️ Max Price" optional="show"/>
+                    <field name="sale_price" string="🏷️ Sale Price" optional="show"/>
+                    <field name="cost" string="💰 Cost" optional="show"/>
+                    
+                    <field name="currency_id" optional="hide"/>
+
+
+                    <field name="usd_currency_id" string="💵 USD" optional="hide"/>
+                    <field name="total_value_usd" string="💵 Total USD" sum="total" optional="show"/>
+
+                    <field name="actual_cost" string="🧾 Actual Cost"
+                           widget="float" options="{'precision': 4}"
+                           optional="hide"/>
+
+                    <field name="asset_account_id" string="🏦 Asset Acc" optional="hide"/>
+
+                    <field name="is_commissionable" string="🎯 Commission?" optional="hide"/>
+                    <field name="account_id" string="🧾 Commission Acc" optional="hide"/>
+
+                    <field name="rate_currency_id" string="💱 Rate Cur" optional="hide"/>
+                    <field name="rate" string="💱 Rate" optional="hide"/>
+
                 </tree>
             </field>
         </record>
 
-        <!-- Product Form View -->
+        <!-- ===================================================== -->
+        <!-- 📦 Product | Form View (Modern UI + Icons Everywhere)  -->
+        <!-- ===================================================== -->
         <record id="view_product_form" model="ir.ui.view">
-            <field name="name">product.form</field>
+            <field name="name">my_product.product.form.modern</field>
             <field name="model">my_product.product</field>
             <field name="arch" type="xml">
-                <form string="Product">
+
+                <form string="📦 Product" class="o_form_full o_form_nosheet">
+
+                    <!-- Header -->
                     <header>
-                        <button string="Product Information" class="oe_highlight" colspan="4"/>
                         <button name="export_movements_to_excel"
                                 type="object"
-                                string="Export Movements to Excel"
-                                class="oe_highlight"/>
+                                string="📤 Export Movements"
+                                class="btn-primary"/>
+
+                        <span class="ms-2 badge rounded-pill bg-light border text-muted px-3 py-2">
+                            <i class="fa fa-cubes me-1"/>
+                            Stock:
+                            <b><field name="stock_quantity" nolabel="1" readonly="1"/></b>
+                        </span>
+
+                        <span class="ms-2 badge rounded-pill bg-light border text-muted px-3 py-2">
+                            <i class="fa fa-tag me-1"/>
+                            Sale:
+                            <b><field name="sale_price" nolabel="1"/></b>
+                        </span>
+
+                        <span class="ms-2 badge rounded-pill bg-light border text-muted px-3 py-2">
+                            <i class="fa fa-usd me-1"/>
+                            Total USD:
+                            <b><field name="total_value_usd" nolabel="1"/></b>
+                        </span>
                     </header>
 
                     <sheet>
+
+                        <!-- Title -->
                         <div class="oe_title">
-                            <h1>
-                                <field name="name" placeholder="Product Name"/>
+                            <h1 class="mb-1">
+                                <i class="fa fa-box text-primary me-2"/>
+                                <field name="name" placeholder="Product Name" class="w-100" nolabel="1"/>
                             </h1>
+                            <div class="text-muted">
+                                <i class="fa fa-info-circle me-1"/>
+                                Configure product stock, pricing rules, accounts, and movements.
+                            </div>
                         </div>
 
-                        <!-- Top identity section -->
-                        <group col="4">
-                            <group col="2">
-                                <field name="internal_reference"/>
-                                <field name="detailed_type"/>
-                                <field name="category_id"/>
-                            </group>
-                            <group col="1">
-                                <field name="image_1920"
-                                       widget="image"
-                                       options="{'size': [150, 150]}"/>
-                            </group>
-                        </group>
+                        <!-- Top Cards -->
+                        <div class="row g-3 mt-3">
 
-                        <notebook>
+                            <!-- Identity -->
+                            <div class="col-12 col-lg-7">
+                                <div class="border rounded-4 p-3 shadow-sm bg-white">
+                                    <div class="fw-bold mb-2">
+                                        <i class="fa fa-id-card-o me-2 text-muted"/>
+                                        Identity
+                                    </div>
 
-                            <!-- Inventory Information Page -->
-                            <page string="Inventory Information">
-                                <group col="4">
-                                    <group col="2" string="Inventory">
-                                        <field name="uom_id"/>
-                                        <field name="asset_currency_id"/>
-                                        <field name="asset_account_id"/>
-                                    </group>
-                                </group>
+                                    <div class="row g-3 align-items-start">
+
+                                        <div class="col-12 col-md-8">
+                                            <div class="d-grid gap-2">
+
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="text-muted" style="width:24px;text-align:center;">
+                                                        <i class="fa fa-hashtag"/>
+                                                    </span>
+                                                    <span class="o_form_label mb-0" style="min-width:140px;">Internal Ref</span>
+                                                    <field name="internal_reference" nolabel="1" class="w-100"/>
+                                                </div>
+
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="text-muted" style="width:24px;text-align:center;">
+                                                        <i class="fa fa-sitemap"/>
+                                                    </span>
+                                                    <span class="o_form_label mb-0" style="min-width:140px;">Category</span>
+                                                    <field name="category_id" nolabel="1" class="w-100"/>
+                                                </div>
+
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="text-muted" style="width:24px;text-align:center;">
+                                                        <i class="fa fa-cogs"/>
+                                                    </span>
+                                                    <span class="o_form_label mb-0" style="min-width:140px;">Type</span>
+                                                    <field name="detailed_type" nolabel="1" class="w-100"/>
+                                                </div>
+
+                                            </div>
+                                        </div>
+
+                                        <div class="col-12 col-md-4 text-center">
+                                            <field name="image_1920"
+                                                   widget="image"
+                                                   class="oe_avatar"
+                                                   options="{'size': [180, 180]}"/>
+                                            <div class="text-muted mt-2">
+                                                <i class="fa fa-image me-1"/>
+                                                Product Image
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Summary -->
+                            <div class="col-12 col-lg-5">
+                                <div class="border rounded-4 p-3 shadow-sm bg-white">
+                                    <div class="fw-bold mb-2">
+                                        <i class="fa fa-bar-chart me-2 text-muted"/>
+                                        Summary
+                                    </div>
+
+                                    <div class="d-grid gap-2">
+
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <div class="text-muted"><i class="fa fa-cubes me-1"/>Stock</div>
+                                            <div class="fw-bold"><field name="stock_quantity" nolabel="1" readonly="1"/></div>
+                                        </div>
+
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <div class="text-muted"><i class="fa fa-tag me-1"/>Sale Price</div>
+                                            <div class="fw-bold"><field name="sale_price" nolabel="1"/></div>
+                                        </div>
+                                        <div class="alert alert-info mt-3 mb-0" role="alert">
+                                            <i class="fa fa-lightbulb-o me-1"/>
+                                            Tip: <b>Sales Price</b> currency is taken from the <b>Asset Account</b> currency. Whenever sales price is used, the system uses the account currency.
+                                        </div>
+                                        
+
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <div class="text-muted"><i class="fa fa-arrow-down me-1"/>Min Price</div>
+                                            <div class="fw-bold"><field name="min_sales_price" nolabel="1"/></div>
+                                        </div>
+
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <div class="text-muted"><i class="fa fa-arrow-up me-1"/>Max Price</div>
+                                            <div class="fw-bold"><field name="max_sales_price" nolabel="1"/></div>
+                                        </div>
+
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <div class="text-muted"><i class="fa fa-usd me-1"/>Total USD</div>
+                                            <div class="fw-bold"><field name="total_value_usd" nolabel="1"/></div>
+                                        </div>
+
+                                    </div>
+
+                                    <div class="alert alert-info mt-3 mb-0" role="alert">
+                                        <i class="fa fa-lightbulb-o me-1"/>
+                                        Tip: set <b>Min Sales Price</b> to block low price selling.
+                                    </div>
+
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Notebook -->
+                        <notebook class="mt-3">
+
+                            <!-- Inventory -->
+                            <page string="📦 Inventory" name="page_inventory">
+                                <div class="border rounded-4 p-3 shadow-sm bg-white">
+                                    <div class="fw-bold mb-2">
+                                        <i class="fa fa-archive me-2 text-muted"/>
+                                        Inventory Setup
+                                    </div>
+
+                                    <div class="d-grid gap-2">
+
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-balance-scale"/></span>
+                                            <span class="o_form_label mb-0" style="min-width:160px;">UoM</span>
+                                            <field name="uom_id" nolabel="1" class="w-100"/>
+                                        </div>
+
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-money"/></span>
+                                            <span class="o_form_label mb-0" style="min-width:160px;">Asset Currency</span>
+                                            <field name="asset_currency_id" nolabel="1" class="w-100"/>
+                                        </div>
+
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-bank"/></span>
+                                            <span class="o_form_label mb-0" style="min-width:160px;">Asset Account</span>
+                                            <field name="asset_account_id" nolabel="1" class="w-100"/>
+                                        </div>
+
+                                    </div>
+                                </div>
                             </page>
 
-                            <!-- Sales Information Page -->
-                            <page string="Sales Information">
-                                <!-- outer group has no col; inner groups will flex and auto-fit -->
-                                <group>
-                                    <group string="Sales Details">
-                                        <field name="stock_quantity" readonly="1"/>
-                                        <field name="sale_price"/>
-                                        <field name="sales_currency_id"/>
-                                        <field name="sales_account_id"/>
-                                        <field name="income_account_id"/>
-                                    </group>
+                            <!-- Sales -->
+                            <page string="💰 Sales" name="page_sales">
+                                <div class="border rounded-4 p-3 shadow-sm bg-white">
+                                    <div class="fw-bold mb-2">
+                                        <i class="fa fa-shopping-cart me-2 text-muted"/>
+                                        Sales Setup
+                                    </div>
 
-                                    <group string="Quantity Discount">
-                                        <field name="is_quantity_discount"/>
-                                        <field name="discount_currency_id" invisible="not is_quantity_discount"/>
-                                        <field name="sales_discount_id" invisible="not is_quantity_discount"/>
-                                        <field name="discount" invisible="not is_quantity_discount"/>
-                                    </group>
+                                    <div class="d-grid gap-2">
 
-                                    <group string="Sales Commission (When Sold)">
-                                        <field name="is_sales_commissionable"/>
-                                        <field name="commission"
-                                               invisible="not is_sales_commissionable"
-                                               string="Commission Rate (%)"/>
-                                        <field name="sales_currency_id"
-                                               invisible="not is_sales_commissionable"/>
-                                        <field name="sales_account_id"
-                                               invisible="not is_sales_commissionable"
-                                               string="Commission Expenses Account"/>
-                                    </group>
-                                </group>
-                            </page> 
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-tag"/></span>
+                                            <span class="o_form_label mb-0" style="min-width:160px;">Sale Price</span>
+                                            <field name="sale_price" nolabel="1" class="w-100"
+                                                   />
+                                        </div>
+                                        <div class="alert alert-info mt-3 mb-0" role="alert">
+                                            <i class="fa fa-lightbulb-o me-1"/>
+                                            Tip: <b>Sales Price</b> currency is taken from the <b>Asset Account</b> currency. Whenever sales price is used, the system uses the account currency.
+                                        </div>
 
-                            <!-- Costing Information Page -->
-                            <page string="Costing Information">
-                                <group col="2">
-                                    <group string="Cost &amp; BoM" col="2">
-                                        <field name="bom_id"/>
-                                        <field name="is_cost_manual_purchase"/>
-                                        <field name="cost"/>
-                                    </group>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-arrow-down"/></span>
+                                            <span class="o_form_label mb-0" style="min-width:160px;">Min Sales Price</span>
+                                            <field name="min_sales_price" nolabel="1" class="w-100"/>
+                                        </div>
 
-                                    <group string="COGS &amp; Adjustment Accounts" col="2">
-                                        <field name="currency_cogs_id"/>
-                                        <field name="cost_value_currency_id"/>
-                                        <field name="account_cogs_id"/>
-                                        <field name="account_adjustment_id"/>
-                                    </group>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-arrow-up"/></span>
+                                            <span class="o_form_label mb-0" style="min-width:160px;">Max Sales Price</span>
+                                            <field name="max_sales_price" nolabel="1" class="w-100"/>
+                                        </div>
 
-                                    <group string="Manufacturing Commission" col="2">
-                                        <field name="is_commissionable" string="Commissionable"/>
-                                        <field name="currency_id" invisible="not is_commissionable"/>
-                                        <field name="account_id"
-                                               invisible="not is_commissionable"
-                                               string="Commission Expenses Account"/>
-                                    </group>
-                                </group>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-line-chart"/></span>
+                                            <span class="o_form_label mb-0" style="min-width:160px;">Income Account</span>
+                                            <field name="income_account_id" nolabel="1" class="w-100"/>
+                                        </div>
+
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-percent"/></span>
+                                            <span class="o_form_label mb-0" style="min-width:160px;">Discountible</span>
+                                            <field name="is_quantity_discount" nolabel="1"/>
+                                        </div>
+
+                                        <div class="d-flex align-items-center gap-2" invisible="not is_quantity_discount">
+                                            <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-money"/></span>
+                                            <span class="o_form_label mb-0" style="min-width:160px;">Discount Currency</span>
+                                            <field name="discount_currency_id" nolabel="1" class="w-100"/>
+                                        </div>
+
+                                        <div class="d-flex align-items-center gap-2" invisible="not is_quantity_discount">
+                                            <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-ticket"/></span>
+                                            <span class="o_form_label mb-0" style="min-width:160px;">Discount Account</span>
+                                            <field name="sales_discount_id" nolabel="1" class="w-100"/>
+                                        </div>
+
+                                        <div class="d-flex align-items-center gap-2" invisible="not is_quantity_discount">
+                                            <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-percent"/></span>
+                                            <span class="o_form_label mb-0" style="min-width:160px;">Discount Rate</span>
+                                            <field name="discount" nolabel="1" class="w-100"/>
+                                        </div>
+
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-bullseye"/></span>
+                                            <span class="o_form_label mb-0" style="min-width:160px;">Sales Commission?</span>
+                                            <field name="is_sales_commissionable" nolabel="1"/>
+                                        </div>
+
+                                        <div class="d-flex align-items-center gap-2" invisible="not is_sales_commissionable">
+                                            <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-percent"/></span>
+                                            <span class="o_form_label mb-0" style="min-width:160px;">Commission Rate</span>
+                                            <field name="commission" nolabel="1" class="w-100"/>
+                                        </div>
+
+                                        <div class="d-flex align-items-center gap-2" invisible="not is_sales_commissionable">
+                                            <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-money"/></span>
+                                            <span class="o_form_label mb-0" style="min-width:160px;">Sales Currency</span>
+                                            <field name="sales_currency_id" nolabel="1" class="w-100"/>
+                                        </div>
+
+                                        <div class="d-flex align-items-center gap-2" invisible="not is_sales_commissionable">
+                                            <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-file-text-o"/></span>
+                                            <span class="o_form_label mb-0" style="min-width:160px;">Sales Comm Account</span>
+                                            <field name="sales_account_id" nolabel="1" class="w-100"/>
+                                        </div>
+
+                                    </div>
+                                </div>
                             </page>
 
-                            <!-- Movement History Page -->
-                            <page string="Movement History">
-                                <group col="4">
-                                    <group col="2">
-                                        <field name="start_date"/>
-                                        <field name="end_date"/>
-                                    </group>
-                                </group>
+                            <!-- Costing -->
+                            <page string="🧮 Costing" name="page_costing">
+                                <div class="border rounded-4 p-3 shadow-sm bg-white">
+                                    <div class="fw-bold mb-2">
+                                        <i class="fa fa-calculator me-2 text-muted"/>
+                                        Costing &amp; Accounts
+                                    </div>
 
-                                <group col="1">
-                                    <field name="movement_ids">
-                                        <tree create="false"
-                                              delete="false"
-                                              editable="false"
-                                              limit="100">
-                                            <field name="date" readonly="1"/>
-                                            <field name="movement_type" readonly="1"/>
-                                            <field name="vendor_id" readonly="1"/>
-                                            <field name="quantity" readonly="1" sum="Total"/>
-                                            <field name="source_document" readonly="1"/>
-                                            <field name="sales_person_id" readonly="1"/>
-                                            <field name="customer_id" readonly="1"/>
-                                            <field name="destination" readonly="1"/>
-                                            <field name="employee_id" readonly="1"/>
-                                        </tree>
-                                    </field>
-                                </group>
+                                    <div class="d-grid gap-2">
+
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-cubes"/></span>
+                                            <span class="o_form_label mb-0" style="min-width:160px;">BOM</span>
+                                            <field name="bom_id" nolabel="1" class="w-100"/>
+                                        </div>
+
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-edit"/></span>
+                                            <span class="o_form_label mb-0" style="min-width:160px;">Manual Cost?</span>
+                                            <field name="is_cost_manual_purchase" nolabel="1"/>
+                                        </div>
+
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-money"/></span>
+                                            <span class="o_form_label mb-0" style="min-width:160px;">Cost</span>
+                                            <field name="cost" nolabel="1" class="w-100"/>
+                                        </div>
+                                        <div class="alert alert-info mt-3 mb-0" role="alert">
+                                            <i class="fa fa-lightbulb-o me-1"/>
+                                            Tip: <b>Cost Price</b> currency is taken from the <b>Asset Account</b> currency. Whenever cost price is used, the system uses the Asset Account currency.
+                                        </div>
+
+                                      <div class="d-flex align-items-center gap-2">
+                                            <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-money"/></span>
+                                            <span class="o_form_label mb-0" style="min-width:160px;">COGS Currency</span>
+                                            <field name="currency_cogs_id" nolabel="1" class="w-100"/>
+                                        </div>
+
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-credit-card"/></span>
+                                            <span class="o_form_label mb-0" style="min-width:160px;">COGS Account</span>
+                                            <field name="account_cogs_id" nolabel="1" class="w-100"/>
+                                        </div>
+
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-exchange"/></span>
+                                            <span class="o_form_label mb-0" style="min-width:160px;">Adjustment Account</span>
+                                            <field name="account_adjustment_id" nolabel="1" class="w-100"/>
+                                        </div>
+
+                                        
+
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-bullseye"/></span>
+                                            <span class="o_form_label mb-0" style="min-width:160px;">Manufacturing Comm?</span>
+                                            <field name="is_commissionable" nolabel="1"/>
+                                        </div>
+
+                                        <div class="d-flex align-items-center gap-2" invisible="not is_commissionable">
+                                            <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-money"/></span>
+                                            <span class="o_form_label mb-0" style="min-width:160px;">Currency</span>
+                                            <field name="currency_id" nolabel="1" class="w-100"/>
+                                        </div>
+
+                                        <div class="d-flex align-items-center gap-2" invisible="not is_commissionable">
+                                            <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-file-text-o"/></span>
+                                            <span class="o_form_label mb-0" style="min-width:160px;">Commission Account</span>
+                                            <field name="account_id" nolabel="1" class="w-100"/>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </page>
+
+                            <!-- Movement History -->
+                            <page string="📜 Movement History" name="page_movements">
+                                <div class="border rounded-4 p-3 shadow-sm bg-white">
+                                    <div class="fw-bold mb-2">
+                                        <i class="fa fa-history me-2 text-muted"/>
+                                        Movements
+                                    </div>
+
+                                    <div class="row g-3">
+                                        <div class="col-12 col-md-6">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-calendar"/></span>
+                                                <span class="o_form_label mb-0" style="min-width:160px;">Start Date</span>
+                                                <field name="start_date" nolabel="1" class="w-100"/>
+                                            </div>
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="text-muted" style="width:24px;text-align:center;"><i class="fa fa-calendar"/></span>
+                                                <span class="o_form_label mb-0" style="min-width:160px;">End Date</span>
+                                                <field name="end_date" nolabel="1" class="w-100"/>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-3">
+                                        <field name="movement_ids" nolabel="1">
+                                            <tree create="false" delete="false" editable="false" limit="100">
+                                                <field name="date" string="📅 Date"/>
+                                                <field name="movement_type" string="🔄 Type"/>
+                                                <field name="vendor_id" string="🏷️ Vendor"/>
+                                                <field name="quantity" string="📦 Qty" sum="Total"/>
+                                                <field name="source_document" string="📄 Source"/>
+                                                <field name="sales_person_id" string="🧑‍💼 Salesperson"/>
+                                                <field name="customer_id" string="👤 Customer"/>
+                                                <field name="destination" string="📍 Destination"/>
+                                                <field name="employee_id" string="👷 Employee"/>
+                                            </tree>
+                                        </field>
+                                    </div>
+
+                                </div>
                             </page>
 
                         </notebook>
+
                     </sheet>
                 </form>
             </field>
         </record>
 
-        <!-- Product Action -->
+        <!-- ===================================================== -->
+        <!-- 🚀 Product Action                                     -->
+        <!-- ===================================================== -->
         <record id="action_view_product" model="ir.actions.act_window">
-            <field name="name">Products</field>
+            <field name="name">📦 Products</field>
             <field name="res_model">my_product.product</field>
             <field name="view_mode">tree,form</field>
             <field name="help" type="html">
-                <p class="oe_view_nocontent_create">
-                    Click to create a new product.
+                <p class="o_view_nocontent_smiling_face">
+                    Create your first Product
+                </p>
+                <p>
+                    Set stock accounts, sale price rules (Min/Max), and review movements.
                 </p>
             </field>
         </record>

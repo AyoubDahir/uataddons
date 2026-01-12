@@ -32,12 +32,7 @@
     </record>
 
     <!-- Menu Item -->
-    <menuitem id="menu_kitchen_report"
-              name="Kitchen Quantity Report"
-              parent="idil.menu_general_Operations"
-              groups="base.group_user"
-              action="action_kitchen_report_wizard"
-              sequence="3"/>
+   
 
     <!-- Report Action -->
     <record id="action_report_kitchen_quantity" model="ir.actions.report">

@@ -370,8 +370,10 @@ class ManufacturingOrder(models.Model):
                     if bom and bom.product_id:
                         vals["product_id"] = bom.product_id.id
                         product = bom.product_id
-                        if product.account_id and product.is_commissionable and not vals.get(
-                            "commission_employee_id"
+                        if (
+                            product.account_id
+                            and product.is_commissionable
+                            and not vals.get("commission_employee_id")
                         ):
                             raise ValidationError(
                                 "The product has a commission account but no employee is selected."
@@ -629,6 +631,7 @@ class ManufacturingOrder(models.Model):
                             "payment_status": "pending",
                             "commission_remaining": order.commission_amount,
                             "date": order.scheduled_start_date,
+                            "rate": order.rate,
                         }
                     )
                     order.write({"commission_id": commission.id})

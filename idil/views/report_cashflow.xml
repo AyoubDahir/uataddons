@@ -29,9 +29,5 @@
         <field name="target">new</field>
     </record>
 
-    <menuitem id="menu_cashflow_report"
-              name="Cash Flow Statement"
-              parent="idil.FinancialReports"
-              action="action_cashflow_report_wizard"
-              sequence="40"/>
+   
 </odoo>

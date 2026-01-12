@@ -37,11 +37,7 @@
         </record>
 
         <!-- Menu Item under Reports -->
-        <menuitem id="menu_product_inventory_summary_report"
-                  name="Product Inventory Summary"
-                  parent="idil.OtherReports"
-                  action="action_product_inventory_summary_wizard"
-                  sequence="25"/>
+     
 
     </data>
 </odoo>

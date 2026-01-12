@@ -7,9 +7,5 @@
     </record>
 
     <!-- Menu Item -->
-    <menuitem id="menu_idil_inventory_dashboard"
-              name="Inventory Dashboard"
-              parent="menu_inventory_purchase_root"
-              action="action_idil_inventory_dashboard"
-              sequence="0"/>
+  
 </odoo>

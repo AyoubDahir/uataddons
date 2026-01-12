@@ -1,76 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Action: make TREE first -->
-    <record id="action_salesperson_order_tree" model="ir.actions.act_window">
-        <field name="name">Place Order by Sales Team</field>
-        <field name="res_model">idil.salesperson.place.order</field>
-        <!-- Tree first, then form -->
-        <field name="view_mode">tree,form</field>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">Create your first team order</p>
-            <p>Use the filters to see Draft/Confirmed orders and group by date or salesperson.</p>
+
+    <!-- ===================================================== -->
+    <!-- 🚀 Action (Tree first)                                 -->
+    <!-- ===================================================== -->
+ 
+    <!-- ===================================================== -->
+    <!-- 🔎 Search View                                         -->
+    <!-- ===================================================== -->
+    <record id="view_salesperson_order_search" model="ir.ui.view">
+        <field name="name">salesperson.order.search</field>
+        <field name="model">idil.salesperson.place.order</field>
+        <field name="arch" type="xml">
+            <search string="🔎 Search Team Orders">
+                <field name="name" string="🔖 Ref"/>
+                <field name="salesperson_id" string="🧑 Salesperson"/>
+                <field name="order_date" string="📅 Date"/>
+
+                <separator/>
+
+                <filter name="draft" string="📝 Draft" domain="[('state','=','draft')]"/>
+                <filter name="confirmed" string="✅ Confirmed" domain="[('state','=','confirmed')]"/>
+                <filter name="cancel" string="⛔ Cancelled" domain="[('state','=','cancel')]"/>
+
+                <group expand="0" string="📊 Group By">
+                    <filter name="group_salesperson" string="🧑 Salesperson" context="{'group_by':'salesperson_id'}"/>
+                    <filter name="group_date" string="📅 Date" context="{'group_by':'order_date'}"/>
+                    <filter name="group_state" string="🏷️ Status" context="{'group_by':'state'}"/>
+                </group>
+            </search>
         </field>
     </record>
 
-    <!-- TREE VIEW (remove editable so a click opens the form) -->
+    <!-- ===================================================== -->
+    <!-- 🧾 Tree View                                           -->
+    <!-- ===================================================== -->
     <record id="view_salesperson_order_tree" model="ir.ui.view">
         <field name="name">salesperson.order.tree</field>
         <field name="model">idil.salesperson.place.order</field>
         <field name="arch" type="xml">
-            <tree string="Team Orders" create="1" delete="0"
+            <tree string="🧾 Team Orders" default_order="id desc"
+                  create="1" delete="0"
                   decoration-muted="state == 'cancel'"
                   decoration-info="state == 'draft'"
                   decoration-success="state == 'confirmed'">
-                <field name="name" optional="show"/>
-                <field name="salesperson_id"/>
-                <field name="order_date" sum="Total Days"/>
-                <field name="state"/>
-                <field name="total_quantity" string="Total Quantity" sum="Total Quantity"/>
-                <field name="create_date" invisible="1"/>
+
+                <field name="name" string="🔖 Ref"/>
+                <field name="order_date" string="📅 Date"/>
+                <field name="salesperson_id" string="🧑 Salesperson"/>
+                <field name="total_quantity" string="📦 Total Qty" sum="Total"/>
+                <field name="state" string="🏷️ Status" widget="badge"/>
             </tree>
         </field>
     </record>
 
-    <!-- FORM VIEW -->
+    <!-- ===================================================== -->
+    <!-- 🧾 Form View (Modern)                                  -->
+    <!-- ===================================================== -->
     <record id="view_salesperson_order_form" model="ir.ui.view">
         <field name="name">salesperson.order.form</field>
         <field name="model">idil.salesperson.place.order</field>
         <field name="arch" type="xml">
-            <form string="Place Order by Sales Team">
-                <header>
-                    <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,cancel"/>
-                </header>
-                <sheet>
-                    <div class="oe_button_box" name="button_box"/>
-                    <group>
-                        <group>
-                            <field name="name" readonly="1" placeholder="Auto"/>
-                            <field name="salesperson_id" options="{'no_create_edit': True}"/>
-                        </group>
-                        <group>
-                            <field name="order_date"/>
-                        </group>
-                    </group>
+            <form string="🧾 Place Order by Sales Team" class="o_form_full o_form_nosheet">
 
-                    <!-- One2many lines: keep editable here (this is fine) -->
-                    <field name="order_lines" widget="one2many_list" context="{'default_order_id': active_id}">
-                        <tree editable="bottom" string="Lines">
-                            <field name="product_id" options="{'no_open': True}"/>
-                            <field name="quantity" sum="Total Quantity"/>
-                        </tree>
-                        <form>
-                            <group>
-                                <field name="product_id" options="{'no_open': True}"/>
-                                <field name="quantity"/>
-                            </group>
-                        </form>
-                    </field>
+                <!-- Header: Status pill -->
+                <header>
+                    <span class="ms-2 badge rounded-pill bg-light border text-muted px-3 py-2">
+                        <i class="fa fa-flag me-1"/>
+                        Status:
+                        <field name="state" widget="badge" readonly="1" class="ms-1"/>
+                    </span>
+                </header>
+
+                <sheet>
+
+                    <!-- Title -->
+                    <div class="oe_title">
+                        <h1 class="mb-1">
+                            <i class="fa fa-shopping-basket me-2 text-primary"/>
+                            Team Order
+                            <span class="ms-2 badge rounded-pill bg-light border text-muted px-3 py-2">
+                                <i class="fa fa-hashtag me-1"/>
+                                <field name="name" readonly="1" nolabel="1"/>
+                            </span>
+                        </h1>
+                        <div class="text-muted">
+                            <i class="fa fa-info-circle me-1"/>
+                            Create the team’s draft order. This order will later be used to generate a Sales Order.
+                        </div>
+                    </div>
+
+                    <!-- Two cards -->
+                    <div class="row g-3 mt-3">
+
+                        <!-- Document -->
+                        <div class="col-12 col-lg-7">
+                            <div class="border rounded-4 p-3 shadow-sm bg-white h-100">
+                                <div class="fw-bold mb-2 d-flex align-items-center gap-2 flex-wrap">
+                                    <i class="fa fa-file-text-o text-muted"/>
+                                    <span>Order Details</span>
+                                </div>
+
+                                <div class="d-grid gap-2">
+
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="text-muted" style="width:24px; text-align:center;">
+                                            <i class="fa fa-hashtag"/>
+                                        </span>
+                                        <span class="o_form_label mb-0" style="min-width:160px;">Reference</span>
+                                        <div class="flex-grow-1" style="min-width:260px;">
+                                            <field name="name" nolabel="1" readonly="1" placeholder="Auto"/>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="text-muted" style="width:24px; text-align:center;">
+                                            <i class="fa fa-user"/>
+                                        </span>
+                                        <span class="o_form_label mb-0" style="min-width:160px;">Salesperson</span>
+                                        <div class="flex-grow-1" style="min-width:260px;">
+                                            <field name="salesperson_id" nolabel="1" options="{'no_create_edit': True}"/>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="text-muted" style="width:24px; text-align:center;">
+                                            <i class="fa fa-calendar"/>
+                                        </span>
+                                        <span class="o_form_label mb-0" style="min-width:160px;">Order Date</span>
+                                        <div class="flex-grow-1" style="min-width:260px;">
+                                            <field name="order_date" nolabel="1"/>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                <div class="alert alert-info mt-3 mb-0" role="alert">
+                                    <i class="fa fa-lightbulb-o me-1"/>
+                                    Tip: Keep this order in <b>Draft</b> until the salesperson confirms quantities.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Summary -->
+                        <div class="col-12 col-lg-5">
+                            <div class="border rounded-4 p-3 shadow-sm bg-white h-100">
+                                <div class="fw-bold mb-2 d-flex align-items-center gap-2 flex-wrap">
+                                    <i class="fa fa-calculator text-muted"/>
+                                    <span>Summary</span>
+                                </div>
+
+                                <div class="d-grid gap-2">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="text-muted" style="width:24px; text-align:center;">
+                                            <i class="fa fa-cubes"/>
+                                        </span>
+                                        <span class="o_form_label mb-0" style="min-width:160px;">Total Quantity</span>
+                                        <div class="flex-grow-1" style="min-width:220px;">
+                                            <field name="total_quantity" nolabel="1" readonly="1"/>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-3">
+                                    <div class="badge rounded-pill bg-light border text-muted px-3 py-2">
+                                        <i class="fa fa-shield me-1"/>
+                                        Totals are computed from order lines.
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Notebook -->
+                    <notebook class="mt-3">
+
+                        <!-- Lines -->
+                        <page string="📋 Order Lines">
+                            <div class="border rounded-4 p-3 shadow-sm bg-white">
+
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                                    <div class="fw-bold d-flex align-items-center gap-2">
+                                        <i class="fa fa-list-ul text-muted"/>
+                                        <span>Products</span>
+                                    </div>
+
+                                    <span class="badge rounded-pill bg-light border text-muted px-3 py-2">
+                                        📦 Total Qty:
+                                        <field name="total_quantity" nolabel="1" readonly="1" class="ms-1"/>
+                                    </span>
+                                </div>
+
+                                <field name="order_lines" nolabel="1" context="{'default_order_id': active_id}">
+                                    <tree editable="bottom" string="Lines" delete="false">
+                                        <field name="product_id" string="📦 Product" options="{'no_open': True}"/>
+                                        <field name="quantity" string="🧮 Qty" sum="Total Quantity"/>
+                                    </tree>
+                                    <form string="Line">
+                                        <group>
+                                            <field name="product_id" options="{'no_open': True}"/>
+                                            <field name="quantity"/>
+                                        </group>
+                                    </form>
+                                </field>
+
+                                <div class="text-muted mt-2">
+                                    <i class="fa fa-info-circle me-1"/>
+                                    Add products and quantities. This draft order is used later when creating a Sales Order.
+                                </div>
+
+                            </div>
+                        </page>
+
+                        <!-- Chatter -->
+                        <page string="💬 Chatter">
+                            <field name="message_follower_ids" widget="mail_followers"/>
+                            <field name="activity_ids" widget="mail_activity"/>
+                            <field name="message_ids" widget="mail_thread"/>
+                        </page>
+
+                    </notebook>
+
                 </sheet>
-              
             </form>
         </field>
     </record>
 
-    <!-- PIVOT + GRAPH -->
+    <!-- ===================================================== -->
+    <!-- PIVOT + GRAPH                                          -->
+    <!-- ===================================================== -->
     <record id="view_salesperson_order_pivot" model="ir.ui.view">
         <field name="name">salesperson.order.pivot</field>
         <field name="model">idil.salesperson.place.order</field>
@@ -94,30 +254,16 @@
             </graph>
         </field>
     </record>
+    
+   <record id="action_salesperson_order_tree" model="ir.actions.act_window">
+        <field name="name">🧾 Place Order by Sales Team</field>
+        <field name="res_model">idil.salesperson.place.order</field>
+        <field name="view_mode">tree,form,pivot,graph</field>
+        <field name="search_view_id" ref="view_salesperson_order_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Create your first team order</p>
+            <p>Use filters for Draft/Confirmed and group by date or salesperson.</p>
+        </field>
+    </record>
 
-    <!-- Attach views to the action in the right order -->
-    <record id="action_salesperson_order_tree_tree" model="ir.actions.act_window.view">
-        <field name="act_window_id" ref="action_salesperson_order_tree"/>
-        <field name="view_mode">tree</field>
-        <field name="view_id" ref="view_salesperson_order_tree"/>
-        <field name="sequence">1</field>
-    </record>
-    <record id="action_salesperson_order_tree_form" model="ir.actions.act_window.view">
-        <field name="act_window_id" ref="action_salesperson_order_tree"/>
-        <field name="view_mode">form</field>
-        <field name="view_id" ref="view_salesperson_order_form"/>
-        <field name="sequence">2</field>
-    </record>
-    <record id="action_salesperson_order_tree_pivot" model="ir.actions.act_window.view">
-        <field name="act_window_id" ref="action_salesperson_order_tree"/>
-        <field name="view_mode">pivot</field>
-        <field name="view_id" ref="view_salesperson_order_pivot"/>
-        <field name="sequence">3</field>
-    </record>
-    <record id="action_salesperson_order_tree_graph" model="ir.actions.act_window.view">
-        <field name="act_window_id" ref="action_salesperson_order_tree"/>
-        <field name="view_mode">graph</field>
-        <field name="view_id" ref="view_salesperson_order_graph"/>
-        <field name="sequence">4</field>
-    </record>
 </odoo>

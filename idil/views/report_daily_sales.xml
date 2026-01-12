@@ -46,10 +46,5 @@
     </record>
 
     <!-- Menu Item under Financial Reports -->
-    <menuitem
-        id="menu_daily_sales_report"
-        name="Daily Sales Report"
-        parent="idil.FinancialReports"
-        action="action_daily_sales_report_wizard"
-        sequence="30"/>
+ 
 </odoo>

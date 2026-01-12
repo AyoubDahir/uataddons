@@ -29,6 +29,12 @@ class Commission(models.Model):
         ),
         readonly=True,
     )
+    rate = fields.Float(
+        string="Exchange Rate",
+        store=True,
+        readonly=True,
+        tracking=True,
+    )
     manufacturing_order_id = fields.Many2one(
         "idil.manufacturing.order",
         string="Manufacturing Order",
@@ -106,7 +112,11 @@ class Commission(models.Model):
         help="True if commission is due for payment today or earlier",
     )
 
-    @api.depends("date", "employee_id.commission_payment_schedule", "employee_id.commission_payment_day")
+    @api.depends(
+        "date",
+        "employee_id.commission_payment_schedule",
+        "employee_id.commission_payment_day",
+    )
     def _compute_due_date(self):
         """Calculate due date based on employee's payment schedule"""
         for commission in self:
@@ -135,7 +145,9 @@ class Commission(models.Model):
                         due_date = transaction_date.replace(day=payment_day)
                     except ValueError:
                         # Handle months with fewer days (e.g., Feb 30)
-                        due_date = (transaction_date.replace(day=1) + relativedelta(months=1, days=-1))
+                        due_date = transaction_date.replace(day=1) + relativedelta(
+                            months=1, days=-1
+                        )
                 else:
                     # Payment is in the next month
                     try:
@@ -144,7 +156,9 @@ class Commission(models.Model):
                     except ValueError:
                         # Handle months with fewer days
                         next_month = transaction_date + relativedelta(months=1)
-                        due_date = (next_month.replace(day=1) + relativedelta(months=1, days=-1))
+                        due_date = next_month.replace(day=1) + relativedelta(
+                            months=1, days=-1
+                        )
 
                 commission.due_date = due_date
 
@@ -173,7 +187,6 @@ class Commission(models.Model):
                 ("payment_status", "=", "paid"),
                 ("due_date", ">", today),
             ]
-
 
     def pay_commission(self):
         if self.is_paid:
@@ -205,6 +218,7 @@ class Commission(models.Model):
             "employee_id": self.employee_id.id,
             "amount": self.amount,
             "date": fields.Date.context_today(self),
+            "rate": self.rate,
         }
         payment = self.env["idil.commission.payment"].create(payment_vals)
         self.is_paid = True
@@ -255,37 +269,96 @@ class Commission(models.Model):
         self._compute_commission_remaining()
         self._compute_payment_status()
 
-    def _create_commission_payment_transaction_lines(self, payment):
+    # def _create_commission_payment_transaction_lines(self, payment):
 
-        # Debit line for reducing cash
+    #     # Debit line for reducing cash
+    #     debit_line_vals = {
+    #         "transaction_booking_id": self.manufacturing_order_id.transaction_booking_id.id,
+    #         "sl_line": 1,
+    #         "description": "Commission Payment - Debit",
+    #         "product_id": self.manufacturing_order_id.product_id.id,
+    #         "account_number": self.employee_id.account_id.id,
+    #         "transaction_type": "dr",
+    #         "dr_amount": payment.amount,
+    #         "cr_amount": 0.0,
+    #         "transaction_date": fields.Date.today(),
+    #         "commission_payment_id": payment.id,
+    #     }
+    #     self.env["idil.transaction_bookingline"].create(debit_line_vals)
+
+    #     # Credit line for reducing employee's commission account
+    #     credit_line_vals = {
+    #         "transaction_booking_id": self.manufacturing_order_id.transaction_booking_id.id,
+    #         "sl_line": 2,
+    #         "description": "Commission Payment - Credit",
+    #         "product_id": self.manufacturing_order_id.product_id.id,
+    #         "account_number": self.cash_account_id.id,
+    #         "transaction_type": "cr",
+    #         "dr_amount": 0.0,
+    #         "cr_amount": payment.amount,
+    #         "transaction_date": fields.Date.today(),
+    #         "commission_payment_id": payment.id,
+    #     }
+    #     self.env["idil.transaction_bookingline"].create(credit_line_vals)
+
+    def _create_commission_payment_transaction_lines(self, payment):
+        Booking = self.env["idil.transaction_booking"]
+        BookingLine = self.env["idil.transaction_bookingline"]
+
+        mo = self.manufacturing_order_id
+        if not mo:
+            raise ValidationError("Commission must be linked to a manufacturing order.")
+
+        # 1) Create main booking (if not already created for this payment)
+        booking = payment.booking_id
+        if not booking:
+            booking = Booking.create(
+                {
+                    "transaction_number": self.env["ir.sequence"].next_by_code(
+                        "idil.transaction_booking"
+                    ),
+                    "reffno": self.name,  # or mo.name if you prefer
+                    "rate": self.rate,
+                    "manufacturing_order_id": mo.id,
+                    "order_number": mo.name or self.name,
+                    "amount": payment.amount,
+                    "trx_date": payment.date or fields.Date.context_today(self),
+                    "payment_status": "paid",
+                }
+            )
+            payment.booking_id = booking.id
+
+        # (Optional) if you want always to attach to MO booking instead, remove above and set booking = mo.transaction_booking_id
+
+        # 2) Create booking lines using booking.id
+        # NOTE: Your comments were swapped: this DR is employee account, CR is cash account.
         debit_line_vals = {
-            "transaction_booking_id": self.manufacturing_order_id.transaction_booking_id.id,
+            "transaction_booking_id": booking.id,
             "sl_line": 1,
-            "description": "Commission Payment - Debit",
-            "product_id": self.manufacturing_order_id.product_id.id,
+            "description": "Commission Payment - DR (Employee)",
+            "product_id": mo.product_id.id if mo.product_id else False,
             "account_number": self.employee_id.account_id.id,
             "transaction_type": "dr",
             "dr_amount": payment.amount,
             "cr_amount": 0.0,
-            "transaction_date": fields.Date.today(),
+            "transaction_date": payment.date or fields.Date.today(),
             "commission_payment_id": payment.id,
         }
-        self.env["idil.transaction_bookingline"].create(debit_line_vals)
+        BookingLine.create(debit_line_vals)
 
-        # Credit line for reducing employee's commission account
         credit_line_vals = {
-            "transaction_booking_id": self.manufacturing_order_id.transaction_booking_id.id,
+            "transaction_booking_id": booking.id,
             "sl_line": 2,
-            "description": "Commission Payment - Credit",
-            "product_id": self.manufacturing_order_id.product_id.id,
+            "description": "Commission Payment - CR (Cash/Bank)",
+            "product_id": mo.product_id.id if mo.product_id else False,
             "account_number": self.cash_account_id.id,
             "transaction_type": "cr",
             "dr_amount": 0.0,
             "cr_amount": payment.amount,
-            "transaction_date": fields.Date.today(),
+            "transaction_date": payment.date or fields.Date.today(),
             "commission_payment_id": payment.id,
         }
-        self.env["idil.transaction_bookingline"].create(credit_line_vals)
+        BookingLine.create(credit_line_vals)
 
     def unlink(self):
         for rec in self:
@@ -325,6 +398,15 @@ class CommissionPayment(models.Model):
     )
     bulk_payment_line_id = fields.Many2one(
         "idil.commission.bulk.payment.line", string="Bulk Payment Line", readonly=True
+    )
+
+    rate = fields.Float(string="Rate", digits=(16, 5), required=True)
+    booking_id = fields.Many2one(
+        "idil.transaction_booking",
+        string="Transaction Booking",
+        readonly=True,
+        ondelete="set null",
+        index=True,
     )
 
     def unlink(self):
