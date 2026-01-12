@@ -41,7 +41,25 @@ class Product(models.Model):
         "A service is a non-material product you provide.",
     )
 
-    sale_price = fields.Float(string="Sales Price", required=True)
+    sale_price = fields.Float(
+        string="Sales Price",
+        required=True,
+        help="Tip: Sales price currency is taken from the product’s Sales/Income account currency (the account linked for revenue). Wherever sales price is used, currency will be derived from that sales account currency.",
+    )
+
+    min_sales_price = fields.Float(
+        string="Min Sales Price",
+        digits=(16, 5),
+        default=0.0,
+        help="Minimum allowed sales threshold. If exceeded, user gets error when processing customer sales.",
+    )
+
+    max_sales_price = fields.Float(
+        string="Max Sales Price",
+        digits=(16, 5),
+        default=0.0,
+        help="Maximum allowed sales threshold. If exceeded, user gets warning but can proceed.",
+    )
 
     is_cost_manual_purchase = fields.Boolean(
         string="Enter Cost Manually",
@@ -54,8 +72,10 @@ class Product(models.Model):
         compute="_compute_product_cost",
         digits=(16, 5),
         store=True,
+        help="Tip: Cost price currency is taken from the product’s Asset account currency. Wherever cost is used, currency will be derived from the asset account currency. This means the Asset account is the product’s main/reference account; other accounts can have any currency as needed.",
         readonly=False,  # ✅ this is key to allow manual editing
     )
+
     sales_description = fields.Text(string="Sales Description")
     purchase_description = fields.Text(string="Purchase Description")
     uom_id = fields.Many2one("idil.unit.measure", string="Unit of Measure")
@@ -118,17 +138,6 @@ class Product(models.Model):
         default=lambda self: self.env.company.currency_id,
         help="Currency for COGS and Adjustment account filtering",
     )
-
-    # NEW: Separate field to track the currency of the cost VALUE itself
-    cost_value_currency_id = fields.Many2one(
-        "res.currency",
-        string="Cost Currency",
-        required=True,
-        default=lambda self: self.env.ref("base.USD"),
-        help="Currency in which the product cost value is denominated (USD or SL)",
-        tracking=True,
-    )
-
     # below if for account filtering
     account_cogs_id = fields.Many2one(
         "idil.chart.account",
