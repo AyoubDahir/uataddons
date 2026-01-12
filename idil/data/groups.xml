@@ -52,5 +52,33 @@
         <record id="group_idil_kitchen_report_access" model="res.groups">
             <field name="name">Kitchen Quantity Report Access</field>
         </record>
+
+
+        <record id="group_inventory_procurement" model="res.groups">
+        <field name="name">Inventory &amp; Procurement Access</field>
+        <field name="category_id" ref="base.module_category_inventory"/>
+    </record>
+
+    <record id="group_procurement_requests" model="res.groups">
+        <field name="name">Procurement - Requests</field>
+        <field name="category_id" ref="base.module_category_inventory"/>
+    </record>
+
+    <record id="group_procurement_purchasing" model="res.groups">
+        <field name="name">Procurement - Purchasing</field>
+        <field name="category_id" ref="base.module_category_inventory"/>
+    </record>
+
+    <record id="group_procurement_receiving" model="res.groups">
+        <field name="name">Procurement - Receiving</field>
+        <field name="category_id" ref="base.module_category_inventory"/>
+    </record>
+
+    <record id="group_procurement_vendors" model="res.groups">
+        <field name="name">Procurement - Vendors &amp; Payments</field>
+        <field name="category_id" ref="base.module_category_inventory"/>
+    </record>
+
+
     </data>
 </odoo>
