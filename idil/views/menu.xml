@@ -1,172 +1,98 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
 
-<!-- <menuitem id="menu_idil_home"
-        name="BizCore"
-        web_icon="idil,static/description/icon.png"
-        groups="base.group_user"
-        sequence="1"/>
-        
-        <menuitem id="menu_inventory_purchase_root"
-                name="Inventory &amp; Purchase Managment"
-                parent="menu_idil_home"
-                sequence="1"/>
-
-                <menuitem id="menu_purchase"
-                        name="Purchase Managment"
-                        parent="menu_inventory_purchase_root"
-                        sequence="1"/>
-
-                         <menuitem id="menu_idil_procurement_root"
-                                name="🛒 Procurement"
-                                parent="menu_purchase"
-                                sequence="1"/>
-
-                                        <menuitem id="menu_idil_procurement_operations"
-                                                name="⚙️ Operations"
-                                                parent="menu_idil_procurement_root"
-                                                sequence="1"/>
-
-                                                <menuitem id="menu_material_request_root"
-                                                        name="Material Requests"
-                                                        parent="menu_idil_procurement_root"
-                                                        sequence="2"
-                                                        action="action_material_request"/>
-
-                                                <menuitem id="menu_idil_purchase_receipts"
-                                                        name="📦 Purchase Receipts"
-                                                        parent="menu_idil_procurement_root"
-                                                        action="action_idil_purchase_receipt"
-                                                        sequence="3"/>
-
-                        <menuitem id="menu_purchase_orders"
-                                name="Purchase Items"
-                                parent="menu_purchase"
-                                sequence="2"
-                                action="action_purchase_order"/>
-                
-                        <menuitem id="menu_product_purchase_order" 
-                                name="Purchase Products" 
-                                parent="menu_purchase" 
-                                sequence="3"
-                                action="action_product_purchase_order"/>
-
-
-                        <menuitem id="menu_idil_view_purchase_order"
-                                name="View Purchase Oder"
-                                action="action_view_purchase_order"
-                                sequence="4"
-                                parent="menu_purchase"/>
-
-        
-                        <menuitem id="menu_idil_vendors_registration_root"
-                                name="Vendor List"
-                                parent="menu_purchase"
-                                action="action_idil_vendor"
-                                sequence="5"/>
-
-                        <menuitem id="menu_vendor_transaction"
-                                name="Vendor Transactions"
-                                parent="menu_purchase"
-                                action="action_vendor_transaction"
-                                sequence="6"/>
-
-
-                        <menuitem id="menu_vendor_payment_wizard"
-                                        name="Vendor Bulk Payment"
-                                        parent="menu_purchase"
-                                        action="action_vendor_bulk_payment"
-                                        sequence="7"/>
-
-                        <menuitem id="menu_purchase_return" 
-                                name="Item Purchase Returns" 
-                                parent="menu_purchase" 
-                                action="action_purchase_return"
-                                sequence="8"/>
-
-                        <menuitem id="menu_product_purchase_return" 
-                                name="Product Purchase Returns"
-                                parent="menu_purchase" 
-                                sequence="9"
-                                action="action_product_purchase_return"/> -->
 <!-- Root -->
 <menuitem id="menu_idil_home"
-          name="BizCore"
+          name="🏠 BizCore"
           web_icon="idil,static/description/icon.png"
           groups="base.group_user"
           sequence="1"/>
 
-<menuitem id="menu_inventory_purchase_root"
-          name="📦 Inventory &amp; Procurement"
-          parent="menu_idil_home"
-          sequence="1"/>
+        <menuitem id="menu_inventory_purchase_root"
+                name="📦 Inventory &amp; Procurement"
+                parent="menu_idil_home"
+                sequence="1"
+                groups="idil.group_inventory_procurement"/>
 
-<menuitem id="menu_purchase"
-          name="🛒 Procurement"
-          parent="menu_inventory_purchase_root"
-          sequence="1"/>
+                <menuitem id="menu_purchase"
+                        name="🛒 Procurement"
+                        parent="menu_inventory_purchase_root"
+                        sequence="1"/>
 
-<!-- =========================================================
-     1) REQUESTS (Start of workflow)
-========================================================= -->
-<menuitem id="menu_procurement_requests"
-          name="📝 Requests"
-          parent="menu_purchase"
-          sequence="1"/>
+                        <!-- =========================================================
+                        1) REQUESTS (Start of workflow)
+                        ========================================================= -->
+                        <menuitem id="menu_procurement_requests"
+                                name="📝 Requests"
+                                parent="menu_purchase"
+                                sequence="1"
+                                groups="idil.group_procurement_requests"/>
 
+                                <menuitem id="menu_idil_internal_transfer"
+                                        name="🔁 Internal Transfers"
+                                        parent="menu_procurement_requests"
+                                        action="action_internal_transfer"
+                                        sequence="1"/>
 
-    <menuitem id="menu_idil_internal_transfer"
-              name="🔁 Internal Transfers"
-              parent="menu_procurement_requests"
-              action="action_internal_transfer"
-              sequence="-1"/>
+                                <menuitem id="menu_material_request_root"
+                                        name="🧾 Material Requests (Items)"
+                                        parent="menu_procurement_requests"
+                                        action="action_material_request"
+                                        sequence="2"/>
 
+                                <menuitem  id="menu_idil_product_request"
+                                                 name="📦 Material Requests (Products)"
+                                                parent="menu_procurement_requests"
+                                                action="action_idil_product_request"
+                                                sequence="3"/>
 
-<menuitem id="menu_material_request_root"
-          name="🧾 Material Requests"
-          parent="menu_procurement_requests"
-          action="action_material_request"
-          sequence="1"/>
+                                <!-- =========================================================
+                                2) PURCHASING (RFQ / PO)
+                                ========================================================= -->
+                                <menuitem id="menu_procurement_purchasing"
+                                        name="📑 Purchasing"
+                                        parent="menu_purchase"
+                                        sequence="2"
+                                        groups="idil.group_procurement_purchasing"/>
 
-<!-- =========================================================
-     2) PURCHASING (RFQ / PO)
-========================================================= -->
-<menuitem id="menu_procurement_purchasing"
-          name="📑 Purchasing"
-          parent="menu_purchase"
-          sequence="2"/>
+                                        <menuitem id="menu_purchase_orders"
+                                                name="🛍️ Purchase Orders (Items)"
+                                                parent="menu_procurement_purchasing"
+                                                action="action_purchase_order"
+                                                sequence="1"/>
 
-<menuitem id="menu_purchase_orders"
-          name="🛍️ Purchase Orders (Items)"
-          parent="menu_procurement_purchasing"
-          action="action_purchase_order"
-          sequence="1"/>
+                                        <menuitem id="menu_product_purchase_order"
+                                                name="🧰 Purchase Orders (Products)"
+                                                parent="menu_procurement_purchasing"
+                                                action="action_product_purchase_order"
+                                                sequence="2"/>
 
-<menuitem id="menu_product_purchase_order"
-          name="🧰 Purchase Orders (Products)"
-          parent="menu_procurement_purchasing"
-          action="action_product_purchase_order"
-          sequence="2"/>
+                                        <menuitem id="menu_idil_view_purchase_order"
+                                                name="🔎 View Purchase Orders"
+                                                parent="menu_procurement_purchasing"
+                                                action="action_view_purchase_order"
+                                                sequence="3"/>
 
-<menuitem id="menu_idil_view_purchase_order"
-          name="🔎 View Purchase Orders"
-          parent="menu_procurement_purchasing"
-          action="action_view_purchase_order"
-          sequence="3"/>
+                                <!-- =========================================================
+                                3) RECEIVING (Receipts)
+                                ========================================================= -->
+                                <menuitem id="menu_procurement_receiving"
+                                        name="🚚 Receiving"
+                                        parent="menu_purchase"
+                                        sequence="3"
+                                        groups="idil.group_procurement_receiving"/>
 
-<!-- =========================================================
-     3) RECEIVING (Receipts)
-========================================================= -->
-<menuitem id="menu_procurement_receiving"
-          name="🚚 Receiving"
-          parent="menu_purchase"
-          sequence="3"/>
+                                        <menuitem id="menu_idil_purchase_receipts"
+                                                name="📥 Purchase Receipts (Items)"
+                                                parent="menu_procurement_receiving"
+                                                action="action_purchase_receipt"
+                                                sequence="1"/>
 
-<menuitem id="menu_idil_purchase_receipts"
-          name="📥 Purchase Receipts"
-          parent="menu_procurement_receiving"
-          action="action_purchase_receipt"
-          sequence="1"/>
+                                        <menuitem id="menu_product_purchase_receipt"
+                                                name="📦 Purchase Receipts (Products)"
+                                                parent="menu_procurement_receiving"
+                                                action="action_product_purchase_receipt"
+                                                sequence="2"/>
 
 <!-- =========================================================
      4) VENDORS & PAYMENTS
@@ -174,7 +100,8 @@
 <menuitem id="menu_procurement_vendors"
           name="🏷️ Vendors &amp; Payments"
           parent="menu_purchase"
-          sequence="4"/>
+          sequence="4"
+          groups="idil.group_procurement_vendors"/>
 
 <menuitem id="menu_idil_vendors_registration_root"
           name="🏢 Vendors"
@@ -231,513 +158,563 @@
         action="action_idil_warehouse_location"
         sequence="3"/>
 
-
-
-
                 <menuitem id="menu_inventory"
-                        name="Inventory Managment"
+                        name="📦 Inventory Managment"
                         parent="menu_inventory_purchase_root"
                         sequence="2"/>
 
                         <menuitem id="menu_item_registrations_root"
-                        name="Item Operations"
+                        name="📋 Item Operations"
                         parent="menu_inventory"
                         sequence="1"/>
 
                                 <menuitem id="menu_idil_Items_registration"
-                                        name="Item Management"
+                                        name="📦 Item Management"
                                         parent="menu_item_registrations_root"
                                         action="action_idil_item"
                                         sequence="1"/>
 
                                 <menuitem id="menu_idil_unit_measure"
-                                        name="Unit Measurement"
+                                        name="📏 Unit Measurement"
                                         parent="menu_item_registrations_root"
                                         action="action_unit_measure"
                                         sequence="2"/>
 
                                 <menuitem id="menu_idil_item_category"
-                                        name="Unit Category"
+                                        name="🏷️ Unit Category"
                                         parent="menu_item_registrations_root"
                                         action="action_item_category"
                                         sequence="3"/>
 
                         <menuitem id="menu_stock_adjustment"
-                                name="Item Stock Adjustment"
+                                name="⚖️ Item Stock Adjustment"
                                 parent="menu_inventory"
                                 action="action_stock_adjustment"
                                 sequence="2"/>
 
-                    
-
-
-
         <menuitem id="Manufacturing"
-                name="Manufacturing Operations"
+                name="🏭 Manufacturing Operations"
                 parent="menu_idil_home"
                 sequence="5"/>
 
                 <menuitem id="menu_m_order"
-                        name="Order Operations"
+                        name="🧾 Order Operations"
                         parent="Manufacturing"
                         sequence="1"/>
 
                         <menuitem id="menu_manufacturing_order"
-                                name="Manufacturing Order"
+                                name="🏭 Manufacturing Order"
                                 parent="menu_m_order"
                                 sequence="1"
                                 action="action_manufacturing_orders"/>
 
                  <menuitem id="menu_commissions_root"
-                        name="Commissions Management"
+                        name="💰 Commissions Management"
                         parent="Manufacturing"
                         sequence="2"/>
 
                         <menuitem id="menu_commissions"
-                                name="Commissions"
+                                name="💵 Commissions"
                                 parent="menu_commissions_root"
                                 action="action_commissions"
                                 sequence="1"/>
 
-                        <menuitem id="menu_bulk_commission_payments" 
-                                name="Bulk Commission Payments" 
-                                parent="menu_commissions_root" 
-                                sequence="2" 
+                        <menuitem id="menu_bulk_commission_payments"
+                                name="💳 Bulk Commission Payments"
+                                parent="menu_commissions_root"
+                                sequence="2"
                                 action="action_commission_bulk_payment"/>
 
                 <menuitem id="menu_idil_product_operations"
-                        name="Product Operations"
+                        name="🧴 Product Operations"
                         parent="Manufacturing"
                         sequence="3"
                          />
 
                         <menuitem id="menu_idil_product_registration"
-                                name="Product List"
+                                name="📦 Product List"
                                 parent="menu_idil_product_operations"
                                 sequence="1"
                                 action="action_view_product"/>
 
-                        <menuitem id="menu_product_adjustment" 
-                                name="Product Adjustment"
+                        <menuitem id="menu_product_adjustment"
+                                name="⚙️ Product Adjustment"
                                 parent="menu_idil_product_operations"
                                 action="action_product_adjustment"
                                 sequence="2"/>
 
                 <menuitem id="menu_bom_root"
-                        name="Bill Of Materials Management"
+                        name="🧾 Bill Of Materials Management"
                         parent="Manufacturing"
                         sequence="4"/>
 
                         <menuitem id="menu_bom_creation"
-                                name="Create BOM"
+                                name="🧾 Create BOM"
                                 parent="menu_bom_root"
                                 sequence="1"
                                 action="action_view_bom"/>
 
                         <menuitem id="menu_bom_type_creation"
-                                name="Create BOM Type"
+                                name="🏷️ Create BOM Type"
                                 parent="menu_bom_root"
                                 sequence="2"
                                 action="action_view_bom_type"/>
+
         <menuitem id="menu_sales"
-              name="Sales Operations"
+              name="🛒 Sales Operations"
               parent="menu_idil_home"
               sequence="6"/>
-              
+
                 <menuitem id="menu_view_all_sales"
-                        name="All Sales"
+                        name="📊 All Sales"
                         parent="menu_sales"
                         groups="base.group_user"
                         action="action_view_all_sales"
                         sequence="1"/>
-                        
+
                 <menuitem id="menu_orders"
-                        name="Orders Managment"
+                        name="🧾 Orders Managment"
                         parent="menu_sales"
                         sequence="2"/>
+
                                 <menuitem id="menu_place_an_order"
-                                        name="Place an Order"
+                                        name="➕ Place an Order"
                                         parent="menu_orders"
                                         sequence="1"
-                                        action="action_salesperson_order_tree"/>  
+                                        action="action_salesperson_order_tree"/>
 
                                 <menuitem id="menu_sales_orders"
-                                        name="Sales Orders"
+                                        name="🧾 Sales Orders"
                                         parent="menu_orders"
                                         sequence="2"
                                         action="action_sale_order"/>
 
                                 <menuitem id="menu_sale_return"
-                                        name="Sales Return"
+                                        name="↩️ Sales Return"
                                         parent="menu_orders"
                                         sequence="3"
                                         action="action_sales_return"/>
-                                
+
                                 <menuitem id="menu_sales_receipt"
-                                        name="Sales Receipt"
+                                        name="🧾 Sales Receipt"
                                         parent="menu_orders"
                                         sequence="4"
                                         action="action_sales_receipt"/>
 
                                 <menuitem id="menu_idil_receipt_bulk_payment_root"
-                                        name="Bulk Receipt"
+                                        name="💳 Bulk Receipt"
                                         parent="menu_orders"
                                         action="action_idil_receipt_bulk_payment"
                                         sequence="5"/>
-                        
+
                         <menuitem id="menu_customer_Operations"
-                                name="Customer Management"
+                                name="👥 Customer Management"
                                 parent="menu_sales"
                                 sequence="2"/>
 
-                                  <menuitem id="menu_customer_place_order" 
-                                        name="Customer Place Orders" 
-                                        parent="menu_customer_Operations" 
-                                        action="action_customer_place_order" 
+                                  <menuitem id="menu_customer_place_order"
+                                        name="🧾 Customer Place Orders"
+                                        parent="menu_customer_Operations"
+                                        action="action_customer_place_order"
                                         sequence="1"/>
 
                                 <menuitem id="menu_cusotmer_sales_orders"
-                                        name="Customer Orders"
+                                        name="🧾 Customer Orders"
                                         parent="menu_customer_Operations"
                                         sequence="2"
                                         action="action_customer_idsale_order"/>
 
                                 <menuitem id="menu_customer_sale_return"
-                                        name="Customer Sale Returns"
+                                        name="↩️ Customer Sale Returns"
                                         parent="menu_customer_Operations"
                                         action="action_customer_sale_return"
-                                        sequence="3"/>   
+                                        sequence="3"/>
 
                                 <menuitem id="menu_idil_customers_registration"
-                                        name="Customer Operations"
+                                        name="👤 Customer Operations"
                                         parent="menu_customer_Operations"
-                                        action="action_idil_customer"   
+                                        action="action_idil_customer"
                                         sequence="4"/>
-                                        
+
                                 <menuitem id="menu_action_customer_type"
-                                        name="Customer Type"
+                                        name="🏷️ Customer Type"
                                         parent="menu_customer_Operations"
                                         action="action_customer_type"
                                         sequence="5"/>
 
-
                         <menuitem id="menu_employee_sales_root"
-                                name="Employee Sales"
+                                name="👷 Employee Sales"
                                 parent="menu_sales"
                                 sequence="3"/>
 
-                                <menuitem id="menu_staff_sales" 
-                                        name="Staff Sales" 
-                                        parent="menu_employee_sales_root" 
-                                        action="action_idil_staff_sales" 
+                                <menuitem id="menu_staff_sales"
+                                        name="👷 Staff Sales"
+                                        parent="menu_employee_sales_root"
+                                        action="action_idil_staff_sales"
                                         sequence="1"/>
-                                        
+
                                 <menuitem id="menu_view_all_sales"
-                                        name="All Sales"
+                                        name="📊 All Sales"
                                         parent="menu_employee_sales_root"
                                         groups="base.group_user"
                                         action="action_view_all_sales"
                                         sequence="2"/>
 
                         <menuitem id="menu_general_Operations"
-                                name="General Operations"
+                                name="⚙️ General Operations"
                                 parent="menu_sales"
                                 sequence="5"/>
 
                         <menuitem id="menu_sales_personnel_list"
-                                        name="Sales Team List"
+                                        name="👥 Sales Team List"
                                         parent="menu_general_Operations"
                                         sequence="1"
                                         action="action_sales_personnel"/>
-        
+
                                 <menuitem id="menu_salesperson_order_summary"
-                                        name="Order Summary"
+                                        name="📈 Order Summary"
                                         parent="menu_general_Operations"
                                         sequence="2"
                                         action="action_salesperson_order_summary"/>
 
-
     <menuitem id="menu_idil_accounting"
-              name="Accounting Operations"
+              name="🧮 Accounting Operations"
               parent="menu_idil_home"
               sequence="7"/>
 
                 <menuitem id="menu_journal_entry_main"
-                        name="Journal Releted Operations"
+                        name="📚 Journal Releted Operations"
                         parent="menu_idil_accounting"
                         sequence="1"/>
-                        
+
                         <menuitem id="menu_journal_entry"
-                                name="Journal Entries"
+                                name="📒 Journal Entries"
                                 parent="menu_journal_entry_main"
                                 action="action_journal_entry"
                                 sequence="1"/>
 
                         <menuitem id="menu_idil_chart_account_tree"
-                                name="Chart of Accounts"
+                                name="🧾 Chart of Accounts"
                                 parent="menu_journal_entry_main"
                                 action="action_idil_chart_account"
                                 sequence="2"/>
 
                         <menuitem id="menu_idil_journal_entry"
-                                name="360 -- All Transactions"
+                                name="🌀 360 -- All Transactions"
                                 parent="menu_journal_entry_main"
                                 action="action_transaction_booking"
                                 sequence="3"/>
 
                 <menuitem id="menu_currency_exchange_root"
-                        name="Currency Exchange Operations"
+                        name="💱 Currency Exchange Operations"
                         parent="menu_idil_accounting"
                         sequence="2"/>
 
                         <menuitem id="menu_currency_exchange"
-                                name="Currency Exchange"
+                                name="💱 Currency Exchange"
                                 parent="menu_currency_exchange_root"
                                 action="action_currency_exchange"
                                 sequence="1"/>
 
-                
                 <menuitem id="menu_general_setup_main"
-                        name="General Setup"
+                        name="⚙️ General Setup"
                         parent="menu_idil_accounting"
                         sequence="3"/>
-                        
+
                         <menuitem id="menu_idil_trx_source"
-                                name="Transaction Sources"
+                                name="🔖 Transaction Sources"
                                 parent="menu_general_setup_main"
                                 action="action_trx_source"
                                 sequence="1"/>
 
-                        <menuitem id="menu_payment_method"
-                                name="Payment Methods"
-                                parent="menu_general_setup_main"
-                                action="action_payment_method" 
-                                sequence="2"/>
-
                         <menuitem id="menu_idil_acc_opening_balances"
-                                name="Opening Balance Operations"
+                                name="📌 Opening Balance Operations"
                                 parent="menu_general_setup_main"
                                 sequence="3"/>
 
                                 <menuitem id="menu_opening_balances"
-                                                name="Opening Balances"
+                                                name="📌 Opening Balances"
                                                 parent="menu_idil_acc_opening_balances"
                                                 sequence="1"/>
 
                                                 <menuitem id="menu_idil_customer_opening_balance"
-                                                        name="Customer Opening Balances"
+                                                        name="👥 Customer Opening Balances"
                                                         parent="menu_opening_balances"
                                                         sequence="1"
                                                         action="action_customer_opening_balance"/>
 
                                                 <menuitem id="menu_idil_vendor_opening_balance"
-                                                        name="Vendor Opening Balances"
+                                                        name="🏷️ Vendor Opening Balances"
                                                         parent="menu_opening_balances"
                                                         action="action_idil_vendor_opening_balance"
                                                         sequence="2"/>
 
                                                 <menuitem id="menu_item_opening_balance"
-                                                        name="Item Opening Balance"
+                                                        name="📦 Item Opening Balance"
                                                         action="action_item_opening_balance"
                                                         parent="menu_opening_balances"
                                                         sequence="3"/>
-                                                
+
                                                 <menuitem id="menu_my_product_opening_balance"
-                                                        name="Product Opening Balance"
+                                                        name="🧴 Product Opening Balance"
                                                         parent="menu_opening_balances"
                                                         action="action_my_product_opening_balance"
                                                         sequence="4"/>
 
-                                        <menuitem id="menu_sales_opening_balance" 
-                                                        name="Sales Opening Balance" 
-                                                        parent="menu_opening_balances" 
+                                        <menuitem id="menu_sales_opening_balance"
+                                                        name="🛒 Sales Opening Balance"
+                                                        parent="menu_opening_balances"
                                                         sequence="5"
                                                         action="action_sales_opening_balance"/>
-                                                         
-
-                                        
-
-
-
 
     <menuitem id="Reports"
-              name="Reports"
+              name="📑 Reports"
               parent="menu_idil_home"
               sequence="8"/>
 
     <menuitem id="FinancialReports"
-              name="Financial Reports"
+              name="💼 Financial Reports"
               parent="Reports"
               sequence="1"/>
 
     <menuitem id="menu_by_company"
-              name="By Company"
+              name="🏢 By Company"
               parent="FinancialReports"
               sequence="2"/>
 
     <menuitem id="menu_company_trial_balance"
-              name="Trial Balance -- By Company"
+              name="📊 Trial Balance -- By Company"
               parent="menu_by_company"
               sequence="1"
               action="action_open_company_trial_balance_wizard"/>
 
     <menuitem id="menu_company_income_statement"
-              name="Income statement -- By Company"
+              name="📈 Income statement -- By Company"
               parent="menu_by_company"
               sequence="-2"
               action="action_open_income_statement_wizard"/>
 
     <menuitem id="menu_company_balance_sheet_report"
-              name="Balance Sheet -- By Company"
+              name="📑 Balance Sheet -- By Company"
               parent="menu_by_company"
               sequence="3"/>
 
-
     <menuitem id="menu_by_currency"
-              name="By Currency"
+              name="💱 By Currency"
               parent="FinancialReports"
               sequence="2"/>
 
     <menuitem id="menu_trial_balance"
-              name="Trial Balance -- By Currency"
+              name="📊 Trial Balance -- By Currency"
               parent="menu_by_currency"
               sequence="1"
               action="action_open_trial_balance_wizard"/>
 
-    <!-- Menu Item Definition -->
     <menuitem id="menu_balance_sheet_report"
-              name="Balance Sheet -- By Currency"
+              name="📑 Balance Sheet -- By Currency"
               parent="menu_by_currency"
               action="action_report_currency_wizard"
               sequence="2"/>
 
-
     <menuitem id="OtherReports"
-              name="System Reports"
+              name="🧰 System Reports"
               parent="Reports"
               sequence="4"/>
 
     <menuitem id="Reports_bs"
-              name="Account Balances"
+              name="🧾 Account Balances"
               parent="OtherReports"
               sequence="5"
               action="action_generate_account_balances"
     />
+
      <menuitem id="menu_transaction_report_root"
-              name="Account Statement Report"
+              name="📒 Account Statement Report"
               parent="OtherReports"
               sequence="1"
               action="action_transaction_report_wizard"/>
-              
+
     <menuitem id="Reports_vendor"
-              name="Vendor Balances"
+              name="🏷️ Vendor Balances"
               parent="OtherReports"
               sequence="6"
               action="action_generate_vendor_balances"
     />
+
     <menuitem id="menu_vendor_transaction_report"
-              name="Vendor Transaction Report"
+              name="📒 Vendor Transaction Report"
               parent="OtherReports"
               action="action_generate_vendor_transaction"
               sequence="7"/>
 
-
     <menuitem id="menu_sales_person_report"
-              name="Sales Person Balance Report"
+              name="👤 Sales Person Balance Report"
               parent="OtherReports"
               action="action_generate_sales_person_balances"
               sequence="8"/>
 
-
     <menuitem id="menu_sales_personnel_balance"
-              name="Sales Receipt"
+              name="🧾 Sales Receipt"
               parent="OtherReports"
               action="action_sales_receipt_balance"
               sequence="9"/>
 
     <menuitem id="menu_item_summary_with_vendor"
-                name="Item Summary Report -- With Vendor"
+                name="📦 Item Summary Report -- With Vendor"
                 parent="OtherReports"
                 sequence="10"
                 action="action_item_summary_with_vendor_report_wizard"/>
 
    <menuitem id="menu_saels_summary_with_salesperson"
-                name="Sales Summary Report -- With Salesperson"
+                name="📊 Sales Summary Report -- With Salesperson"
                 parent="OtherReports"
                 sequence="11"
                 action="action_sales_summary_with_saelsperosn_report_wizard"/>
 
-
-
    <menuitem id="menu_customer_sales_report_root"
-            name="Customer Reports"
+            name="👥 Customer Reports"
             parent="OtherReports"
             sequence="12"/>
 
   <menuitem id="menu_customer_sales_report"
-            name="Customer Sales Report"
+            name="📒 Customer Sales Report"
             parent="menu_customer_sales_report_root"
             action="action_customer_sales_report_wizard"
             sequence="1"/>
 
    <menuitem id="menu_product_profitability_report_root"
-            name="Customer Reports"
+            name="📦 Product Reports"
             parent="OtherReports"
             sequence="13"/>
 
                 <menuitem id="menu_product_profitability_report"
-                        name="Product Profitability Report"
+                        name="📈 Product Profitability Report"
                         parent="menu_product_profitability_report_root"
                         action="action_product_profitability_report_wizard"
                         sequence="1"/>
 
-    <!-- Operational Reports Menu -->
     <menuitem id="menu_operational_reports"
-              name="Operational Reports"
+              name="🛠️ Operational Reports"
               parent="Reports"
               sequence="3"/>
 
     <menuitem id="menu_daily_cash_collection"
-              name="Daily Cash Collection"
+              name="💵 Daily Cash Collection"
               parent="menu_operational_reports"
               action="action_daily_cash_collection_wizard"
               sequence="1"/>
 
     <menuitem id="menu_low_stock_alert"
-              name="Low Stock Alert"
+              name="⚠️ Low Stock Alert"
               parent="menu_operational_reports"
               action="action_low_stock_alert_wizard"
               sequence="2"/>
 
     <menuitem id="menu_expiring_inventory"
-              name="Expiring Inventory"
+              name="⏳ Expiring Inventory"
               parent="menu_operational_reports"
               action="action_expiring_inventory_wizard"
               sequence="3"/>
 
     <menuitem id="menu_pending_orders"
-              name="Pending Orders"
+              name="🕒 Pending Orders"
               parent="menu_operational_reports"
               action="action_pending_orders_wizard"
               sequence="4"/>
 
     <menuitem id="menu_customer_outstanding"
-              name="Customer Outstanding Balance"
+              name="💳 Customer Outstanding Balance"
               parent="menu_operational_reports"
               action="action_customer_outstanding_wizard"
               sequence="5"/>
 
-
 <menuitem id="menu_bizcore_db_tools"
-              name="Database Tools"      
+              name="🗄️ Database Tools"
               sequence="10"/>
 
-<!-- Backup menu -->
 <menuitem id="menu_bizcore_db_backup"
-        name="Database Backup  "
+        name="💾 Database Backup"
         parent="menu_bizcore_db_tools"
         action="action_bizcore_db_backup_wizard"
         sequence="1"/>
 
+ <menuitem id="menu_cashflow_report"
+              name="💧 Cash Flow Statement"
+              parent="idil.FinancialReports"
+              action="action_cashflow_report_wizard"
+              sequence="40"/>
+
+   <menuitem
+        id="menu_daily_sales_report"
+        name="📅 Daily Sales Report"
+        parent="idil.FinancialReports"
+        action="action_daily_sales_report_wizard"
+        sequence="30"/>
+
+   <menuitem id="menu_product_inventory_summary_report"
+                  name="📦 Product Inventory Summary"
+                  parent="idil.OtherReports"
+                  action="action_product_inventory_summary_wizard"
+                  sequence="25"/>
+
+         <menuitem id="menu_kitchen_report"
+              name="🍳 Kitchen Quantity Report"
+              parent="idil.menu_general_Operations"
+              groups="base.group_user"
+              action="action_kitchen_report_wizard"
+              sequence="3"/>
+
+  <menuitem id="menu_idil_inventory_dashboard"
+              name="📊 Inventory Dashboard"
+              parent="menu_inventory_purchase_root"
+              action="action_idil_inventory_dashboard"
+              sequence="0"/>
+
+<menuitem id="menu_sales_commission_root"
+              name="💰 Commissions"
+              parent="menu_sales"
+              sequence="50"/>
+
+    <menuitem id="menu_sales_commission_all"
+              name="📋 All Commissions"
+              parent="menu_sales_commission_root"
+              action="action_sales_commission"
+              sequence="10"/>
+
+    <menuitem id="menu_sales_commission_payable"
+              name="✅ Payable Now"
+              parent="menu_sales_commission_root"
+              action="action_sales_commission_payable"
+              sequence="20"/>
+
+<menuitem id="menu_idil_sales_dashboard"
+              name="📊 Sales Dashboard"
+              parent="menu_sales"
+              action="action_idil_sales_dashboard"
+              sequence="0"/>
+
+    <menuitem id="menu_sales_discount_root"
+              name="🏷️ Discounts"
+              parent="menu_sales"
+              sequence="55"/>
+
+    <menuitem id="menu_sales_discount_all"
+              name="📋 All Discounts"
+              parent="menu_sales_discount_root"
+              action="action_sales_discount"
+              sequence="10"/>
+
+    <menuitem id="menu_sales_discount_payable"
+              name="✅ Processable Now"
+              parent="menu_sales_discount_root"
+              action="action_sales_discount_payable"
+              sequence="20"/>
+
+  <menuitem id="menu_sales_commission_bulk_payment"
+              name="💳 Bulk Payment"
+              parent="idil.menu_sales_commission_root"
+              action="action_sales_commission_bulk_payment"
+              groups="base.group_user"
+              sequence="30"/>
 
 </odoo>
