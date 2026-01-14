@@ -30,6 +30,11 @@ class Product(models.Model):
         "pos.category",
         string="POS Categories",
     )
+    cost_value_currency_id = fields.Many2one(
+        "res.currency",
+        string="Cost Value Currency",
+        default=lambda self: self.env.company.currency_id,
+    )
 
     detailed_type = fields.Selection(
         [("consu", "Consumable"), ("service", "Service")],
