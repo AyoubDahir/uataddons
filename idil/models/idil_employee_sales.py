@@ -15,6 +15,14 @@ class IdilStaffSales(models.Model):
     company_id = fields.Many2one(
         "res.company", default=lambda s: s.env.company, required=True
     )
+    salary_id = fields.Many2one(
+        "idil.employee.salary",
+        string="Paid In Salary",
+        readonly=True,
+        copy=False,
+        index=True,
+        tracking=True,
+    )
     name = fields.Char(string="Reference", readonly=True, default="New", tracking=True)
     employee_id = fields.Many2one(
         "idil.employee", string="Staff", required=True, tracking=True

@@ -57,6 +57,18 @@ class IdilEmployeeSalary(models.Model):
     advance_deduction = fields.Monetary(
         string="Advance Salary", default=0.0, store=True, tracking=True
     )
+
+    staff_sales_ids = fields.Many2many(
+        "idil.staff.sales",
+        "idil_salary_staff_sales_rel",  # relation table name
+        "salary_id",
+        "staff_sale_id",
+        string="Staff Sales Deducted",
+        readonly=True,
+        copy=False,
+        tracking=True,
+    )
+
     total_pending_sales = fields.Monetary(
         string="Total Pending Sales",
         compute="_compute_total_pending_sales",
@@ -190,6 +202,11 @@ class IdilEmployeeSalary(models.Model):
                     [
                         ("employee_id", "=", rec.employee_id.id),
                         ("payment_status", "=", "pending"),
+                        (
+                            "salary_id",
+                            "=",
+                            False,
+                        ),  # ✅ not already paid in another salary
                     ]
                 )
             else:
@@ -307,6 +324,23 @@ class IdilEmployeeSalary(models.Model):
 
         # Create the salary record
         record = super(IdilEmployeeSalary, self).create(vals)
+
+        # ✅ Detect and attach all pending staff sales for this employee
+        pending_sales = record.pending_sales_ids  # uses your compute (already filtered)
+
+        if pending_sales:
+            # Link to salary (Many2many)
+            record.staff_sales_ids = [(6, 0, pending_sales.ids)]
+
+            # Mark as paid + link back to salary (Many2one)
+            pending_sales.write(
+                {
+                    "payment_status": "paid",
+                    "salary_id": record.id,
+                }
+            )
+        else:
+            record.staff_sales_ids = [(5, 0, 0)]  # clear just in case
 
         # If we found advances and we have an amount to deduct, allocate across advances
         if advances and float(vals.get("advance_deduction", 0.0)) > 0.0:
@@ -626,6 +660,16 @@ class IdilEmployeeSalary(models.Model):
 
                 # Mark all relevant advances as approved
                 advances.write({"state": "approved"})
+
+        StaffSales = self.env["idil.staff.sales"]
+        for record in self:
+            # ✅ revert staff sales paid by this salary
+            linked_sales = StaffSales.search([("salary_id", "=", record.id)])
+            if linked_sales:
+                linked_sales.write({"payment_status": "pending", "salary_id": False})
+
+            # clear many2many (optional)
+            record.staff_sales_ids = [(5, 0, 0)]
 
         return super(IdilEmployeeSalary, self).unlink()
 
