@@ -14,6 +14,17 @@ class VendorBulkPayment(models.Model):
     vendor_id = fields.Many2one(
         "idil.vendor.registration", string="Vendor", required=True
     )
+    order_ids = fields.One2many(
+        "idil.vendor.bulk.payment.line", "payment_id", string="Vendor Orders"
+    )
+
+    transaction_booking_ids = fields.One2many(
+        "idil.transaction_booking",
+        "bulk_payment_id",
+        string="Transaction Bookings",
+        ondelete="cascade",
+    )
+
     reffno = fields.Char(string="Reference Number")
     cash_account_id = fields.Many2one(
         "idil.chart.account",
@@ -21,22 +32,16 @@ class VendorBulkPayment(models.Model):
         domain=[("account_type", "in", ["cash", "bank_transfer"])],
         help="Select the cash account for transactions.",
     )
+
     amount_paying = fields.Float(string="Total Amount Paying", required=True)
-    order_ids = fields.One2many(
-        "idil.vendor.bulk.payment.line", "payment_id", string="Vendor Orders"
-    )
+
     payment_date = fields.Date(
         string="Payment Date",
         default=fields.Date.context_today,
         required=True,
         tracking=True,
     )
-    transaction_booking_ids = fields.One2many(
-        "idil.transaction_booking",
-        "bulk_payment_id",
-        string="Transaction Bookings",
-        ondelete="cascade",
-    )
+
     process_status = fields.Selection(
         [("pending", "Pending"), ("processed", "Processed")],
         string="Process Status",

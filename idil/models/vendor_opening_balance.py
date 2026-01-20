@@ -281,13 +281,14 @@ class VendorOpeningBalance(models.Model):
                     # Vendor transaction
                     self.env["idil.vendor_transaction"].create(
                         {
+                            "order_number": f"VOB-{record.id}",
                             "transaction_number": transaction_booking.transaction_number,
                             "transaction_date": record.date,
                             "vendor_id": line.vendor_id.id,
                             "amount": line.amount,
                             "remaining_amount": line.amount,
                             "paid_amount": 0.0,
-                            "payment_method": "other",
+                            "payment_method": "ap",
                             "reffno": record.name,
                             "transaction_booking_id": transaction_booking.id,
                             "payment_status": "pending",
@@ -402,13 +403,14 @@ class VendorOpeningBalance(models.Model):
                             # Create vendor transaction for new line
                             self.env["idil.vendor_transaction"].create(
                                 {
+                                    "order_number": f"VOB-{record.id}",
                                     "transaction_number": booking.transaction_number,
                                     "transaction_date": record.date,
                                     "vendor_id": line.vendor_id.id,
                                     "amount": line.amount,
                                     "remaining_amount": line.amount,
                                     "paid_amount": 0.0,
-                                    "payment_method": "other",
+                                    "payment_method": "ap",
                                     "reffno": record.name,
                                     "transaction_booking_id": booking.id,
                                     "payment_status": "pending",

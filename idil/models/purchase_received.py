@@ -665,6 +665,7 @@ class IdilReceivedPurchase(models.Model):
             # Vendor transaction (direct only)
             # --------------------------
             vt_vals = {
+                "order_number": f"PO-{self.id}",
                 "transaction_number": booking.transaction_number,
                 "transaction_date": doc_date,
                 "vendor_id": vendor.id,
