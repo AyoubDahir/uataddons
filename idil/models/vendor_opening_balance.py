@@ -281,7 +281,7 @@ class VendorOpeningBalance(models.Model):
                     # Vendor transaction
                     self.env["idil.vendor_transaction"].create(
                         {
-                            "order_number": f"VOB-{record.id}",
+                            "order_number": f"VOB-{line.id}",
                             "transaction_number": transaction_booking.transaction_number,
                             "transaction_date": record.date,
                             "vendor_id": line.vendor_id.id,
@@ -403,7 +403,7 @@ class VendorOpeningBalance(models.Model):
                             # Create vendor transaction for new line
                             self.env["idil.vendor_transaction"].create(
                                 {
-                                    "order_number": f"VOB-{record.id}",
+                                    "order_number": f"VOB-{line.id}",
                                     "transaction_number": booking.transaction_number,
                                     "transaction_date": record.date,
                                     "vendor_id": line.vendor_id.id,
