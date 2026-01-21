@@ -31,6 +31,31 @@ class IdilEmployeeSalary(models.Model):
     employee_id = fields.Many2one(
         "idil.employee", string="Employee", required=True, tracking=True
     )
+
+    employee_account_id = fields.Many2one(
+        "idil.chart.account",
+        string="Employee Account",
+        related="employee_id.account_id",  # <-- change to your real field name on employee model
+        store=True,
+        readonly=True,
+    )
+
+    employee_account_currency_id = fields.Many2one(
+        "res.currency",
+        string="Employee Account Currency",
+        related="employee_id.account_id.currency_id",
+        store=True,
+        readonly=True,
+    )
+
+    payout_account_currency_id = fields.Many2one(
+        "res.currency",
+        string="Payout Account Currency",
+        related="account_id.currency_id",
+        store=True,
+        readonly=True,
+    )
+
     salary_date = fields.Date(
         string="Salary Date",
         default=fields.Date.context_today,
@@ -139,6 +164,127 @@ class IdilEmployeeSalary(models.Model):
         tracking=True,
     )
 
+    # ______________________________________________________________________________________________________________________
+    # ______________________________________________________________________________________________________________________
+    sl_currency_id = fields.Many2one(
+        "res.currency",
+        string="SL Currency",
+        default=lambda self: self.env["res.currency"].search(
+            [("name", "=", "SL")], limit=1
+        ),
+        readonly=True,
+    )
+
+    usd_currency_id = fields.Many2one(
+        "res.currency",
+        string="USD Currency",
+        default=lambda self: self.env["res.currency"].search(
+            [("name", "=", "USD")], limit=1
+        ),
+        readonly=True,
+    )
+
+    basic_salary_usd = fields.Monetary(
+        string="Basic Salary (USD)",
+        compute="_compute_usd_fields",
+        store=True,
+        currency_field="usd_currency_id",
+    )
+
+    bonus_usd = fields.Monetary(
+        string="Bonus (USD)",
+        compute="_compute_usd_fields",
+        store=True,
+        currency_field="usd_currency_id",
+    )
+
+    salary_by_days_usd = fields.Monetary(
+        string="Salary by Days (USD)",
+        compute="_compute_usd_fields",
+        store=True,
+        currency_field="usd_currency_id",
+    )
+
+    total_earnings_usd = fields.Monetary(
+        string="Total Earnings (USD)",
+        compute="_compute_usd_fields",
+        store=True,
+        currency_field="usd_currency_id",
+    )
+
+    deductions_usd = fields.Monetary(
+        string="Deductions (USD)",
+        compute="_compute_usd_fields",
+        store=True,
+        currency_field="usd_currency_id",
+    )
+
+    advance_deduction_usd = fields.Monetary(
+        string="Advance Salary (USD)",
+        compute="_compute_usd_fields",
+        store=True,
+        currency_field="usd_currency_id",
+    )
+
+    total_pending_sales_usd = fields.Monetary(
+        string="Total Pending Sales (USD)",
+        compute="_compute_usd_fields",
+        store=True,
+        currency_field="usd_currency_id",
+    )
+
+    total_deductions_usd = fields.Monetary(
+        string="Total Deductions (USD)",
+        compute="_compute_usd_fields",
+        store=True,
+        currency_field="usd_currency_id",
+    )
+
+    total_salary_usd = fields.Monetary(
+        string="Total Salary (USD)",
+        compute="_compute_usd_fields",
+        store=True,
+        currency_field="usd_currency_id",
+    )
+
+    @api.depends(
+        "rate",
+        "basic_salary",
+        "bonus",
+        "salary_by_days",
+        "total_earnings",
+        "deductions",
+        "advance_deduction",
+        "total_pending_sales",
+        "total_deductions",
+        "total_salary",
+        "currency_id",
+    )
+    def _compute_usd_fields(self):
+        for rec in self:
+            r = float(rec.rate or 0.0)
+
+            def to_usd(amount):
+                amount = float(amount or 0.0)
+                if not amount:
+                    return 0.0
+                if rec.currency_id and rec.currency_id.name == "USD":
+                    return amount
+                # currency is SL -> USD
+                return amount / r if r else 0.0
+
+            rec.basic_salary_usd = to_usd(rec.basic_salary)
+            rec.bonus_usd = to_usd(rec.bonus)
+            rec.salary_by_days_usd = to_usd(rec.salary_by_days)
+            rec.total_earnings_usd = to_usd(rec.total_earnings)
+
+            rec.deductions_usd = to_usd(rec.deductions)
+            rec.advance_deduction_usd = to_usd(rec.advance_deduction)
+            rec.total_pending_sales_usd = to_usd(rec.total_pending_sales)
+            rec.total_deductions_usd = to_usd(rec.total_deductions)
+
+            rec.total_salary_usd = to_usd(rec.total_salary)
+
     @api.depends("deductions", "advance_deduction", "total_pending_sales")
     def _compute_total_deductions(self):
         for rec in self:
@@ -187,12 +333,10 @@ class IdilEmployeeSalary(models.Model):
         for rec in self:
             rec.salary_by_days = rec.basic_salary * rec.number_of_days
 
-    @api.depends("pending_sales_ids.total_amount")
+    @api.depends("staff_sales_ids.total_amount")
     def _compute_total_pending_sales(self):
         for record in self:
-            record.total_pending_sales = sum(
-                record.pending_sales_ids.mapped("total_amount")
-            )
+            record.total_pending_sales = sum(record.staff_sales_ids.mapped("total_amount"))
 
     @api.depends("employee_id")
     def _compute_pending_sales(self):
@@ -413,115 +557,226 @@ class IdilEmployeeSalary(models.Model):
 
         return salary_expense_account, trx_source
 
-    def _book_transaction(self, record):
-        """Books a transaction and validates account balances."""
-        # Ensure account_id is a valid Many2one field
-        credit_account = record.account_id
-
-        salary_expense_account, salary_expense_trx_source = (
-            self._ensure_salary_posting_configuration(credit_account)
-        )
-
-        if not credit_account:
-            raise ValidationError("Please choose a valid account.")
-
-        # Fetch the account record for "Salary Advance Expense"
-        salary_expense_account = self.env["idil.chart.account"].search(
-            [
-                (
-                    "name",
-                    "=",
-                    "Salary Expense",
-                )  # Assuming the type is COGS, adjust based on your setup
-            ],
-            limit=1,
-        )
-
-        # Fetch the trx source record for "Salary Advance Expense"
-        salary_expense_trx_source = self.env["idil.transaction.source"].search(
-            [
-                (
-                    "name",
-                    "=",
-                    "Salary Expense",
-                )  # Assuming the type is COGS, adjust based on your setup
-            ],
-            limit=1,
-        )
-
-        # Compute current balance
-        transaction_lines = self.env["idil.transaction_bookingline"].search(
-            [
-                (
-                    "account_number",
-                    "=",
-                    credit_account.id,
-                )  # Now credit_account is a recordset, so .id works fine
-            ]
-        )
-        current_balance = sum(transaction_lines.mapped("dr_amount")) - sum(
-            transaction_lines.mapped("cr_amount")
-        )
-
-        # Check if sufficient balance is available
-        if current_balance < record.total_salary:
+    def _require_account_currency(self, acc, label="Account"):
+        if not acc:
+            raise ValidationError(f"{label} is missing.")
+        if not acc.currency_id:
             raise ValidationError(
-                f"Insufficient balance in account '{credit_account.name}'. "
-                f"Available balance: {current_balance}, required: {record.total_salary}."
+                f"{label} '{acc.name}' has no currency. Please set account currency."
+            )
+        return acc.currency_id
+
+    def _convert_amount(self, amount, from_cur, to_cur, rate, ctx=""):
+        """
+        Convert between SL and USD using record.rate (same approach as your opening balance).
+        Assumes:
+        - rate = SL per 1 USD (example)
+        - supports only USD <-> SL (like your code)
+        """
+        amount = float(amount or 0.0)
+
+        if not from_cur or not to_cur:
+            raise ValidationError(f"Currency missing in conversion ({ctx}).")
+
+        if from_cur.id == to_cur.id:
+            return amount
+
+        if not rate:
+            raise ValidationError(f"Exchange rate is required ({ctx}).")
+
+        f = (from_cur.name or "").upper()
+        t = (to_cur.name or "").upper()
+
+        if f == "USD" and t == "SL":
+            return amount * rate
+        if f == "SL" and t == "USD":
+            return amount / rate
+
+        raise ValidationError(
+            f"Unhandled conversion {from_cur.name} -> {to_cur.name} ({ctx})."
+        )
+
+    def _get_exchange_clearing(self, currency):
+        ChartAccount = self.env["idil.chart.account"]
+        acc = ChartAccount.search(
+            [
+                ("name", "=", "Exchange Clearing Account"),
+                ("currency_id", "=", currency.id),
+            ],
+            limit=1,
+        )
+        if not acc:
+            raise ValidationError(
+                f"Exchange Clearing Account not found for currency '{currency.name}'."
+            )
+        return acc
+
+    def _book_transaction(self, record):
+        TransactionBooking = self.env["idil.transaction_booking"]
+        BookingLine = self.env["idil.transaction_bookingline"]
+        ChartAccount = self.env["idil.chart.account"]
+        TrxSource = self.env["idil.transaction.source"]
+
+        # --- Validate configs ---
+        credit_account = record.account_id
+        if not credit_account:
+            raise ValidationError(
+                "Please choose a valid payout/credit account (account_id)."
             )
 
-        # Create a transaction booking record
-        transaction_booking = self.env["idil.transaction_booking"].create(
+        salary_expense_account = ChartAccount.search(
+            [("name", "=", "Salary Expense")], limit=1
+        )
+        if not salary_expense_account:
+            raise ValidationError("Chart of Account named 'Salary Expense' is missing.")
+
+        salary_expense_trx_source = TrxSource.search(
+            [("name", "=", "Salary Expense")], limit=1
+        )
+        if not salary_expense_trx_source:
+            raise ValidationError("Transaction Source 'Salary Expense' is missing.")
+
+        # --- Currencies ---
+        doc_currency = record.currency_id  # salary document currency (your default SL)
+        rate = record.rate
+
+        expense_currency = self._require_account_currency(
+            salary_expense_account, "Salary Expense account"
+        )
+        credit_currency = self._require_account_currency(
+            credit_account, "Payout/Credit account"
+        )
+
+        # Amount in each account currency (based on document currency)
+        amount_in_doc = float(record.total_salary or 0.0)
+
+        amount_for_expense = self._convert_amount(
+            amount_in_doc, doc_currency, expense_currency, rate, ctx="Salary -> Expense"
+        )
+        amount_for_credit = self._convert_amount(
+            amount_in_doc, doc_currency, credit_currency, rate, ctx="Salary -> Payout"
+        )
+
+        # --- Balance check MUST be in credit account currency ---
+        lines = BookingLine.search([("account_number", "=", credit_account.id)])
+        current_balance = sum(lines.mapped("dr_amount")) - sum(
+            lines.mapped("cr_amount")
+        )
+
+        if current_balance < amount_for_credit:
+            raise ValidationError(
+                f"Insufficient balance in account '{credit_account.name}'. "
+                f"Available: {current_balance}, required: {amount_for_credit} ({credit_currency.name})."
+            )
+
+        # --- Create booking header ---
+        trx = TransactionBooking.create(
             {
                 "transaction_number": self.env["ir.sequence"].next_by_code(
                     "idil.transaction_booking"
                 )
                 or "/",
-                "reffno": record.id,
+                "reffno": str(record.id),
                 "employee_salary_id": record.id,
                 "employee_id": record.employee_id.id,
                 "trx_source_id": salary_expense_trx_source.id,
                 "payment_method": "cash",
                 "payment_status": "paid",
-                "rate": record.rate,
+                "rate": rate,
                 "trx_date": record.salary_date,
-                "amount": record.total_salary,
-                "amount_paid": record.total_salary,
+                # keep header "amount" in document currency (recommended)
+                "amount": amount_in_doc,
+                "amount_paid": amount_in_doc,
                 "remaining_amount": 0,
             }
         )
 
-        # Create transaction booking lines
-        self.env["idil.transaction_bookingline"].create(
-            {
-                "transaction_booking_id": transaction_booking.id,
-                "employee_salary_id": record.id,
-                "description": "Salary Payment of - "
-                + record.salary_date.strftime("%Y-%m")
-                + " for - "
-                + record.employee_id.name,
-                "account_number": salary_expense_account.id,  # Debit salary expense account
-                "transaction_type": "dr",
-                "dr_amount": record.total_salary,
-                "cr_amount": 0,
-                "transaction_date": record.salary_date,
-            }
+        desc = (
+            "Salary Payment of - "
+            + record.salary_date.strftime("%Y-%m")
+            + " for - "
+            + record.employee_id.name
         )
 
-        self.env["idil.transaction_bookingline"].create(
-            {
-                "transaction_booking_id": transaction_booking.id,
-                "employee_salary_id": record.id,
-                "description": "Salary Payment of - "
-                + record.salary_date.strftime("%Y-%m")
-                + " for - "
-                + record.employee_id.name,
-                "account_number": credit_account.id,  # Credit the advance account
-                "transaction_type": "cr",
-                "dr_amount": 0,
-                "cr_amount": record.total_salary,
-                "transaction_date": record.salary_date,
-            }
+        # --- Same currency: normal 2 lines ---
+        if expense_currency.id == credit_currency.id:
+            BookingLine.create(
+                [
+                    {
+                        "transaction_booking_id": trx.id,
+                        "employee_salary_id": record.id,
+                        "description": desc,
+                        "account_number": salary_expense_account.id,
+                        "transaction_type": "dr",
+                        "dr_amount": amount_for_expense,
+                        "cr_amount": 0.0,
+                        "transaction_date": record.salary_date,
+                    },
+                    {
+                        "transaction_booking_id": trx.id,
+                        "employee_salary_id": record.id,
+                        "description": desc,
+                        "account_number": credit_account.id,
+                        "transaction_type": "cr",
+                        "dr_amount": 0.0,
+                        "cr_amount": amount_for_expense,
+                        "transaction_date": record.salary_date,
+                    },
+                ]
+            )
+            return
+
+        # --- Different currencies: 4 lines with clearing accounts ---
+        source_clearing = self._get_exchange_clearing(expense_currency)
+        target_clearing = self._get_exchange_clearing(credit_currency)
+
+        BookingLine.create(
+            [
+                # 1) DR Salary Expense (expense currency)
+                {
+                    "transaction_booking_id": trx.id,
+                    "employee_salary_id": record.id,
+                    "description": desc,
+                    "account_number": salary_expense_account.id,
+                    "transaction_type": "dr",
+                    "dr_amount": amount_for_expense,
+                    "cr_amount": 0.0,
+                    "transaction_date": record.salary_date,
+                },
+                # 2) CR Source Clearing (expense currency)
+                {
+                    "transaction_booking_id": trx.id,
+                    "employee_salary_id": record.id,
+                    "description": "Salary - Source Clearing",
+                    "account_number": source_clearing.id,
+                    "transaction_type": "cr",
+                    "dr_amount": 0.0,
+                    "cr_amount": amount_for_expense,
+                    "transaction_date": record.salary_date,
+                },
+                # 3) DR Target Clearing (credit currency)
+                {
+                    "transaction_booking_id": trx.id,
+                    "employee_salary_id": record.id,
+                    "description": "Salary - Target Clearing",
+                    "account_number": target_clearing.id,
+                    "transaction_type": "dr",
+                    "dr_amount": amount_for_credit,
+                    "cr_amount": 0.0,
+                    "transaction_date": record.salary_date,
+                },
+                # 4) CR Payout/Credit account (credit currency)
+                {
+                    "transaction_booking_id": trx.id,
+                    "employee_salary_id": record.id,
+                    "description": desc,
+                    "account_number": credit_account.id,
+                    "transaction_type": "cr",
+                    "dr_amount": 0.0,
+                    "cr_amount": amount_for_credit,
+                    "transaction_date": record.salary_date,
+                },
+            ]
         )
 
     @api.depends(
@@ -702,30 +957,6 @@ class IdilEmployeeSalary(models.Model):
             # Log the warnings
             _logger.warning("\n".join(salary_logs))
             raise UserError("\n".join(salary_logs))
-
-    # @api.constrains("employee_id", "salary_date")
-    # def _check_duplicate_salary(self):
-    #     for record in self:
-    #         if not record.salary_date:
-    #             continue
-    #         # first day of month
-    #         first_day = record.salary_date.replace(day=1)
-    #         # last day of month: go to next month, subtract 1 day
-    #         next_month = (first_day.replace(day=28) + timedelta(days=4)).replace(day=1)
-    #         last_day = next_month - timedelta(days=1)
-
-    #         duplicate = self.search(
-    #             [
-    #                 ("employee_id", "=", record.employee_id.id),
-    #                 ("salary_date", ">=", first_day),
-    #                 ("salary_date", "<=", last_day),
-    #                 ("id", "!=", record.id),
-    #             ]
-    #         )
-    #         if duplicate:
-    #             raise ValidationError(
-    #                 f"A salary record for {record.employee_id.name} already exists for this month."
-    #             )
 
     def action_generate_salary_report_pdf(self):
         """Generate the payment slip for the selected employee."""
