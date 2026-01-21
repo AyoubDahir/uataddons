@@ -74,11 +74,7 @@ from . import purchase_receive_wizard
 from . import warehouse_location
 from . import internaltransfer
 from . import BizcoreDbBackup
-from . import product_request
-from . import productpurchasereceipt
-from . import receivedproductpurchase
-from . import productpurchasereceivewizard
-from . import payment_method
+
 
 
 # from . import model_export_wizard
@@ -94,6 +90,7 @@ from . import sales_discount
 from . import report_product_inventory_summary
 from . import report_daily_cash_collection
 from . import report_low_stock_alert
+
 from . import report_expiring_inventory
 from . import report_pending_orders
 from . import report_customer_outstanding
