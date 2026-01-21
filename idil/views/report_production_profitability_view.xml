@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Search View -->
+        <record id="view_report_production_profitability_search" model="ir.ui.view">
+            <field name="name">idil.report.production.profitability.search</field>
+            <field name="model">idil.report.production.profitability</field>
+            <field name="arch" type="xml">
+                <search string="Production Profitability Search">
+                    <field name="date"/>
+                    <field name="product_id"/>
+                    <filter string="Today" name="today" domain="[('date', '=', context_today().strftime('%Y-%m-%d'))]"/>
+                    <filter string="This Month" name="this_month" domain="[('date', '&gt;=', context_today().strftime('%Y-%m-01'))]"/>
+                    <group expand="1" string="Group By">
+                        <filter string="Date" name="group_date" context="{'group_by':'date'}"/>
+                        <filter string="Product" name="group_product" context="{'group_by':'product_id'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- Tree View -->
+        <record id="view_report_production_profitability_tree" model="ir.ui.view">
+            <field name="name">idil.report.production.profitability.tree</field>
+            <field name="model">idil.report.production.profitability</field>
+            <field name="arch" type="xml">
+                <tree string="Production Profitability" create="false" edit="false" delete="false">
+                    <field name="date"/>
+                    <field name="product_id"/>
+                    
+                    <field name="produced_qty" sum="Total Produced"/>
+                    <field name="production_cost_usd" sum="Total Prod Cost (USD)" optional="hide"/>
+                    <field name="production_cost_sl" sum="Total Prod Cost (SL)" optional="hide"/>
+                    
+                    <field name="unit_production_cost_usd" optional="show" widget="float" digits="[16, 4]"/>
+                    <field name="unit_production_cost_sl" optional="show" widget="float" digits="[16, 4]"/>
+
+                    <field name="sold_qty" sum="Total Sold"/>
+                    
+                    <field name="cost_of_sales_usd" sum="Total COGS (USD)" optional="show"/>
+                    <field name="cost_of_sales_sl" sum="Total COGS (SL)" optional="show"/>
+
+                    <field name="avg_sales_price_usd" optional="show" widget="float" digits="[16, 4]"/>
+                    <field name="avg_sales_price_sl" optional="hide" widget="float" digits="[16, 4]"/>
+
+                    <field name="sales_amount_usd" sum="Total Revenue (USD)"/>
+                    <field name="sales_amount_sl" sum="Total Revenue (SL)"/>
+                    
+                    <field name="profit_amount_usd" sum="Total Profit (USD)" decoration-danger="profit_amount_usd &lt; 0" decoration-success="profit_amount_usd &gt; 0" decoration-bf="1"/>
+                    <field name="profit_amount_sl" sum="Total Profit (SL)" decoration-danger="profit_amount_sl &lt; 0" decoration-success="profit_amount_sl &gt; 0" decoration-bf="1"/>
+                </tree>
+            </field>
+        </record>
+
+        <!-- Action -->
+        <record id="action_report_production_profitability" model="ir.actions.act_window">
+            <field name="name">Production Profitability</field>
+            <field name="res_model">idil.report.production.profitability</field>
+            <field name="view_mode">tree</field>
+            <field name="view_id" ref="view_report_production_profitability_tree"/>
+            <field name="search_view_id" ref="view_report_production_profitability_search"/>
+            <field name="context">{'search_default_today': 1, 'group_by': ['date']}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No data found.
+                </p>
+                <p>
+                    This report shows the profitability of manufactured items by comparing daily production costs with daily sales revenue.
+                </p>
+            </field>
+        </record>
+
+        <!-- Menu Item (Assuming parent menu 'idil.menu_reports' exists from system analysis) -->
+       
+    </data>
+</odoo>

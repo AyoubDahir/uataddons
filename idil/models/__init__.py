@@ -90,3 +90,6 @@ from . import report_low_stock_alert
 from . import report_expiring_inventory
 from . import report_pending_orders
 from . import report_customer_outstanding
+from . import report_production_profitability
+from . import production_profitability_wizard
+

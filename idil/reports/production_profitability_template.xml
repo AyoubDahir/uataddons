@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_production_profitability_document">
+        <t t-call="web.html_container">
+            <t t-call="web.external_layout">
+                <div class="page" style="font-family: 'Roboto', 'Odoo Unicode Support Noto', sans-serif;">
+                    
+                    <!-- Header Section -->
+                    <div class="row mb-4">
+                        <div class="col-12 text-center">
+                            <h2 style="color: #2c3e50; font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">
+                                Production Profitability Report
+                            </h2>
+                            <t t-if="start_date and end_date">
+                                <h5 class="text-muted">
+                                    Period: <span t-esc="start_date" t-options='{"widget": "date"}'/> 
+                                    to <span t-esc="end_date" t-options='{"widget": "date"}'/>
+                                </h5>
+                            </t>
+                        </div>
+                    </div>
+
+                    <!-- Main Table -->
+                    <table class="table table-sm table-bordered table-striped" style="font-size: 11px; border-color: #dee2e6;">
+                        <thead style="background-color: #343a40; color: #ffffff;">
+                            <tr>
+                                <th style="vertical-align: middle; border-bottom: 2px solid #212529;">Date</th>
+                                <th style="vertical-align: middle; border-bottom: 2px solid #212529;">Product</th>
+                                <th class="text-end" style="vertical-align: middle; border-bottom: 2px solid #212529;">Prod Qty</th>
+                                <th class="text-end" style="vertical-align: middle; border-bottom: 2px solid #212529;">Unit Cost (USD)</th>
+                                <th class="text-end" style="vertical-align: middle; border-bottom: 2px solid #212529;">Sold Qty</th>
+                                <th class="text-end" style="vertical-align: middle; border-bottom: 2px solid #212529;">COGS (USD)</th>
+                                <th class="text-end" style="vertical-align: middle; border-bottom: 2px solid #212529;">COGS (SL)</th>
+                                <th class="text-end" style="vertical-align: middle; border-bottom: 2px solid #212529;">Avg Price (USD)</th>
+                                <th class="text-end" style="vertical-align: middle; border-bottom: 2px solid #212529;">Sales (USD)</th>
+                                <th class="text-end" style="vertical-align: middle; border-bottom: 2px solid #212529;">Sales (SL)</th>
+                                <th class="text-end" style="vertical-align: middle; border-bottom: 2px solid #212529;">Profit (USD)</th>
+                                <th class="text-end" style="vertical-align: middle; border-bottom: 2px solid #212529;">Profit (SL)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Compute Variables -->
+                            <t t-set="total_prod_qty" t-value="0"/>
+                            <t t-set="total_sold_qty" t-value="0"/>
+                            <t t-set="total_cogs_usd" t-value="0"/>
+                            <t t-set="total_cogs_sl" t-value="0"/>
+                            <t t-set="total_sales_usd" t-value="0"/>
+                            <t t-set="total_sales_sl" t-value="0"/>
+                            <t t-set="total_profit_usd" t-value="0"/>
+                            <t t-set="total_profit_sl" t-value="0"/>
+
+                            <tr t-foreach="docs" t-as="o">
+                                <td><span t-field="o.date"/></td>
+                                <td><span t-field="o.product_id.name"/></td>
+                                
+                                <td class="text-end"><span t-field="o.produced_qty"/></td>
+                                <t t-set="total_prod_qty" t-value="total_prod_qty + o.produced_qty"/>
+                                
+                                <td class="text-end"><span t-esc="'{:,.4f}'.format(o.unit_production_cost_usd)"/></td>
+                                
+                                <td class="text-end"><span t-field="o.sold_qty"/></td>
+                                <t t-set="total_sold_qty" t-value="total_sold_qty + o.sold_qty"/>
+
+                                <td class="text-end"><span t-esc="'{:,.2f}'.format(o.cost_of_sales_usd)"/></td>
+                                <t t-set="total_cogs_usd" t-value="total_cogs_usd + o.cost_of_sales_usd"/>
+
+                                <td class="text-end"><span t-esc="'{:,.2f}'.format(o.cost_of_sales_sl)"/></td>
+                                <t t-set="total_cogs_sl" t-value="total_cogs_sl + o.cost_of_sales_sl"/>
+
+                                <td class="text-end"><span t-esc="'{:,.4f}'.format(o.avg_sales_price_usd)"/></td>
+
+                                <td class="text-end"><span t-esc="'{:,.2f}'.format(o.sales_amount_usd)"/></td>
+                                <t t-set="total_sales_usd" t-value="total_sales_usd + o.sales_amount_usd"/>
+
+                                <td class="text-end"><span t-esc="'{:,.2f}'.format(o.sales_amount_sl)"/></td>
+                                <t t-set="total_sales_sl" t-value="total_sales_sl + o.sales_amount_sl"/>
+
+                                <td class="text-end">
+                                    <span t-esc="'{:,.2f}'.format(o.profit_amount_usd)"
+                                          t-att-class="'text-danger fw-bold' if o.profit_amount_usd &lt; 0 else 'text-success fw-bold'"/>
+                                </td>
+                                <t t-set="total_profit_usd" t-value="total_profit_usd + o.profit_amount_usd"/>
+
+                                <td class="text-end">
+                                    <span t-esc="'{:,.2f}'.format(o.profit_amount_sl)"
+                                          t-att-class="'text-danger fw-bold' if o.profit_amount_sl &lt; 0 else 'text-success fw-bold'"/>
+                                </td>
+                                <t t-set="total_profit_sl" t-value="total_profit_sl + o.profit_amount_sl"/>
+                            </tr>
+
+                            <!-- Totals Row -->
+                            <tr style="background-color: #e9ecef; font-weight: bold; border-top: 2px solid #dee2e6;">
+                                <td colspan="2" class="text-end text-uppercase text-dark" style="padding-right: 15px;">Grand Totals:</td>
+                                <td class="text-end"><span t-esc="'{:,.2f}'.format(total_prod_qty)"/></td>
+                                <td></td> <!-- Unit Cost Empty -->
+                                <td class="text-end"><span t-esc="'{:,.2f}'.format(total_sold_qty)"/></td>
+                                <td class="text-end"><span t-esc="'{:,.2f}'.format(total_cogs_usd)"/></td>
+                                <td class="text-end"><span t-esc="'{:,.2f}'.format(total_cogs_sl)"/></td>
+                                <td></td> <!-- Avg Price Empty -->
+                                <td class="text-end"><span t-esc="'{:,.2f}'.format(total_sales_usd)"/></td>
+                                <td class="text-end"><span t-esc="'{:,.2f}'.format(total_sales_sl)"/></td>
+                                <td class="text-end"><span t-esc="'{:,.2f}'.format(total_profit_usd)"/></td>
+                                <td class="text-end"><span t-esc="'{:,.2f}'.format(total_profit_sl)"/></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Footer Note -->
+                    <div class="row mt-3">
+                        <div class="col-12 text-end text-muted">
+                            <small>Generated on <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%Y-%m-%d %H:%M')"/></small>
+                        </div>
+                    </div>
+
+                </div>
+            </t>
+        </t>
+    </template>
+</odoo>

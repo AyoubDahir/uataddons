@@ -644,6 +644,12 @@
               action="action_cashflow_report_wizard"
               sequence="40"/>
 
+               <menuitem id="menu_report_production_profitability"
+                  name="Production Profitability"
+                  parent="FinancialReports"
+                  action="action_view_production_profitability_wizard"
+                  sequence="25"/>
+
    <menuitem
         id="menu_daily_sales_report"
         name="📅 Daily Sales Report"
