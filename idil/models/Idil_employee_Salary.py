@@ -135,7 +135,7 @@ class IdilEmployeeSalary(models.Model):
         readonly=True,
         tracking=True,
     )
-    is_paid = fields.Boolean(string="Paid", default=True, tracking=True)
+    is_paid = fields.Boolean(string="Paid", default=False, tracking=True , readonly=True)
     remarks = fields.Text(string="Remarks", tracking=True)
 
     advances_this_month = fields.One2many(
@@ -148,6 +148,7 @@ class IdilEmployeeSalary(models.Model):
         compute="_compute_pending_sales",
         string="Pending Sales",
     )
+
     number_of_days = fields.Integer(string="Number of Days", tracking=True)
     salary_by_days = fields.Monetary(
         string="Salary by Days",
@@ -247,6 +248,27 @@ class IdilEmployeeSalary(models.Model):
         currency_field="usd_currency_id",
     )
 
+    # ✅ NEW: Total Paid Sales (history / snapshot)
+    # This will show the sum of staff sales that are linked to THIS salary record.
+    total_paid_sales = fields.Monetary(
+        string="Total Paid Sales",
+        compute="_compute_total_paid_sales",
+        store=True,
+        currency_field="currency_id",
+        tracking=True,
+    )
+
+    @api.depends("staff_sales_ids.total_amount")
+    def _compute_total_paid_sales(self):
+        """
+        ✅ NEW:
+        Total of staff sales that were PAID in this salary (snapshot).
+        Uses staff_sales_ids (Many2many) which is fixed when salary is created.
+        """
+        for rec in self:
+            rec.total_paid_sales = sum(rec.staff_sales_ids.mapped("total_amount"))
+
+
     @api.depends(
         "rate",
         "basic_salary",
@@ -333,10 +355,20 @@ class IdilEmployeeSalary(models.Model):
         for rec in self:
             rec.salary_by_days = rec.basic_salary * rec.number_of_days
 
-    @api.depends("staff_sales_ids.total_amount")
+    @api.depends("pending_sales_ids.total_amount", "is_paid")
     def _compute_total_pending_sales(self):
-        for record in self:
-            record.total_pending_sales = sum(record.staff_sales_ids.mapped("total_amount"))
+        for rec in self:
+            if rec.is_paid:
+                #
+                #  ✅ salary already processed → no pending sales
+                rec.total_pending_sales = 0.0
+            else:
+                # ✅ new salary process → show live pending sales
+                rec.total_pending_sales = sum(
+                    rec.pending_sales_ids.mapped("total_amount")
+                )
+
+
 
     @api.depends("employee_id")
     def _compute_pending_sales(self):
@@ -778,21 +810,14 @@ class IdilEmployeeSalary(models.Model):
                 },
             ]
         )
+        record.is_paid = True
 
-    @api.depends(
-        "deductions",
-        "advance_deduction",
-        "total_pending_sales",
-        "total_earnings",
-    )
+    @api.depends("total_earnings", "deductions", "advance_deduction", "total_pending_sales", "total_paid_sales", "is_paid")
     def _compute_total_salary(self):
-        for record in self:
-            record.total_salary = (
-                record.total_earnings
-                - record.deductions
-                - record.advance_deduction
-                - record.total_pending_sales
-            )
+        for rec in self:
+            sales_ded = rec.total_paid_sales if rec.is_paid else rec.total_pending_sales
+            rec.total_salary = (rec.total_earnings or 0.0) - (rec.deductions or 0.0) - (rec.advance_deduction or 0.0) - (sales_ded or 0.0)
+
 
     @api.depends("employee_id", "salary_date")
     def _compute_advance_deduction(self):
