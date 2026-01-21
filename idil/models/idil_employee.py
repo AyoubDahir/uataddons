@@ -107,7 +107,6 @@ class IdilEmployee(models.Model):
         tracking=True,
     )
 
-
     # Salary and bonus information
     salary = fields.Monetary(
         string="Basic Salary", currency_field="currency_id", tracking=True
