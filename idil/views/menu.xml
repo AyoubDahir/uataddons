@@ -593,6 +593,31 @@
                         action="action_product_profitability_report_wizard"
                         sequence="1"/>
 
+
+        <menuitem id="action_production_profitability_wizard"
+                name="📈 Product Profitability Report Wizard"
+                parent="menu_product_profitability_report_root"
+                action="action_product_profitability_report_wizard"
+                sequence="1"/> -->
+
+
+
+
+
+
+ <menuitem
+            id="menu_executive_business_summary"
+            name="Executive Business Summary"
+            parent="OtherReports"
+            action="action_executive_business_summary_wizard"
+            sequence="10"
+        />
+
+
+
+
+
+
     <menuitem id="menu_operational_reports"
               name="🛠️ Operational Reports"
               parent="Reports"

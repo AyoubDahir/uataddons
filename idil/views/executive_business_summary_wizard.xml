@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <!-- Wizard Form -->
+        <record id="view_executive_business_summary_wizard_form" model="ir.ui.view">
+            <field name="name">idil.executive.business.summary.wizard.form</field>
+            <field name="model">idil.executive.business.summary.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Executive Business Summary (Owner)">
+                    <group>
+                        <field name="start_date" required="1"/>
+                        <field name="end_date" required="1"/>
+                    </group>
+
+                    <footer>
+                        <button string="View PDF" type="object" name="view_report" class="btn-primary"/>
+                        <button string="Download PDF" type="object" name="generate_pdf_report" class="btn-secondary"/>
+                        <button string="Cancel" special="cancel" class="btn-link"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <!-- Wizard Action -->
+        <record id="action_executive_business_summary_wizard" model="ir.actions.act_window">
+            <field name="name">Executive Business Summary</field>
+            <field name="res_model">idil.executive.business.summary.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+        </record>
+
+        <!-- Menu (place under your Reports menu) -->
+       
+
+    </data>
+</odoo>

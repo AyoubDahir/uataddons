@@ -59,10 +59,11 @@ from . import sales_opening_balance
 from . import customer_opening_balance
 from . import sales_receipt_bulk_payment
 from . import vendor_opening_balance
-from . import report_productprofitability
 from . import idil_employee_sales
 from . import customerplaceorder
+
 from . import product_opening_balance
+from . import executive_business_summary_wizard
 from . import product_purchase_return
 from . import system_clearing
 from . import report_customer_sales
@@ -73,6 +74,12 @@ from . import purchase_receive_wizard
 from . import warehouse_location
 from . import internaltransfer
 from . import BizcoreDbBackup
+from . import product_request
+from . import productpurchasereceipt
+from . import receivedproductpurchase
+from . import productpurchasereceivewizard
+from . import payment_method
+
 
 # from . import model_export_wizard
 # from . import report_production_summary

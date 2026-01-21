@@ -143,6 +143,7 @@
         "views/report_low_stock_alert.xml",
         "views/report_expiring_inventory.xml",
         "views/report_pending_orders.xml",
+        "views/executive_business_summary_wizard.xml",
         "views/report_customer_outstanding.xml",
         "views/material_request_views.xml",
         "views/purchase_receipt_views.xml",
