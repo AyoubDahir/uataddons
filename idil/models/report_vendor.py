@@ -87,24 +87,47 @@ class VendorReportWizard(models.TransientModel):
             trxs_domain += ['|', ('company_id', '=', company_id), ('company_id', '=', False)]
             
             trxs = self.env['idil.vendor_transaction'].search(trxs_domain)
-            ven_due_sl = sum(trxs.mapped('remaining_amount'))
             
-            ven_due_usd = 0
-            for t in trxs:
-                rate = getattr(t, 'rate', 1.0) or 1.0
-                if t.currency_id.name == 'USD': rate = 1.0
-                if rate <= 0: rate = 1.0
-                ven_due_usd += (t.remaining_amount or 0.0) / rate
+            v_due_usd = 0
+            v_due_sl = 0
+            
+            # identify vendor's primary A/P account currency from the linked chart of accounts
+            vendor_ap_currency = vendor.account_payable_id.currency_id.name or 'USD'
 
-            vendor_data.append({
-                'name': vendor.name,
-                'phone': vendor.phone,
-                'type': (vendor.supplier_type or 'Local').capitalize(),
-                'due_sl': ven_due_sl,
-                'due_usd': ven_due_usd,
-            })
-            total_due_usd += ven_due_usd
-            total_due_sl += ven_due_sl
+            for t in trxs:
+                # Find conversion rate from the booking
+                rate = 1.0
+                if t.transaction_booking_id:
+                    rate = t.transaction_booking_id.rate or 1.0
+                
+                # Priority: If A/P account is SL, treat balance as SL regardless of transaction header
+                # (User requested: "check account its currency if is SL")
+                t_curr = t.currency_id.name
+                effective_is_sl = (t_curr == 'SL' or vendor_ap_currency == 'SL')
+                
+                amt = t.remaining_amount or 0.0
+                
+                if effective_is_sl:
+                    v_due_sl += amt
+                    # Point 2: "un USD should show use AMOUnt if account has SL please do conver amount/rate"
+                    if rate > 0:
+                        v_due_usd += amt / rate
+                    else:
+                        v_due_usd += amt
+                else: 
+                    # Transaction and Account are both USD
+                    v_due_usd += amt
+
+            if v_due_usd > 0 or (data and data.get('report_type') == 'list'):
+                vendor_data.append({
+                    'name': vendor.name,
+                    'phone': vendor.phone,
+                    'type': (vendor.supplier_type or 'Local').capitalize(),
+                    'due_sl': v_due_sl,
+                    'due_usd': v_due_usd,
+                })
+                total_due_usd += v_due_usd
+                total_due_sl += v_due_sl
 
         return {
             'vendors': sorted(vendor_data, key=lambda x: x['due_usd'], reverse=True),
@@ -131,20 +154,30 @@ class VendorReportWizard(models.TransientModel):
         # Opening Balance (Liability nature: Cr - Dr)
         opening_domain = [
             ('account_number', '=', payable_acc.id),
+            ('transaction_booking_id.vendor_id', '=', vendor.id), # Isolation
             ('transaction_date', '<', start_date),
             '|', ('company_id', '=', company_id), ('company_id', '=', False)
         ]
         opening_lines = self.env['idil.transaction_bookingline'].search(opening_domain)
         opening_bal_usd = 0
+        vendor_ap_currency = payable_acc.currency_id.name or 'USD'
+
         for ln in opening_lines:
             rate = ln.rate or 1.0
-            if ln.currency_id.name == 'USD': rate = 1.0
-            if rate <= 0: rate = 1.0
-            opening_bal_usd += (ln.cr_amount - ln.dr_amount) / rate
+            ln_curr = ln.currency_id.name
+            
+            effective_is_sl = (ln_curr == 'SL' or vendor_ap_currency == 'SL')
+            
+            raw_bal = ln.cr_amount - ln.dr_amount
+            if effective_is_sl:
+                opening_bal_usd += raw_bal / rate if rate > 0 else raw_bal
+            else:
+                opening_bal_usd += raw_bal
 
         # Current Period
         trans_domain = [
             ('account_number', '=', payable_acc.id),
+            ('transaction_booking_id.vendor_id', '=', vendor.id), # Isolation
             ('transaction_date', '>=', start_date),
             ('transaction_date', '<=', end_date),
             '|', ('company_id', '=', company_id), ('company_id', '=', False)
@@ -158,11 +191,20 @@ class VendorReportWizard(models.TransientModel):
         
         for ln in lines:
             rate = ln.rate or 1.0
-            if ln.currency_id.name == 'USD': rate = 1.0
-            if rate <= 0: rate = 1.0
+            ln_curr = ln.currency_id.name
             
-            dr_usd = ln.dr_amount / rate
-            cr_usd = ln.cr_amount / rate
+            effective_is_sl = (ln_curr == 'SL' or vendor_ap_currency == 'SL')
+            
+            dr_raw = ln.dr_amount or 0.0
+            cr_raw = ln.cr_amount or 0.0
+            
+            if effective_is_sl:
+                dr_usd = dr_raw / rate if rate > 0 else dr_raw
+                cr_usd = cr_raw / rate if rate > 0 else cr_raw
+            else:
+                dr_usd = dr_raw
+                cr_usd = cr_raw
+            
             running_bal += (cr_usd - dr_usd)
             
             total_dr += dr_usd
@@ -195,19 +237,20 @@ class VendorReportWizard(models.TransientModel):
 
     def _get_vendor_summary_data(self, data=None):
         """Top level summary of vendor activity"""
-        vendors = self.env['idil.vendor.registration'].search([])
+        # Get active vendors
+        vendors = self.env['idil.vendor.registration'].search([('active', '=', True)])
+        
+        # We must call list_data filtered by date if provided
+        list_data = self._get_vendor_list_data(data)
+        
         summary = {
             'total_vendors': len(vendors),
             'local_count': len(vendors.filtered(lambda v: v.supplier_type == 'local')),
             'intl_count': len(vendors.filtered(lambda v: v.supplier_type == 'international')),
-            'total_payable_usd': 0,
-            'top_vendors': [],
-            'report_date': fields.Date.context_today(self)
+            'total_payable_usd': list_data.get('total_due_usd', 0),
+            'top_vendors': list_data.get('vendors', [])[:10],
+            'report_date': fields.Date.today()
         }
-        
-        list_data = self._get_vendor_list_data(data)
-        summary['total_payable_usd'] = list_data['total_due_usd']
-        summary['top_vendors'] = list_data['vendors'][:10]
         
         return summary
 
