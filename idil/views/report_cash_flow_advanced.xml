@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <template id="report_cash_flow_advanced_template">
+        <t t-call="web.html_container">
+            <t t-set="rd" t-value="env['idil.chart.account.header'].get_cash_flow_advanced_data(data.get('company_id') if data else (company_id or res_company.id), data.get('start_date') if data else start_date, data.get('end_date') if data else end_date)"/>
+            <div class="page" style="font-family: 'Inter', 'Segoe UI', Arial, sans-serif; color: #334155; max-width: 1100px; margin: 0 auto; background: white; padding: 40px;">
+                <style>
+                    .bs-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px; }
+                    .company-info h1 { font-size: 28px; font-weight: 800; color: #1e293b; margin: 0 0 5px 0; letter-spacing: -1px; }
+                    .report-meta { color: #64748b; font-size: 13px; }
+                    
+                    .cf-section { margin-bottom: 35px; }
+                    .cf-section-title { background: #f8fafc; padding: 10px 15px; font-size: 14px; font-weight: 800; color: #1e293b; text-transform: uppercase; border-left: 4px solid #1e293b; margin-bottom: 15px; }
+                    
+                    .cf-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+                    .cf-table th { text-align: left; font-size: 11px; text-transform: uppercase; color: #94a3b8; padding: 10px; border-bottom: 1px solid #e2e8f0; }
+                    .cf-table td { padding: 8px 10px; border-bottom: 1px solid #f8fafc; font-size: 12px; }
+                    
+                    .type-header { font-weight: 700; color: #475569; background: #fbfcfd; font-size: 13px; }
+                    .amount-col { text-align: right; width: 150px; font-weight: 500; }
+                    
+                    .subtotal-row { font-weight: 700; color: #1e293b; background: #f1f5f9; }
+                    .net-row { font-weight: 800; font-size: 14px; background: #e2e8f0; }
+                    
+                    .summary-banner { margin-top: 40px; padding: 25px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; background: #1e293b; color: white; }
+                    .summary-label { font-size: 14px; text-transform: uppercase; opacity: 0.8; letter-spacing: 1px; }
+                    .summary-value { font-size: 32px; font-weight: 800; }
+                    
+                    .footer-note { margin-top: 50px; padding-top: 15px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 11px; color: #94a3b8; }
+                </style>
+
+                <!-- Header -->
+                <div class="bs-header">
+                    <div class="company-info">
+                        <h1>Cash Flow Statement</h1>
+                        <t t-set="company" t-value="env['res.company'].browse(rd.get('company_id') or res_company.id)"/>
+                        <div class="report-meta">
+                            <div style="font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 3px;"><t t-esc="company.name"/></div>
+                            <div t-if="company.phone">Tel: <t t-esc="company.phone"/> | <t t-esc="company.email"/></div>
+                            <div style="margin-top: 5px;">Period: <strong><t t-esc="rd['start_date']"/></strong> to <strong><t t-esc="rd['end_date']"/></strong></div>
+                        </div>
+                    </div>
+                    <div class="logo-container">
+                        <img t-if="company.logo" t-att-src="'data:image/png;base64,%s' % company.logo.decode()" alt="Company Logo" style="max-height: 80px;"/>
+                    </div>
+                </div>
+
+                <t t-foreach="['operating', 'investing', 'financing']" t-as="cat_slug">
+                    <t t-set="cat" t-value="rd[cat_slug]"/>
+                    <div class="cf-section">
+                        <div class="cf-section-title">
+                            Cash Flow from <t t-esc="cat_slug.capitalize()"/> Activities
+                        </div>
+                        <table class="cf-table">
+                            <!-- INFLOWS -->
+                            <thead>
+                                <tr>
+                                    <th colspan="2" class="type-header" style="color: #166534;">Cash Inflows (Receipts)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="cat['inflows']" t-as="item">
+                                    <tr>
+                                        <td><t t-esc="item['name']"/></td>
+                                        <td class="amount-col" style="color: #166534;"><t t-esc="item['amount']"/></td>
+                                    </tr>
+                                </t>
+                                <tr class="subtotal-row">
+                                    <td style="text-align: right; padding-right: 20px;">Total <t t-esc="cat_slug.capitalize()"/> Inflows</td>
+                                    <td class="amount-col"><t t-esc="cat['total_in']"/></td>
+                                </tr>
+                            </tbody>
+                            
+                            <!-- OUTFLOWS -->
+                            <thead>
+                                <tr>
+                                    <th colspan="2" class="type-header" style="color: #991b1b; padding-top: 20px;">Cash Outflows (Payments)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="cat['outflows']" t-as="item">
+                                    <tr>
+                                        <td><t t-esc="item['name']"/></td>
+                                        <td class="amount-col" style="color: #991b1b;"><t t-esc="item['amount']"/></td>
+                                    </tr>
+                                </t>
+                                <tr class="subtotal-row">
+                                    <td style="text-align: right; padding-right: 20px;">Total <t t-esc="cat_slug.capitalize()"/> Outflows</td>
+                                    <td class="amount-col"><t t-esc="cat['total_out']"/></td>
+                                </tr>
+                            </tbody>
+                            
+                            <!-- NET FOR CATEGORY -->
+                            <tfoot>
+                                <tr class="net-row">
+                                    <td style="text-align: right; padding-right: 20px;">Net Cash from <t t-esc="cat_slug.capitalize()"/> Activities</td>
+                                    <td class="amount-col"><t t-esc="cat['net']"/></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </t>
+
+                <!-- NET CHANGE IN CASH -->
+                <div class="summary-banner">
+                    <div class="summary-label">Net change in cash for the period</div>
+                    <div class="summary-value"><t t-esc="rd['net_cash_flow']"/></div>
+                </div>
+
+                <div class="footer-note">
+                    This cash flow statement is prepared using the direct method for auditing purposes.<br/>
+                    IDIL BizCore Financial Intelligence - <t t-esc="rd['report_date']"/>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Report Action -->
+    <record id="action_report_cash_flow_advanced" model="ir.actions.report">
+        <field name="name">Advanced Cash Flow</field>
+        <field name="model">idil.chart.account.header</field>
+        <field name="report_type">qweb-html</field>
+        <field name="report_name">idil.report_cash_flow_advanced_template</field>
+        <field name="report_file">idil.report_cash_flow_advanced_template</field>
+    </record>
+
+    <!-- Wizard View -->
+    <record id="view_report_cash_flow_advanced_wizard_form" model="ir.ui.view">
+        <field name="name">report.cash.flow.advanced.wizard.form</field>
+        <field name="model">report.cash.flow.advanced.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Cash Flow Statement">
+                <group>
+                    <group>
+                        <field name="company_id"/>
+                    </group>
+                    <group>
+                        <field name="start_date"/>
+                        <field name="end_date"/>
+                    </group>
+                </group>
+                <footer>
+                    <button string="Generate Statement" type="object" name="generate_report" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action for Wizard -->
+    <record id="action_report_cash_flow_advanced_wizard" model="ir.actions.act_window">
+        <field name="name">Advanced Cash Flow</field>
+        <field name="res_model">report.cash.flow.advanced.wizard</field>
+        <field name="view_mode" >form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

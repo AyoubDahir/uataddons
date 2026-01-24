@@ -14,6 +14,14 @@ class item(models.Model):
     _inherit = ["mail.thread", "mail.activity.mixin"]
     _description = "Idil Purchased Items"
 
+    company_id = fields.Many2one(
+        "res.company",
+        string="Company",
+        required=True,
+        default=lambda self: self.env.company,
+        index=True,
+    )
+
     ITEM_TYPE_SELECTION = [
         ("service", "Service"),
         ("inventory", "Inventory"),
@@ -157,22 +165,34 @@ class item(models.Model):
     def update_currency_id(self):
         usd_currency = self.env.ref("base.USD")
         self.search([]).write({"currency_id": usd_currency.id})
-        
-    @api.onchange('currency_id')
+
+    @api.onchange("currency_id")
     def _onchange_currency_id(self):
         """Clear account fields when currency changes to force reselection"""
         if self.currency_id:
             # Keep the accounts if they match the currency, otherwise clear them
-            if self.purchase_account_id and self.purchase_account_id.currency_id != self.currency_id:
+            if (
+                self.purchase_account_id
+                and self.purchase_account_id.currency_id != self.currency_id
+            ):
                 self.purchase_account_id = False
-            if self.sales_account_id and self.sales_account_id.currency_id != self.currency_id:
+            if (
+                self.sales_account_id
+                and self.sales_account_id.currency_id != self.currency_id
+            ):
                 self.sales_account_id = False
-            if self.asset_account_id and self.asset_account_id.currency_id != self.currency_id:
+            if (
+                self.asset_account_id
+                and self.asset_account_id.currency_id != self.currency_id
+            ):
                 self.asset_account_id = False
-            if self.adjustment_account_id and self.adjustment_account_id.currency_id != self.currency_id:
+            if (
+                self.adjustment_account_id
+                and self.adjustment_account_id.currency_id != self.currency_id
+            ):
                 self.adjustment_account_id = False
 
-    @api.onchange('item_type')
+    @api.onchange("item_type")
     def _onchange_item_type(self):
         """Try to load default accounts based on existing items of same type and currency"""
         if self.item_type and self.currency_id:
@@ -180,18 +200,24 @@ class item(models.Model):
             # when comparing with database IDs (integers)
             if not self._origin.id:
                 # This is a new record, just search without excluding self
-                existing_items = self.search([
-                    ('item_type', '=', self.item_type),
-                    ('currency_id', '=', self.currency_id.id)
-                ], limit=1)
+                existing_items = self.search(
+                    [
+                        ("item_type", "=", self.item_type),
+                        ("currency_id", "=", self.currency_id.id),
+                    ],
+                    limit=1,
+                )
             else:
                 # This is an existing record, exclude self from search
-                existing_items = self.search([
-                    ('item_type', '=', self.item_type),
-                    ('currency_id', '=', self.currency_id.id),
-                    ('id', '!=', self._origin.id)
-                ], limit=1)
-            
+                existing_items = self.search(
+                    [
+                        ("item_type", "=", self.item_type),
+                        ("currency_id", "=", self.currency_id.id),
+                        ("id", "!=", self._origin.id),
+                    ],
+                    limit=1,
+                )
+
             # If found, copy the accounts
             if existing_items:
                 if not self.purchase_account_id and existing_items.purchase_account_id:
@@ -200,9 +226,12 @@ class item(models.Model):
                     self.sales_account_id = existing_items.sales_account_id
                 if not self.asset_account_id and existing_items.asset_account_id:
                     self.asset_account_id = existing_items.asset_account_id
-                if not self.adjustment_account_id and existing_items.adjustment_account_id:
+                if (
+                    not self.adjustment_account_id
+                    and existing_items.adjustment_account_id
+                ):
                     self.adjustment_account_id = existing_items.adjustment_account_id
-                    
+
     @api.depends_context("uid")
     def compute_item_total_value(self):
         """Compute total value per item: sum(dr_amount - cr_amount) where account is asset_account_id."""
@@ -228,7 +257,7 @@ class item(models.Model):
     def get_available_accounts(self):
         """Debug function to check available accounts for the item"""
         if not self.currency_id:
-            return {'error': 'Currency not set'}
+            return {"error": "Currency not set"}
 
         # Make safe currency_id reference
         currency_id = self.currency_id.id
@@ -237,47 +266,49 @@ class item(models.Model):
             try:
                 currency_id = int(currency_id)
             except (ValueError, TypeError):
-                return {'error': 'Invalid currency ID format'}
-            
+                return {"error": "Invalid currency ID format"}
+
         # Check for available purchase accounts
-        purchase_accounts = self.env['idil.chart.account'].search([
-            ('account_type', 'like', 'COGS'), 
-            ('currency_id', '=', currency_id), 
-            ('header_name', '=', 'Expenses')
-        ])
-        
+        purchase_accounts = self.env["idil.chart.account"].search(
+            [
+                ("account_type", "like", "COGS"),
+                ("currency_id", "=", currency_id),
+                ("header_name", "=", "Expenses"),
+            ]
+        )
+
         # Check for available sales accounts
-        sales_accounts = self.env['idil.chart.account'].search([
-            ('header_name', '=', 'Income'), 
-            ('currency_id', '=', currency_id)
-        ])
-        
+        sales_accounts = self.env["idil.chart.account"].search(
+            [("header_name", "=", "Income"), ("currency_id", "=", currency_id)]
+        )
+
         # Check for available asset accounts
-        asset_accounts = self.env['idil.chart.account'].search([
-            ('header_name', '=', 'Assets'),
-            ('currency_id', '=', currency_id)
-        ])
-        
+        asset_accounts = self.env["idil.chart.account"].search(
+            [("header_name", "=", "Assets"), ("currency_id", "=", currency_id)]
+        )
+
         # Check for available adjustment accounts
-        adjustment_accounts = self.env['idil.chart.account'].search([
-            '|', 
-            ('header_name', '=', 'Assets'), 
-            ('header_name', '=', 'Expenses'), 
-            ('currency_id', '=', currency_id), 
-            ('account_type', '=', 'Adjustment')
-        ])
-        
+        adjustment_accounts = self.env["idil.chart.account"].search(
+            [
+                "|",
+                ("header_name", "=", "Assets"),
+                ("header_name", "=", "Expenses"),
+                ("currency_id", "=", currency_id),
+                ("account_type", "=", "Adjustment"),
+            ]
+        )
+
         return {
-            'purchase_accounts': purchase_accounts.mapped('name'),
-            'sales_accounts': sales_accounts.mapped('name'),
-            'asset_accounts': asset_accounts.mapped('name'),
-            'adjustment_accounts': adjustment_accounts.mapped('name'),
-            'count': {
-                'purchase': len(purchase_accounts),
-                'sales': len(sales_accounts),
-                'asset': len(asset_accounts),
-                'adjustment': len(adjustment_accounts)
-            }
+            "purchase_accounts": purchase_accounts.mapped("name"),
+            "sales_accounts": sales_accounts.mapped("name"),
+            "asset_accounts": asset_accounts.mapped("name"),
+            "adjustment_accounts": adjustment_accounts.mapped("name"),
+            "count": {
+                "purchase": len(purchase_accounts),
+                "sales": len(sales_accounts),
+                "asset": len(asset_accounts),
+                "adjustment": len(adjustment_accounts),
+            },
         }
 
     @api.constrains("name")
@@ -307,13 +338,13 @@ class item(models.Model):
                     "Expiration dates must be today or in the future."
                 )
 
-    @api.constrains("quantity", "cost_price")
-    def _check_positive_values(self):
-        for record in self:
-            if record.quantity < 0:
-                raise ValidationError("Quantity must be a positive value.")
-            if record.cost_price < 0:
-                raise ValidationError("Cost price must be a positive value.")
+    # @api.constrains("quantity", "cost_price")
+    # def _check_positive_values(self):
+    #     for record in self:
+    #         if record.quantity < 0:
+    #             raise ValidationError("Quantity must be a positive value.")
+    #         if record.cost_price < 0:
+    #             raise ValidationError("Cost price must be a positive value.")
 
     def check_reorder(self):
         """Send notifications for items that need reordering."""
@@ -336,6 +367,8 @@ class ItemMovement(models.Model):
         string="Date", required=True, default=fields.Date.today, tracking=True
     )
     quantity = fields.Float(string="Quantity", required=True, tracking=True)
+    # ✅ Proper Transfer Traceability (structured)
+
     source = fields.Char(string="Source", required=True, tracking=True)
 
     source_warehouse_id = fields.Many2one(
@@ -384,6 +417,8 @@ class ItemMovement(models.Model):
             ("idil.purchase_return.line", "Purchase Return Line"),
             ("idil.item.opening.balance.line", "Item Opening Balance Line"),
             ("idil.material.request", "Material Request"),
+            ("idil.internal.transfer.line", "Internal Transfer Line"),
+            ("idil.internal.transfer", "Internal Transfer"),
         ],
         string="Related Document",
     )
@@ -395,12 +430,13 @@ class ItemMovement(models.Model):
         help="Vendor associated with this movement if it originated from a purchase order",
     )
 
-    product_id = fields.Many2one(
-        "my_product.product",
-        string="Product",
-        tracking=True,
-        help="Product associated with this movement if it relates to a manufacturing order",
-    )
+    # product_id = fields.Many2one(
+    #     "my_product.product",
+    #     string="Product",
+    #     tracking=True,
+    #     help="Product associated with this movement if it relates to a manufacturing order",
+    # )
+
     transaction_number = fields.Char(string="Transaction Number", tracking=True)
 
     purchase_order_line_id = fields.Many2one(
@@ -474,7 +510,7 @@ class ItemMovement(models.Model):
             ):
                 raise ValidationError(
                     _("From and To cannot be the same warehouse/location.")
-    )
+                )
 
     @api.constrains("item_id", "movement_type", "quantity", "date")
     def _check_enough_stock_on_out(self):

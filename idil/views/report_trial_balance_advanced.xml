@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <template id="report_trial_balance_advanced_template">
+        <t t-call="web.html_container">
+            <t t-set="rd" t-value="env['idil.chart.account.header'].get_trial_balance_report_data(data.get('company_id') if data else (company_id or res_company.id), data.get('report_date') if data else report_date)"/>
+            <div class="page" style="font-family: 'Inter', 'Segoe UI', Arial, sans-serif; color: #334155; max-width: 1100px; margin: 0 auto; background: white; padding: 40px;">
+                <style>
+                    .bs-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #e2e8f0; padding-bottom: 30px; margin-bottom: 40px; }
+                    .company-info h1 { font-size: 32px; font-weight: 800; color: #1e293b; margin: 0 0 10px 0; letter-spacing: -1px; }
+                    .report-meta { color: #64748b; font-size: 14px; }
+                    .report-meta strong { color: #0f172a; }
+                    .logo-container img { max-height: 80px; width: auto; }
+                    
+                    .section-divider { background: #f8fafc; padding: 12px 20px; font-size: 16px; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 1px; border-left: 4px solid #1e293b; margin: 30px 0 15px 0; }
+                    .bs-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 20px; table-layout: fixed; }
+                    .header-name { padding: 12px 20px; font-size: 15px; font-weight: 700; color: #334155; border-bottom: 1px solid #e2e8f0; background: #fbfcfd; }
+                    .subheader-name { padding: 8px 20px 8px 30px; font-size: 13px; font-weight: 600; color: #475569; border-bottom: 1px solid #f1f5f9; }
+                    
+                    .account-row td { padding: 8px 10px; border-bottom: 1px solid #f8fafc; font-size: 11px; vertical-align: middle; }
+                    .col-code { color: #94a3b8; width: 100px; padding-left: 40px !important; }
+                    .col-name { width: 40%; }
+                    .col-amount { text-align: right; width: 120px; font-weight: 500; }
+                    .col-balance { text-align: right; width: 120px; font-weight: 600; color: #0f172a; }
+                    
+                    .total-row { background: #f1f5f9; font-weight: 700; }
+                    .total-row td { padding: 10px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #1e293b; }
+                    
+                    .grand-total-section { margin-top: 40px; border-top: 3px double #e2e8f0; padding-top: 20px; }
+                    .grand-total-table { width: 100%; background: #1e293b; color: white; border-radius: 8px; }
+                    .grand-total-table td { padding: 20px; font-size: 16px; font-weight: 700; }
+                    .amount-debit { color: #4ade80; }
+                    .amount-credit { color: #f87171; }
+                </style>
+
+                <!-- Report Header -->
+                <div class="bs-header">
+                    <div class="company-info">
+                        <h1>Trial Balance</h1>
+                        <t t-set="company" t-value="env['res.company'].browse(rd.get('company_id') or res_company.id)"/>
+                        <div class="report-meta">
+                            <div style="font-size: 18px; font-weight: 700; color: #1e293b; margin-bottom: 5px;"><t t-esc="company.name"/></div>
+                            <div t-if="company.street"><t t-esc="company.street"/> <t t-if="company.city"><t t-esc="company.city"/></t></div>
+                            <div t-if="company.phone">Phone: <t t-esc="company.phone"/></div>
+                            <div t-if="company.email">Email: <t t-esc="company.email"/></div>
+                            <div style="margin-top: 10px;">Reference Date: <strong><t t-esc="rd['report_date']"/></strong></div>
+                        </div>
+                    </div>
+                    <div class="logo-container">
+                        <img t-if="company.logo" t-att-src="'data:image/png;base64,%s' % company.logo.decode()" alt="Company Logo" style="max-height: 100px;"/>
+                    </div>
+                </div>
+
+                <t t-foreach="rd['headers']" t-as="header">
+                    <div class="section-divider"><t t-esc="header['name']"/></div>
+                    <table class="bs-table">
+                        <thead>
+                            <tr style="background: #f8fafc; font-size: 11px; text-transform: uppercase; color: #64748b;">
+                                <th class="col-code" style="text-align: left; padding: 10px;">ID</th>
+                                <th class="col-name" style="text-align: left; padding: 10px;">Account Name</th>
+                                <th class="col-amount" style="text-align: right; padding: 10px;">Debit</th>
+                                <th class="col-amount" style="text-align: right; padding: 10px;">Credit</th>
+                                <th class="col-balance" style="text-align: right; padding: 10px;">Net Balance</th>
+                            </tr>
+                        </thead>
+                        <t t-foreach="header['sub_headers']" t-as="sh">
+                            <tr class="subheader-row">
+                                <td colspan="5" class="subheader-name"><t t-esc="sh['name']"/></td>
+                            </tr>
+                            <t t-foreach="sh['accounts']" t-as="acc">
+                                <tr class="account-row">
+                                    <td class="col-code"><t t-esc="acc['code']"/></td>
+                                    <td class="col-name"><t t-esc="acc['name']"/></td>
+                                    <td class="col-amount"><t t-esc="acc['debit']"/></td>
+                                    <td class="col-amount"><t t-esc="acc['credit']"/></td>
+                                    <td class="col-balance"><t t-esc="acc['balance']"/></td>
+                                </tr>
+                            </t>
+                            <tr class="total-row">
+                                <td colspan="2" style="text-align: right; padding-right: 20px;">Subtotal <t t-esc="sh['name']"/></td>
+                                <td style="text-align: right;"><t t-esc="sh['total_debit']"/></td>
+                                <td style="text-align: right;"><t t-esc="sh['total_credit']"/></td>
+                                <td></td>
+                            </tr>
+                        </t>
+                        <tr class="total-row" style="background: #e2e8f0; border-top: 2px solid #94a3b8;">
+                            <td colspan="2" style="text-align: right; padding-right: 20px; font-size: 14px;">TOTAL <t t-esc="header['name']"/></td>
+                            <td style="text-align: right; font-size: 14px;"><t t-esc="header['total_debit']"/></td>
+                            <td style="text-align: right; font-size: 14px;"><t t-esc="header['total_credit']"/></td>
+                            <td></td>
+                        </tr>
+                    </table>
+                </t>
+
+                <!-- GRAND TOTAL -->
+                <div class="grand-total-section">
+                    <table class="grand-total-table">
+                        <tr>
+                            <td style="width: 50%;">REPORT GRAND TOTAL</td>
+                            <td style="text-align: right; width: 17%;">
+                                <div style="font-size: 12px; opacity: 0.8; margin-bottom: 4px;">Total Debit</div>
+                                <div><t t-esc="rd['grand_total_debit']"/></div>
+                            </td>
+                            <td style="text-align: right; width: 17%;">
+                                <div style="font-size: 12px; opacity: 0.8; margin-bottom: 4px;">Total Credit</div>
+                                <div><t t-esc="rd['grand_total_credit']"/></div>
+                            </td>
+                            <td style="text-align: right; width: 16%;">
+                                <div style="font-size: 12px; opacity: 0.8; margin-bottom: 4px;">Net</div>
+                                <div t-att-style="'color: #4ade80' if '-' not in rd['grand_total_balance'] else 'color: #f87171'"><t t-esc="rd['grand_total_balance']"/></div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div style="margin-top: 40px; text-align: center; color: #94a3b8; font-size: 12px;">
+                    This Trial Balance report provides a summary of all ledger balances for auditing purposes.<br/>
+                    Confidential Report - <t t-esc="rd['report_date']"/>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Report Action -->
+    <record id="action_report_trial_balance_advanced" model="ir.actions.report">
+        <field name="name">Advanced Trial Balance</field>
+        <field name="model">idil.chart.account.header</field>
+        <field name="report_type">qweb-html</field>
+        <field name="report_name">idil.report_trial_balance_advanced_template</field>
+        <field name="report_file">idil.report_trial_balance_advanced_template</field>
+    </record>
+
+    <!-- Wizard View -->
+    <record id="view_report_trial_balance_advanced_wizard_form" model="ir.ui.view">
+        <field name="name">report.trial.balance.advanced.wizard.form</field>
+        <field name="model">report.trial.balance.advanced.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Trial Balance Report">
+                <group>
+                    <field name="company_id"/>
+                    <field name="report_date"/>
+                </group>
+                <footer>
+                    <button string="Generate Report" type="object" name="generate_report" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action for Wizard -->
+    <record id="action_report_trial_balance_advanced_wizard" model="ir.actions.act_window">
+        <field name="name">Advanced Trial Balance</field>
+        <field name="res_model">report.trial.balance.advanced.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

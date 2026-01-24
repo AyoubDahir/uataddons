@@ -1,0 +1,351 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Wizard View -->
+    <record id="view_vendor_report_wizard_form" model="ir.ui.view">
+        <field name="name">idil.vendor.report.wizard.form</field>
+        <field name="model">idil.vendor.report.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Vendor Intelligence Hub">
+                <style>
+                    .report-config-title { font-size: 20px; font-weight: 800; color: #1e293b; margin-bottom: 25px; border-bottom: 3px solid #3b82f6; display: inline-block; padding-bottom: 8px; }
+                    .report-type-box { background: #f1f5f9; padding: 25px; border-radius: 12px; border: 1px dashed #cbd5e1; margin-bottom: 25px; }
+                    .o_form_view .o_field_radio .o_radio_item { margin-bottom: 10px; font-weight: 600; }
+                </style>
+                <sheet>
+                    <div class="report-config-title">Vendor Portfolio Analytics</div>
+                    <div class="report-type-box">
+                        <field name="report_type" widget="radio" options="{'horizontal': true}"/>
+                    </div>
+                    <group>
+                        <group string="Target Definition">
+                            <field name="vendor_id" 
+                                   invisible="report_type in ['list', 'summary']" 
+                                   required="report_type in ['statement', 'items']"
+                                   options="{'no_create': True}"
+                                   placeholder="Select Vendor Account..."/>
+                            <field name="company_id" groups="base.group_multi_company" options="{'no_create': True}"/>
+                        </group>
+                        <group string="Financial Period">
+                            <field name="start_date" invisible="report_type in ['list', 'summary']"/>
+                            <field name="end_date"/>
+                        </group>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="generate_report" string="📊 Preview Report" type="object" class="btn-primary btn-lg" icon="fa-line-chart"/>
+                    <button string="Cancel" class="btn-secondary btn-lg" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action for the Wizard -->
+    <record id="action_vendor_report_wizard" model="ir.actions.act_window">
+        <field name="name">Vendor Analytics</field>
+        <field name="res_model">idil.vendor.report.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Report Definition -->
+    <record id="action_report_vendor_unified" model="ir.actions.report">
+        <field name="name">Vendor Intelligence Report</field>
+        <field name="model">idil.vendor.report.wizard</field>
+        <field name="report_type">qweb-html</field>
+        <field name="report_name">idil.report_vendor_unified_template</field>
+        <field name="report_file">idil.report_vendor_unified_template</field>
+    </record>
+
+    <!-- Premium QWeb Template -->
+    <template id="report_vendor_unified_template">
+        <t t-call="web.html_container">
+            <div class="page" style="font-family: 'Inter', 'Segoe UI', Arial, sans-serif; color: #334155; max-width: 1100px; margin: 0 auto; background: white; padding: 40px; min-height: 100vh; box-shadow: 0 0 50px rgba(0,0,0,0.05);">
+                <style>
+                    /* Premium Styling System */
+                    .bs-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1e293b; padding-bottom: 25px; margin-bottom: 35px; }
+                    .company-info h1 { font-size: 34px; font-weight: 900; color: #0f172a; margin: 0 0 5px 0; letter-spacing: -2px; text-transform: uppercase; }
+                    .report-meta { color: #64748b; font-size: 13px; line-height: 1.6; }
+                    .report-meta strong { color: #1e293b; font-weight: 700; }
+                    
+                    .kpi-row { display: flex; gap: 20px; margin-bottom: 35px; }
+                    .kpi-card { flex: 1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; border-top: 4px solid #3b82f6; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+                    .kpi-label { font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: 800; letter-spacing: 1px; margin-bottom: 8px; }
+                    .kpi-value { font-size: 24px; font-weight: 900; color: #1e293b; }
+                    
+                    .data-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; }
+                    .data-table th { background: #1e293b; color: white; font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 14px 15px; letter-spacing: 0.5px; }
+                    .data-table td { padding: 14px 15px; border-bottom: 1px solid #f1f5f9; font-size: 13px; vertical-align: middle; }
+                    .data-table tr:nth-child(even) { background: #fcfcfc; }
+                    .data-table tr:hover { background: #f1f5f9; }
+                    
+                    .text-right { text-align: right; }
+                    .text-center { text-align: center; }
+                    .text-success { color: #059669 !important; }
+                    .text-danger { color: #dc2626 !important; }
+                    .font-black { font-weight: 900; }
+                    
+                    .badge-pill { padding: 5px 12px; border-radius: 30px; font-size: 9px; font-weight: 800; text-transform: uppercase; border: 1px solid transparent; }
+                    .badge-local { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+                    .badge-intl { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+                    
+                    .total-footer-box { background: #0f172a; color: white; border-radius: 12px; padding: 25px; margin-top: 40px; display: flex; justify-content: space-between; align-items: center; }
+                    
+                    @media print {
+                        .no-print { display: none !important; }
+                        .page { padding: 0 !important; box-shadow: none !important; }
+                        .kpi-card { border: 1px solid #eee !important; box-shadow: none !important; }
+                    }
+                </style>
+
+                <!-- Browser Interaction Bar -->
+                <div class="no-print" style="position: sticky; top: -40px; z-index: 100; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); color: white; padding: 12px 30px; margin: -40px -40px 40px -40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #3b82f6;">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div style="background: #3b82f6; width: 35px; height: 35px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 900;">B</div>
+                        <span style="font-weight: 900; font-size: 16px; letter-spacing: 1px; text-transform: uppercase;">BizCore <span style="color: #60a5fa;">Intelligence</span></span>
+                    </div>
+                    <div style="display: flex; gap: 12px;">
+                        <button onclick="window.print()" class="btn btn-sm" style="background: #3b82f6; color: white; border: none; font-weight: 700; padding: 8px 20px; border-radius: 6px; box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39);">
+                            <i class="fa fa-print"></i> Generate PDF
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Main Report Header -->
+                <div class="bs-header">
+                    <div class="company-info" style="flex:1;">
+                        <h1>
+                            <t t-if="rd.get('vendors')">Vendor Performance list</t>
+                            <t t-if="rd.get('lines')">Vendor Statement</t>
+                            <t t-if="rd.get('total_vendors')">Executive Summary</t>
+                            <t t-if="rd.get('items')">Procurement Itemization</t>
+                        </h1>
+                        <div class="report-meta">
+                            <div style="font-size: 18px; font-weight: 800; color: #1e293b; margin-bottom: 5px;"><t t-esc="company.name"/></div>
+                            <div t-if="company.phone"><strong>HQ:</strong> <t t-esc="company.phone"/> | <t t-esc="company.email"/></div>
+                            <div style="margin-top: 10px; background: #f1f5f9; padding: 5px 12px; border-radius: 6px; display: inline-block;">
+                                Period: <strong><span t-esc="rd.get('start_date') or 'Genesis'" t-options='{"widget": "date"}'/></strong> to <strong><span t-esc="rd.get('end_date') or rd.get('report_date')" t-options='{"widget": "date"}'/></strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="logo-container" style="text-align: right;">
+                        <img t-if="company.logo" t-att-src="'data:image/png;base64,%s' % company.logo.decode()" alt="Company Logo" style="max-height: 85px; filter: grayscale(1) opacity(0.8);"/>
+                        <div style="font-size: 10px; color: #94a3b8; margin-top: 8px; font-weight:600; text-transform:uppercase;">Generated: <t t-esc="rd.get('report_date')" t-options='{"widget": "date"}'/></div>
+                    </div>
+                </div>
+
+                <!-- Error Handling -->
+                <t t-if="rd.get('error')">
+                    <div class="alert alert-warning" style="border-left: 5px solid #f59e0b; background: #fffbeb; padding: 20px; border-radius: 8px;">
+                        <h4 style="color: #92400e; margin-bottom: 10px;"><i class="fa fa-warning"/> Advisory Notice</h4>
+                        <p style="color: #b45309; font-weight: 600; margin: 0;"><t t-esc="rd['error']"/></p>
+                    </div>
+                </t>
+
+                <!-- 1. LIST VIEW (AGING) -->
+                <t t-if="rd.get('vendors')">
+                    <div class="kpi-row">
+                        <div class="kpi-card" style="border-top-color: #1e293b;">
+                            <div class="kpi-label">Aggregated Liability (USD)</div>
+                            <div class="kpi-value">$<t t-esc="'{0:,.2f}'.format(rd['total_due_usd'])"/></div>
+                        </div>
+                        <div class="kpi-card" style="border-top-color: #64748b;">
+                            <div class="kpi-label">Local Currency (SL)</div>
+                            <div class="kpi-value"><t t-esc="'{0:,.2f}'.format(rd['total_due_sl'])"/></div>
+                        </div>
+                        <div class="kpi-card" style="border-top-color: #3b82f6;">
+                            <div class="kpi-label">Partner Records</div>
+                            <div class="kpi-value"><t t-esc="len(rd['vendors'])"/> Entities</div>
+                        </div>
+                    </div>
+
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 35%;">Vendor Entity Name</th>
+                                <th>Contact No</th>
+                                <th class="text-center">Classification</th>
+                                <th class="text-right">Balance (USD)</th>
+                                <th class="text-right">Weight (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="rd['vendors']" t-as="v">
+                                <tr>
+                                    <td class="font-black" style="color: #0f172a;"><t t-esc="v['name']"/></td>
+                                    <td style="color: #64748b; font-family: monospace;"><t t-esc="v['phone']"/></td>
+                                    <td class="text-center">
+                                        <span t-att-class="'badge-pill ' + ('badge-local' if v['type'] == 'Local' else 'badge-intl')">
+                                            <t t-esc="v['type']"/>
+                                        </span>
+                                    </td>
+                                    <td class="text-right font-black" style="font-size: 14px;">$<t t-esc="'{0:,.2f}'.format(v['due_usd'])"/></td>
+                                    <td class="text-right" style="color: #94a3b8;">
+                                        <t t-if="rd['total_due_usd'] > 0">
+                                            <t t-esc="'{0:,.1f}'.format((v['due_usd'] / rd['total_due_usd']) * 100)"/>%
+                                        </t>
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </t>
+
+                <!-- 2. STATEMENT VIEW -->
+                <t t-if="rd.get('lines')">
+                    <div style="background: #1e293b; border-radius: 12px; padding: 25px; color: white; display: flex; justify-content: space-between; margin-bottom: 35px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
+                        <div>
+                            <div class="kpi-label" style="color: #60a5fa;">Account Master</div>
+                            <div style="font-size: 26px; font-weight: 900;"><t t-esc="rd['vendor_name']"/></div>
+                            <div style="color: #94a3b8; font-size: 13px; margin-top: 5px;">
+                                <i class="fa fa-phone"/> <t t-esc="rd['vendor_phone']"/> | <i class="fa fa-envelope"/> <t t-esc="rd['vendor_email'] or 'No Email'"/>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="kpi-label" style="color: #60a5fa;">Balance Forward</div>
+                            <div style="font-size: 24px; font-weight: 900;">$<t t-esc="'{0:,.2f}'.format(rd['opening_balance'])"/></div>
+                            <div style="color: #94a3b8; font-size: 11px; margin-top: 5px; font-weight:700;">GL CODE: <t t-esc="rd['acc_code']"/></div>
+                        </div>
+                    </div>
+
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 12%;">Date</th>
+                                <th style="width: 15%;">Ref No</th>
+                                <th>Allocation Description</th>
+                                <th class="text-right" style="width: 15%;">Debit (Paid)</th>
+                                <th class="text-right" style="width: 15%;">Credit (Bill)</th>
+                                <th class="text-right" style="width: 15%;">Resultant Bal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="rd['lines']" t-as="l">
+                                <tr>
+                                    <td style="white-space: nowrap;"><span t-esc="l['date']" t-options='{"widget": "date"}'/></td>
+                                    <td style="font-family: monospace; color: #64748b; font-size: 11px;"><t t-esc="l['ref']"/></td>
+                                    <td style="max-width: 350px; font-size: 12px;"><t t-esc="l['desc']"/></td>
+                                    <td class="text-right text-danger"><t t-if="l['debit'] > 0">($<t t-esc="'{0:,.2f}'.format(l['debit'])"/>)</t></td>
+                                    <td class="text-right text-success"><t t-if="l['credit'] > 0">$<t t-esc="'{0:,.2f}'.format(l['credit'])"/></t></td>
+                                    <td class="text-right font-black">$<t t-esc="'{0:,.2f}'.format(l['balance'])"/></td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+
+                    <div class="total-footer-box">
+                        <div>
+                            <div class="kpi-label" style="color: rgba(255,255,255,0.5);">Statement Closure Summary</div>
+                            <div style="font-size: 12px; color: #94a3b8;">Total Bills Accepted: $<t t-esc="'{0:,.2f}'.format(rd['total_credit'])"/></div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="kpi-label" style="color: #60a5fa;">Consolidated Closing Balance</div>
+                            <div style="font-size: 32px; font-weight: 900; color: white;">$<t t-esc="'{0:,.2f}'.format(rd['closing_balance'])"/></div>
+                        </div>
+                    </div>
+                </t>
+
+                <!-- 2.5 EXECUTIVE SUMMARY VIEW -->
+                <t t-if="rd.get('total_vendors')">
+                    <div class="kpi-row">
+                        <div class="kpi-card" style="background: #0f172a; border-top: none; color: white;">
+                            <div class="kpi-label" style="color: rgba(255,255,255,0.6);">Total Global Liability</div>
+                            <div class="kpi-value" style="color: white; font-size: 28px;">$<t t-esc="'{0:,.2f}'.format(rd['total_payable_usd'])"/></div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Active Partnerships</div>
+                            <div class="kpi-value"><t t-esc="rd['total_vendors']"/> Vendors</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Supply Chain Diversity</div>
+                            <div class="kpi-value">
+                                <span style="color: #059669;"><t t-esc="rd['local_count']"/> L</span> / 
+                                <span style="color: #3b82f6;"><t t-esc="rd['intl_count']"/> I</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 style="font-weight: 900; margin: 40px 0 20px 0; color: #1e293b; text-transform: uppercase; font-size: 16px; letter-spacing: 1px;">Top 10 Strategic Vendor Accounts</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Vendor Account</th>
+                                <th class="text-right">Outstanding Balance (USD)</th>
+                                <th class="text-right">Exposure Level</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="rd['top_vendors']" t-as="tv">
+                                <tr>
+                                    <td class="font-black"><t t-esc="tv['name']"/></td>
+                                    <td class="text-right font-black" style="color: #dc2626;">$<t t-esc="'{0:,.2f}'.format(tv['due_usd'])"/></td>
+                                    <td class="text-right">
+                                        <div style="width: 100px; background: #f1f5f9; height: 8px; border-radius: 4px; display: inline-block; overflow: hidden;">
+                                            <t t-set="exposure" t-value="(tv['due_usd'] / rd['total_payable_usd'] * 100) if rd['total_payable_usd'] > 0 else 0"/>
+                                            <div t-attf-style="width: {{exposure}}%; background: {{ '#dc2626' if exposure > 20 else '#f59e0b' if exposure > 10 else '#3b82f6' }}; height: 100%;"/>
+                                        </div>
+                                        <span style="font-size: 10px; color: #94a3b8; margin-left: 10px;"><t t-esc="'{0:,.1f}'.format(exposure)"/>%</span>
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </t>
+
+                <!-- 3. ITEMS VIEW -->
+                <t t-if="rd.get('items')">
+                    <div style="border-left: 6px solid #3b82f6; background: #eff6ff; padding: 25px; border-radius: 8px; margin-bottom: 35px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+                        <div class="kpi-label" style="color: #3b82f6;">Procurement Concentration</div>
+                        <h3 style="margin:0; font-weight: 900;">Vendor Portfolio: <t t-esc="rd['vendor_name']"/></h3>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 45%;">Item / Product Description</th>
+                                <th class="text-right">Volume (Qty)</th>
+                                <th class="text-right">Avg Base Cost</th>
+                                <th class="text-right">Net Portfolio Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="rd['items']" t-as="i">
+                                <tr>
+                                    <td class="font-black"><t t-esc="i['name']"/></td>
+                                    <td class="text-right font-bold"><t t-esc="'{0:,.1f}'.format(i['qty'])"/></td>
+                                    <td class="text-right" style="color: #64748b;">$<t t-esc="'{0:,.2f}'.format(i['avg_price'])"/></td>
+                                    <td class="text-right font-black" style="color: #0f172a;">$<t t-esc="'{0:,.2f}'.format(i['total'])"/></td>
+                                </tr>
+                            </t>
+                        </tbody>
+                        <tfoot>
+                            <tr style="background: #0f172a; color: white; font-weight: 900;">
+                                <td colspan="3" style="padding: 20px; font-size: 14px;">AGGREGATE LIFETIME PROCUREMENT VALUE</td>
+                                <td class="text-right" style="padding: 20px; font-size: 20px;">$<t t-esc="'{0:,.2f}'.format(rd['total_items_cost'])"/></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </t>
+
+                <!-- Universal Footer -->
+                <div style="margin-top: 70px; border-top: 1px solid #e2e8f0; padding-top: 25px; text-align: center; color: #94a3b8; font-size: 11px; letter-spacing: 0.5px;">
+                    This report is a high-fidelity internal financial instrument.<br/>
+                    <strong>BIZCORE INTELLIGENCE PLATFORM 2026</strong> | Reference Code: VDR-<t t-esc="rd.get('report_date') or '0000'"/>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Adding to Financial Reports -->
+    <menuitem id="menu_vendor_report_wizard_fin"
+              name="📊 Vendor Intelligence Analytics"
+              parent="idil.FinancialReports"
+              action="action_vendor_report_wizard"
+              sequence="45"/>
+
+    <!-- Adding to Procurement/Vendors -->
+    <menuitem id="menu_vendor_report_wizard_proc"
+              name="📊 Vendor Intelligence Analytics"
+              parent="menu_procurement_vendors"
+              action="action_vendor_report_wizard"
+              sequence="10"/>
+
+</odoo>

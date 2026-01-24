@@ -97,3 +97,4 @@ from . import report_customer_outstanding
 from . import report_production_profitability
 from . import production_profitability_wizard
 
+from . import report_vendor

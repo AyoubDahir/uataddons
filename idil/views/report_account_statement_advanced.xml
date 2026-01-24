@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <template id="report_account_statement_advanced_template">
+        <t t-call="web.html_container">
+            <t t-set="rd" t-value="env['idil.chart.account.header'].get_account_statement_advanced_data(data.get('account_id') if data else account_id, data.get('start_date') if data else start_date, data.get('end_date') if data else end_date, data.get('company_id') if data else company_id)"/>
+            <div class="page" style="font-family: 'Inter', 'Segoe UI', Arial, sans-serif; color: #334155; max-width: 1100px; margin: 0 auto; background: white; padding: 40px;">
+                <style>
+                    .bs-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px; }
+                    .company-info h1 { font-size: 28px; font-weight: 800; color: #1e293b; margin: 0 0 5px 0; letter-spacing: -1px; }
+                    .report-meta { color: #64748b; font-size: 13px; }
+                    .report-meta strong { color: #0f172a; }
+                    
+                    .account-box { background: #f8fafc; border-radius: 8px; padding: 15px; margin-bottom: 30px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; }
+                    .account-info-item { display: flex; flex-direction: column; }
+                    .item-label { font-size: 11px; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.5px; margin-bottom: 2px; }
+                    .item-value { font-size: 15px; font-weight: 700; color: #1e293b; }
+
+                    .statement-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; }
+                    .statement-table th { background: #f1f5f9; color: #475569; font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 12px 10px; border-bottom: 2px solid #e2e8f0; text-align: left; }
+                    .statement-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; font-size: 12px; color: #334155; }
+                    
+                    .opening-row { background: #f8fafc; font-weight: 600; }
+                    .opening-row td { border-bottom: 2px solid #e2e8f0; }
+                    
+                    .col-date { width: 100px; }
+                    .col-ref { width: 120px; color: #64748b; font-family: monospace; }
+                    .col-desc { }
+                    .col-amount { width: 130px; text-align: right; }
+                    .col-balance { width: 140px; text-align: right; font-weight: 700; color: #0f172a; }
+
+                    .total-section { margin-top: 20px; border-top: 2px solid #1e293b; padding-top: 10px; }
+                    .total-box { display: flex; justify-content: flex-end; gap: 40px; }
+                    .total-item { text-align: right; }
+                    .total-label { font-size: 12px; color: #64748b; margin-bottom: 2px; }
+                    .total-value { font-size: 18px; font-weight: 800; color: #1e293b; }
+                    
+                    .footer-note { margin-top: 50px; padding-top: 15px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 11px; color: #94a3b8; }
+                </style>
+
+                <!-- Header -->
+                <div class="bs-header">
+                    <div class="company-info">
+                        <h1>Account Statement</h1>
+                        <t t-set="company" t-value="env['res.company'].browse(rd.get('company_id') or res_company.id)"/>
+                        <div class="report-meta">
+                            <div style="font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 3px;"><t t-esc="company.name"/></div>
+                            <div t-if="company.phone">Tel: <t t-esc="company.phone"/> | <t t-esc="company.email"/></div>
+                            <div style="margin-top: 5px;">Period: <strong><t t-esc="rd['start_date']"/></strong> to <strong><t t-esc="rd['end_date']"/></strong></div>
+                        </div>
+                    </div>
+                    <div class="logo-container">
+                        <img t-if="company.logo" t-att-src="'data:image/png;base64,%s' % company.logo.decode()" alt="Company Logo" style="max-height: 80px;"/>
+                    </div>
+                </div>
+
+                <!-- Account Information Box -->
+                <div class="account-box">
+                    <div class="account-info-item">
+                        <span class="item-label">Account Code</span>
+                        <span class="item-value"><t t-esc="rd['account_code']"/></span>
+                    </div>
+                    <div class="account-info-item" style="flex-grow: 1; padding: 0 40px;">
+                        <span class="item-label">Account Name</span>
+                        <span class="item-value"><t t-esc="rd['account_name']"/></span>
+                    </div>
+                    <div class="account-info-item" style="text-align: right;">
+                        <span class="item-label">Opening Balance</span>
+                        <span class="item-value" style="color: #0369a1;"><t t-esc="rd['opening_balance']"/></span>
+                    </div>
+                </div>
+
+                <!-- Transactions Table -->
+                <table class="statement-table">
+                    <thead>
+                        <tr>
+                            <th class="col-date">Date</th>
+                            <th class="col-ref">Reference</th>
+                            <th class="col-desc">Description</th>
+                            <th class="col-amount">Debit</th>
+                            <th class="col-amount">Credit</th>
+                            <th class="col-balance">Running Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="opening-row">
+                            <td colspan="3">Opening Balance Brought Forward</td>
+                            <td></td>
+                            <td></td>
+                            <td class="col-balance"><t t-esc="rd['opening_balance']"/></td>
+                        </tr>
+                        <t t-foreach="rd['lines']" t-as="line">
+                            <tr>
+                                <td class="col-date"><t t-esc="line['date']"/></td>
+                                <td class="col-ref"><t t-esc="line['ref']"/></td>
+                                <td class="col-desc"><t t-esc="line['description']"/></td>
+                                <td class="col-amount" style="color: #166534;"><t t-esc="line['debit']"/></td>
+                                <td class="col-amount" style="color: #991b1b;"><t t-esc="line['credit']"/></td>
+                                <td class="col-balance"><t t-esc="line['balance']"/></td>
+                            </tr>
+                        </t>
+                    </tbody>
+                </table>
+
+                <!-- Summary Totals -->
+                <div class="total-section">
+                    <div class="total-box">
+                        <div class="total-item">
+                            <div class="total-label">Total Debit</div>
+                            <div class="total-value" style="color: #166534;"><t t-esc="rd['total_debit']"/></div>
+                        </div>
+                        <div class="total-item">
+                            <div class="total-label">Total Credit</div>
+                            <div class="total-value" style="color: #991b1b;"><t t-esc="rd['total_credit']"/></div>
+                        </div>
+                        <div class="total-item" style="border-left: 1px solid #e2e8f0; padding-left: 40px;">
+                            <div class="total-label">Ending Balance</div>
+                            <div class="total-value" style="color: #0369a1;"><t t-esc="rd['closing_balance']"/></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="footer-note">
+                    Report generated for auditing and internal review purposes.<br/>
+                    IDIL BizCore Financial Services - <t t-esc="rd['report_date']"/>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Report Action -->
+    <record id="action_report_account_statement_advanced" model="ir.actions.report">
+        <field name="name">Advanced Account Statement</field>
+        <field name="model">idil.chart.account.header</field>
+        <field name="report_type">qweb-html</field>
+        <field name="report_name">idil.report_account_statement_advanced_template</field>
+        <field name="report_file">idil.report_account_statement_advanced_template</field>
+    </record>
+
+    <!-- Wizard View -->
+    <record id="view_report_account_statement_advanced_wizard_form" model="ir.ui.view">
+        <field name="name">report.account.statement.advanced.wizard.form</field>
+        <field name="model">report.account.statement.advanced.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Account Statement Report">
+                <group>
+                    <group>
+                        <field name="company_id"/>
+                        <field name="account_id" options="{'no_create': True}"/>
+                    </group>
+                    <group>
+                        <field name="start_date"/>
+                        <field name="end_date"/>
+                    </group>
+                </group>
+                <footer>
+                    <button string="Generate Statement" type="object" name="generate_report" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action for Wizard -->
+    <record id="action_report_account_statement_advanced_wizard" model="ir.actions.act_window">
+        <field name="name">Advanced Account Statement</field>
+        <field name="res_model">report.account.statement.advanced.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

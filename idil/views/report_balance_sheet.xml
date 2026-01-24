@@ -2,298 +2,157 @@
 <odoo>
 
 
-    <!--    <template id="report_bs_template">-->
-    <!--        <t t-call="web.html_container">-->
-    <!--            &lt;!&ndash; Page header &ndash;&gt;-->
-    <!--            <div class="page-header">-->
-    <!--                <div style="position: absolute; top: 0; left: 0;">-->
-
-    <!--                </div>-->
-    <!--                <div style="text-align: center;">-->
-    <!--                    <img t-if="res_company.logo" t-att-src="'data:image/png;base64,%s' % res_company.logo.decode()"-->
-    <!--                         style="height: 150px;"/>-->
-    <!--                    <h1>Balance Sheet Report</h1>-->
-    <!--                </div>-->
-    <!--            </div>-->
-
-
-    <!--            &lt;!&ndash; Main Content &ndash;&gt;-->
-    <!--            <t t-foreach="docs.get_bs_report_data(currency_id,report_date)" t-as="header">-->
-    <!--                &lt;!&ndash; Display Header Name &ndash;&gt;-->
-    <!--                <h2 t-esc="header['header_name']"/>-->
-    <!--                <table class="table">-->
-
-    <!--                    <thead>-->
-    <!--                        <tr>-->
-    <!--                            <th>-->
-    <!--                            </th>-->
-
-    <!--                            <th>-->
-    <!--                            </th>-->
-
-    <!--                            <th>Account Code</th>-->
-    <!--                            <th>Account Name</th>-->
-    <!--                            <th colspan="2" style="text-align: right;">Balance</th>-->
-    <!--                        </tr>-->
-    <!--                    </thead>-->
-
-
-    <!--                    <tbody>-->
-    <!--                        &lt;!&ndash; Loop through subheaders &ndash;&gt;-->
-    <!--                        <t t-foreach="header['sub_headers']" t-as="subheader">-->
-    <!--                            &lt;!&ndash; Display Subheader Name &ndash;&gt;-->
-    <!--                            <tr class="table-info">-->
-
-    <!--                                <td>-->
-    <!--                                </td>-->
-
-    <!--                                <td>-->
-    <!--                                    <strong t-esc="subheader['sub_header_name']"/>-->
-    <!--                                </td>-->
-
-    <!--                                <td colspan="3">-->
-    <!--                                </td>-->
-
-
-    <!--                            </tr>-->
-    <!--                            &lt;!&ndash; Loop through accounts under each subheader &ndash;&gt;-->
-    <!--                            <t t-foreach="subheader['accounts']" t-as="account">-->
-    <!--                                <tr>-->
-    <!--                                    <td>-->
-    <!--                                    </td>-->
-
-    <!--                                    <td>-->
-    <!--                                    </td>-->
-
-    <!--                                    <td t-esc="account['account_code']"/>-->
-
-    <!--                                    <td t-esc="account['account_name']"/>-->
-
-    <!--                                    <td style="text-align: right;">-->
-    <!--                                        <span t-esc="account['balance']"/>-->
-    <!--                                        <span t-esc="account['currency_symbol']"/>-->
-    <!--                                    </td>-->
-
-    <!--                                </tr>-->
-    <!--                            </t>-->
-    <!--                            &lt;!&ndash; Subheader Total &ndash;&gt;-->
-    <!--                            <tr class="table-secondary">-->
-    <!--                                <td style="text-align: right;" colspan="4">-->
-    <!--                                    <h5 t-esc=" 'Total ' + subheader['sub_header_name']"/>-->
-    <!--                                </td>-->
-    <!--                                <td style="text-align: right;">-->
-    <!--                                    <strong t-esc="subheader['sub_header_total']"/>-->
-    <!--                                    <span t-esc="subheader['currency_symbol']"/>-->
-    <!--                                </td>-->
-    <!--                            </tr>-->
-    <!--                        </t>-->
-    <!--                    </tbody>-->
-    <!--                    &lt;!&ndash; Header Total &ndash;&gt;-->
-    <!--                    <tfoot>-->
-    <!--                        <tr class="table-primary">-->
-    <!--                            <td colspan="4" style="text-align: right;">-->
-    <!--                                <h3 t-esc=" 'Total ' + header['header_name']"/>-->
-    <!--                            </td>-->
-    <!--                            <td style="text-align: right;">-->
-    <!--                                <strong t-esc="header['header_total']"/>-->
-    <!--                                <span t-esc="header['currency_symbol']"/>-->
-    <!--                            </td>-->
-    <!--                        </tr>-->
-
-
-    <!--                    </tfoot>-->
-    <!--                </table>-->
-    <!--            </t>-->
-    <!--        </t>-->
-    <!--    </template>-->
-
-    <!--    <template id="report_bs_template">-->
-    <!--        <t t-call="web.html_container">-->
-    <!--            &lt;!&ndash; Page header &ndash;&gt;-->
-    <!--            <div class="page-header">-->
-    <!--                <div style="position: absolute; top: 0; left: 0;">-->
-
-    <!--                </div>-->
-    <!--                <div style="text-align: center;">-->
-    <!--                    <img t-if="res_company.logo" t-att-src="'data:image/png;base64,%s' % res_company.logo.decode()"-->
-    <!--                         style="height: 150px;"/>-->
-    <!--                    <h1>Balance Sheet Report</h1>-->
-    <!--                </div>-->
-    <!--            </div>-->
-
-    <!--            &lt;!&ndash; Main Content &ndash;&gt;-->
-    <!--            <t t-foreach="docs.get_bs_report_data(currency_id, report_date)" t-as="header">-->
-    <!--                &lt;!&ndash; Display Header Name &ndash;&gt;-->
-    <!--                <h2 t-esc="header['header_name']"/>-->
-    <!--                <table class="table">-->
-
-    <!--                    <thead>-->
-    <!--                        <tr>-->
-    <!--                            <th>-->
-    <!--                            </th>-->
-
-    <!--                            <th>-->
-    <!--                            </th>-->
-
-    <!--                            <th>Account Code</th>-->
-    <!--                            <th>Account Name</th>-->
-    <!--                            <th colspan="2" style="text-align: right;">Balance</th>-->
-    <!--                        </tr>-->
-    <!--                    </thead>-->
-
-    <!--                    <tbody>-->
-    <!--                        &lt;!&ndash; Loop through subheaders &ndash;&gt;-->
-    <!--                        <t t-foreach="header['sub_headers']" t-as="subheader">-->
-    <!--                            &lt;!&ndash; Display Subheader Name &ndash;&gt;-->
-    <!--                            <tr class="table-info">-->
-
-    <!--                                <td>-->
-    <!--                                </td>-->
-
-    <!--                                <td>-->
-    <!--                                    <strong t-esc="subheader['sub_header_name']"/>-->
-    <!--                                </td>-->
-
-    <!--                                <td colspan="3">-->
-    <!--                                </td>-->
-
-    <!--                            </tr>-->
-    <!--                            &lt;!&ndash; Loop through accounts under each subheader &ndash;&gt;-->
-    <!--                            <t t-foreach="subheader['accounts']" t-as="account">-->
-    <!--                                <tr>-->
-    <!--                                    <td>-->
-    <!--                                    </td>-->
-
-    <!--                                    <td>-->
-    <!--                                    </td>-->
-
-    <!--                                    <td t-esc="account['account_code']"/>-->
-
-    <!--                                    <td t-esc="account['account_name']"/>-->
-
-    <!--                                    <td style="text-align: right;">-->
-    <!--                                        <span t-esc="account['balance']"/>-->
-    <!--                                        <span t-esc="account['currency_symbol']"/>-->
-    <!--                                    </td>-->
-
-    <!--                                </tr>-->
-    <!--                            </t>-->
-    <!--                            &lt;!&ndash; Subheader Total &ndash;&gt;-->
-    <!--                            <tr class="table-secondary">-->
-    <!--                                <td style="text-align: right;" colspan="4">-->
-    <!--                                    <h5 t-esc="'Total ' + subheader['sub_header_name']"/>-->
-    <!--                                </td>-->
-    <!--                                <td style="text-align: right;">-->
-    <!--                                    <strong t-esc="subheader['sub_header_total']"/>-->
-    <!--                                    <span t-esc="subheader['currency_symbol']"/>-->
-    <!--                                </td>-->
-    <!--                            </tr>-->
-    <!--                        </t>-->
-    <!--                    </tbody>-->
-    <!--                    &lt;!&ndash; Header Total &ndash;&gt;-->
-    <!--                    <tfoot>-->
-    <!--                        <tr class="table-primary">-->
-    <!--                            <td colspan="4" style="text-align: right;">-->
-    <!--                                <h3 t-esc="'Total ' + header['header_name']"/>-->
-    <!--                            </td>-->
-    <!--                            <td style="text-align: right;">-->
-    <!--                                <strong t-esc="header['header_total']"/>-->
-    <!--                                <span t-esc="header['currency_symbol']"/>-->
-    <!--                            </td>-->
-    <!--                        </tr>-->
-
-    <!--                    </tfoot>-->
-    <!--                </table>-->
-    <!--            </t>-->
-    <!--            &lt;!&ndash; Net Profit/Loss &ndash;&gt;-->
-    <!--            <t t-if="docs.get_bs_report_data(currency_id, report_date)[-1]['header_name'] == 'Net Profit/Loss'">-->
-    <!--                <h2 t-esc="'Net Profit/Loss: ' + docs.get_bs_report_data(currency_id, report_date)[-1]['header_total']"/>-->
-    <!--            </t>-->
-    <!--        </t>-->
-    <!--    </template>-->
     <template id="report_bs_template">
         <t t-call="web.html_container">
-            <div class="page" style="font-family: 'Segoe UI', Arial, sans-serif;">
+            <div class="page" style="font-family: 'Inter', 'Segoe UI', Arial, sans-serif; color: #334155; max-width: 1000px; margin: 0 auto; background: white; padding: 40px;">
+                <style>
+                    .bs-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #e2e8f0; padding-bottom: 30px; margin-bottom: 40px; }
+                    .company-info h1 { font-size: 32px; font-weight: 800; color: #1e293b; margin: 0 0 10px 0; letter-spacing: -1px; }
+                    .report-meta { color: #64748b; font-size: 14px; }
+                    .report-meta strong { color: #0f172a; }
+                    .logo-container img { max-height: 80px; width: auto; }
+                    
+                    .section-divider { background: #f8fafc; padding: 12px 20px; font-size: 16px; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 1px; border-left: 4px solid #1e293b; margin: 30px 0 15px 0; }
+                    .bs-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 20px; }
+                    .header-name { padding: 12px 20px; font-size: 15px; font-weight: 700; color: #334155; border-bottom: 1px solid #e2e8f0; background: #fbfcfd; }
+                    .subheader-name { padding: 8px 20px 8px 30px; font-size: 13px; font-weight: 600; color: #475569; border-bottom: 1px solid #f1f5f9; }
+                    .account-row td { padding: 8px 20px 8px 50px; border-bottom: 1px solid #f8fafc; font-size: 12px; }
+                    .account-code { color: #94a3b8; width: 100px; }
+                    .account-balance { text-align: right; font-weight: 500; color: #0f172a; }
+                    
+                    .total-row { background: #f1f5f9; font-weight: 700; }
+                    .total-row td { padding: 12px 20px; border-top: 1px solid #e2e8f0; font-size: 14px; color: #1e293b; }
+                    
+                    .grand-total-section { margin-top: 40px; border-top: 3px double #e2e8f0; padding-top: 20px; }
+                    .grand-total-table { width: 100%; }
+                    .grand-total-table td { padding: 15px 20px; font-size: 18px; font-weight: 800; }
+                    .asset-color { color: #0369a1; }
+                    .liab-equity-color { color: #0f172a; }
+                    
+                    .balanced-banner { margin-top: 30px; padding: 15px; border-radius: 8px; text-align: center; font-weight: 700; }
+                    .balanced-true { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+                    .balanced-false { background: #fff1f2; color: #991b1b; border: 1px solid #fecaca; }
+                </style>
+
                 <!-- Report Header -->
-                <div style="background-color: #1a237e; color: white; padding: 20px; margin-bottom: 25px; border-bottom: 4px solid #3949ab;">
-                    <h1 style="font-size: 24px; font-weight: bold; margin: 0 0 8px 0; color: white;">Balance Sheet Report</h1>
-                    <div style="font-size: 16px; color: white; margin-bottom: 5px;">
-                        <t t-if="res_company"><t t-esc="res_company.name"/></t>
+                <div class="bs-header">
+                    <div class="company-info">
+                        <h1>Balance Sheet</h1>
+                        <div class="report-meta">
+                            <div style="margin-bottom: 4px;">Company: <strong><t t-esc="res_company.name"/></strong></div>
+                            <div>Reference Date: <strong><t t-esc="report_date"/></strong></div>
+                        </div>
                     </div>
-                    <div style="font-size: 12px; color: #c5cae9;">
-                        As of Date: <strong style="color: white;"><t t-esc="report_date"/></strong>
+                    <div class="logo-container">
+                        <img t-if="res_company.logo" t-att-src="'data:image/png;base64,%s' % res_company.logo.decode()" alt="Company Logo"/>
                     </div>
                 </div>
 
-                <!-- Main Content -->
-                <t t-set="report_data" t-value="docs.get_bs_report_data(company_id, report_date)"/>
-                <t t-foreach="report_data" t-as="header">
-                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 11px;">
-                        <thead>
-                            <tr style="background-color: #e8eaf6;">
-                                <td colspan="3" style="padding: 12px 10px; font-weight: bold; font-size: 12px; color: #1a237e; border-bottom: 2px solid #c5cae9;">
-                                    ► <t t-esc="header['header_name']"/>
-                                </td>
-                            </tr>
-                            <tr style="background-color: #f5f5f5;">
-                                <th style="border-bottom: 2px solid #1a237e; padding: 10px; text-align: left; font-weight: bold; color: #333;">Account Code</th>
-                                <th style="border-bottom: 2px solid #1a237e; padding: 10px; text-align: left; font-weight: bold; color: #333;">Account Name</th>
-                                <th style="border-bottom: 2px solid #1a237e; padding: 10px; text-align: right; font-weight: bold; color: #333;">Balance (USD)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Loop through subheaders -->
-                            <t t-foreach="header['sub_headers']" t-as="subheader">
-                                <!-- Display Subheader Name -->
-                                <tr style="background-color: #f5f5f5;">
-                                    <td colspan="3" style="padding: 10px; font-weight: 600; color: #5c6bc0; border-bottom: 1px solid #e0e0e0;">
-                                        <t t-esc="subheader['sub_header_name']"/>
-                                    </td>
-                                </tr>
-                                <!-- Loop through accounts under each subheader -->
-                                <t t-foreach="subheader['accounts']" t-as="account">
-                                    <tr>
-                                        <td style="padding: 8px 10px 8px 35px; color: #757575; border-bottom: 1px solid #eeeeee;"><t t-esc="account['account_code']"/></td>
-                                        <td style="padding: 8px 10px; color: #424242; border-bottom: 1px solid #eeeeee;"><t t-esc="account['account_name']"/></td>
-                                        <td style="padding: 8px 10px; text-align: right; color: #2e7d32; border-bottom: 1px solid #eeeeee; font-weight: 500;">
-                                            <t t-esc="account['balance']"/> <t t-esc="account['currency_symbol']"/>
-                                        </td>
-                                    </tr>
-                                </t>
-                                <!-- Subheader Total -->
-                                <tr style="background-color: #f5f5f5;">
-                                    <td colspan="2" style="padding: 10px; text-align: right; font-weight: 600; color: #424242; border-bottom: 1px solid #e0e0e0;">
-                                        Total <t t-esc="subheader['sub_header_name']"/>
-                                    </td>
-                                    <td style="padding: 10px; text-align: right; font-weight: bold; color: #1a237e; border-bottom: 1px solid #e0e0e0;">
-                                        <t t-esc="subheader['sub_header_total']"/> <t t-esc="subheader['currency_symbol']"/>
-                                    </td>
+                <t t-set="rd" t-value="docs.get_bs_report_data(company_id, report_date)"/>
+
+                <!-- ASSETS SECTION -->
+                <div class="section-divider">Assets</div>
+                <t t-foreach="rd['assets']['headers']" t-as="header">
+                    <table class="bs-table">
+                        <tr class="header-row"><td colspan="3" class="header-name"><t t-esc="header['header_name']"/></td></tr>
+                        <t t-foreach="header['sub_headers']" t-as="sh">
+                            <tr class="subheader-row"><td colspan="3" class="subheader-name"><t t-esc="sh['sub_header_name']"/></td></tr>
+                            <t t-foreach="sh['accounts']" t-as="acc">
+                                <tr class="account-row">
+                                    <td class="account-code"><t t-esc="acc['account_code']"/></td>
+                                    <td class="account-name"><t t-esc="acc['account_name']"/></td>
+                                    <td class="account-balance"><t t-esc="acc['balance']"/></td>
                                 </tr>
                             </t>
-                        </tbody>
-                        <!-- Header Total -->
-                        <tfoot>
-                            <tr style="background-color: #1a237e;">
-                                <td colspan="2" style="padding: 15px 10px; font-weight: bold; font-size: 13px; color: white;">
-                                    TOTAL <t t-esc="header['header_name']"/>
-                                </td>
-                                <td style="padding: 15px 10px; text-align: right; font-weight: bold; font-size: 14px; color: white;">
-                                    <t t-esc="header['header_total']"/> <t t-esc="header['currency_symbol']"/>
-                                </td>
+                            <tr class="total-row">
+                                <td colspan="2" style="text-align: right; padding-right: 40px; font-size: 12px; color: #64748b;">Subtotal <t t-esc="sh['sub_header_name']"/></td>
+                                <td style="text-align: right; width: 150px;"><t t-esc="sh['sub_header_total']"/></td>
                             </tr>
-                        </tfoot>
+                        </t>
                     </table>
                 </t>
-                <!-- Net Profit/Loss -->
-                <t t-if="report_data and report_data[-1]['header_name'] == 'Net Profit/Loss'">
-                    <div style="background-color: #e8f5e9; padding: 15px; border-radius: 4px; text-align: center; margin-top: 20px;">
-                        <span style="font-size: 16px; font-weight: bold; color: #2e7d32;">Net Profit/Loss: <t t-esc="report_data[-1]['header_total']"/></span>
-                    </div>
+                <table class="bs-table" style="margin-top: -10px;">
+                    <tr class="total-row" style="background: #e0f2fe; border-top: 2px solid #0369a1;">
+                        <td colspan="2" style="text-align: right; font-size: 15px; color: #0369a1;">TOTAL ASSETS</td>
+                        <td style="text-align: right; width: 150px; font-size: 16px; color: #0369a1;"><t t-esc="rd['total_assets_formatted']"/></td>
+                    </tr>
+                </table>
+
+                <!-- LIABILITIES SECTION -->
+                <div class="section-divider">Liabilities</div>
+                <t t-foreach="rd['liabilities']['headers']" t-as="header">
+                    <table class="bs-table">
+                        <tr class="header-row"><td colspan="3" class="header-name"><t t-esc="header['header_name']"/></td></tr>
+                        <t t-foreach="header['sub_headers']" t-as="sh">
+                            <tr class="subheader-row"><td colspan="3" class="subheader-name"><t t-esc="sh['sub_header_name']"/></td></tr>
+                            <t t-foreach="sh['accounts']" t-as="acc">
+                                <tr class="account-row">
+                                    <td class="account-code"><t t-esc="acc['account_code']"/></td>
+                                    <td class="account-name"><t t-esc="acc['account_name']"/></td>
+                                    <td class="account-balance"><t t-esc="acc['balance']"/></td>
+                                </tr>
+                            </t>
+                            <tr class="total-row">
+                                <td colspan="2" style="text-align: right; padding-right: 40px; font-size: 12px; color: #64748b;">Subtotal <t t-esc="sh['sub_header_name']"/></td>
+                                <td style="text-align: right; width: 150px;"><t t-esc="sh['sub_header_total']"/></td>
+                            </tr>
+                        </t>
+                    </table>
                 </t>
 
-                <!-- Footer Note -->
-                <div style="text-align: right; font-size: 10px; color: #757575; margin-top: 15px; font-style: italic;">
-                    All amounts are expressed in United States Dollars (USD)
+                <!-- EQUITY SECTION -->
+                <div class="section-divider">Equity</div>
+                <t t-foreach="rd['equity']['headers']" t-as="header">
+                    <table class="bs-table">
+                        <tr class="header-row"><td colspan="3" class="header-name"><t t-esc="header['header_name']"/></td></tr>
+                        <t t-foreach="header['sub_headers']" t-as="sh">
+                            <tr class="subheader-row"><td colspan="3" class="subheader-name"><t t-esc="sh['sub_header_name']"/></td></tr>
+                            <t t-foreach="sh['accounts']" t-as="acc">
+                                <tr class="account-row">
+                                    <td class="account-code"><t t-esc="acc['account_code']"/></td>
+                                    <td class="account-name"><t t-esc="acc['account_name']"/></td>
+                                    <td class="account-balance"><t t-esc="acc['balance']"/></td>
+                                </tr>
+                            </t>
+                            <tr class="total-row">
+                                <td colspan="2" style="text-align: right; padding-right: 40px; font-size: 12px; color: #64748b;">Subtotal <t t-esc="sh['sub_header_name']"/></td>
+                                <td style="text-align: right; width: 150px;"><t t-esc="sh['sub_header_total']"/></td>
+                            </tr>
+                        </t>
+                    </table>
+                </t>
+
+                <!-- Current Period Earnings (Calculated Net Profit) -->
+                <table class="bs-table">
+                    <tr class="subheader-row" style="background: #fdf2f8;"><td colspan="3" class="subheader-name" style="color: #9d174d;">Retained Earnings &amp; Current Profit</td></tr>
+                    <tr class="account-row">
+                        <td class="account-code" style="padding-left: 50px;">PL-CALC</td>
+                        <td class="account-name"><strong>Current Period Earnings (Net Profit/Loss)</strong></td>
+                        <td class="account-balance" style="text-align: right; padding-right: 40px;"><strong><t t-esc="rd['net_profit_formatted']"/></strong></td>
+                    </tr>
+                </table>
+
+                <!-- TOTAL LIABILITIES & EQUITY -->
+                <table class="bs-table">
+                    <tr class="total-row" style="background: #1e293b; color: white;">
+                        <td colspan="2" style="text-align: right; font-size: 15px; color: white;">TOTAL LIABILITIES &amp; EQUITY</td>
+                        <td style="text-align: right; width: 150px; font-size: 16px; color: white;"><t t-esc="rd['total_liab_equity_formatted']"/></td>
+                    </tr>
+                </table>
+
+                <!-- Check if Balanced -->
+                <div t-attf-class="balanced-banner #{'balanced-true' if rd['is_balanced'] else 'balanced-false'}">
+                    <t t-if="rd['is_balanced']">
+                        <i class="fas fa-check-circle"></i> BALANCE SHEET IS BALANCED (Assets = Liabilities + Equity)
+                    </t>
+                    <t t-else="">
+                        <i class="fas fa-exclamation-triangle"></i> BALANCE SHEET IS OUT OF BALANCE BY <t t-esc="rd['difference']" t-options='{"widget": "float", "precision": 3}'/> <t t-esc="rd['currency_symbol']"/>
+                    </t>
+                </div>
+
+                <div class="footer-note" style="margin-top: 50px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 11px; color: #94a3b8;">
+                    This is an automated Statement of Financial Position generated according to global accounting standards.<br/>
+                    Generated for <strong><t t-esc="report_date"/></strong>.
                 </div>
             </div>
         </t>
@@ -309,24 +168,7 @@
         <field name="binding_model_id" ref="model_idil_chart_account_header"/>
     </record>
 
-    <!--    <record id="view_report_currency_wizard_form" model="ir.ui.view">-->
-    <!--        <field name="name">report.currency.wizard.form</field>-->
-    <!--        <field name="model">report.currency.wizard</field>-->
-    <!--        <field name="arch" type="xml">-->
-    <!--            <form string="Select Currency">-->
-    <!--                <group>-->
-    <!--                    <field name="currency_id"/>-->
-    <!--                    <field name="report_date" widget="date"/> &lt;!&ndash; Add this field for selecting the report date &ndash;&gt;-->
 
-    <!--                </group>-->
-
-    <!--                <footer>-->
-    <!--                    <button string="Generate Report" type="object" name="generate_report" class="btn-primary"/>-->
-    <!--                    <button string="Cancel" class="btn-secondary" special="cancel"/>-->
-    <!--                </footer>-->
-    <!--            </form>-->
-    <!--        </field>-->
-    <!--    </record>-->
 
     <record id="view_report_currency_wizard_form" model="ir.ui.view">
         <field name="name">report.currency.wizard.form</field>
@@ -345,14 +187,6 @@
         </field>
     </record>
 
-    <!--    <record id="action_report_currency_wizard" model="ir.actions.act_window">-->
-    <!--        <field name="name">Currency Selection</field>-->
-    <!--        <field name="type">ir.actions.act_window</field>-->
-    <!--        <field name="res_model">report.currency.wizard</field>-->
-    <!--        <field name="view_mode">form</field>-->
-    <!--        <field name="target">new</field>-->
-    <!--        <field name="view_id" ref="view_report_currency_wizard_form"/>-->
-    <!--    </record>-->
     <record id="action_report_currency_wizard" model="ir.actions.act_window">
         <field name="name">Company Selection</field>
         <field name="type">ir.actions.act_window</field>

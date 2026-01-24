@@ -510,11 +510,17 @@
               sequence="1"
               action="action_open_trial_balance_wizard"/>
 
+    <menuitem id="menu_trial_balance_advanced"
+              name="📊 Advanced Trial Balance"
+              parent="menu_by_currency"
+              sequence="2"
+              action="action_report_trial_balance_advanced_wizard"/>
+
     <menuitem id="menu_balance_sheet_report"
               name="📑 Balance Sheet -- By Currency"
               parent="menu_by_currency"
               action="action_report_currency_wizard"
-              sequence="2"/>
+              sequence="3"/>
 
     <menuitem id="OtherReports"
               name="🧰 System Reports"
@@ -533,6 +539,12 @@
               parent="OtherReports"
               sequence="1"
               action="action_transaction_report_wizard"/>
+
+    <menuitem id="menu_account_statement_advanced"
+              name="📊 Advanced Account Statement"
+              parent="OtherReports"
+              sequence="2"
+              action="action_report_account_statement_advanced_wizard"/>
 
     <menuitem id="Reports_vendor"
               name="🏷️ Vendor Balances"
@@ -668,6 +680,12 @@
               parent="idil.FinancialReports"
               action="action_cashflow_report_wizard"
               sequence="40"/>
+
+    <menuitem id="menu_cashflow_report_advanced"
+               name="📊 Advanced Cash Flow"
+               parent="idil.FinancialReports"
+               action="action_report_cash_flow_advanced_wizard"
+               sequence="41"/>
 
                <menuitem id="menu_report_production_profitability"
                   name="Production Profitability"
