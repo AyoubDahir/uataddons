@@ -14,8 +14,8 @@
         <record id="seq_product_purchase_order" model="ir.sequence">
             <field name="name">Product Purchase Order</field>
             <field name="code">product.purchase.order.seq</field>
-            <field name="prefix">Purchase Product/</field>
-            <field name="padding">4</field>
+            <field name="prefix">PO/%(year)s/</field>
+            <field name="padding">5</field>
         </record>
     </data>
 </odoo>

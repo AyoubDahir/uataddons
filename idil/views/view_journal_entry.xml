@@ -7,6 +7,11 @@
       <field name="model">idil.journal.entry</field>
       <field name="arch" type="xml">
         <form string="Journal Entry">
+          <header>
+            <button name="action_confirm" string="Confirm" type="object" class="oe_highlight" invisible="state != 'draft'"/>
+            <button name="action_draft" string="Reset to Draft" type="object" invisible="state == 'draft'"/>
+            <field name="state" widget="statusbar" statusbar_visible="draft,confirmed"/>
+          </header>
           <sheet> 
 
             <!-- Title -->
@@ -25,6 +30,7 @@
                 <field name="date"/>
                 <field name="currency_id"/>
                 <field name="rate"/>
+                <field name="recurring_source_id" invisible="not recurring_source_id"/>
               </group>
             </group>
 
@@ -35,7 +41,13 @@
                   <tree editable="bottom" default_order="id desc">
                     <field name="account_id" domain="[('currency_id', '=', parent.currency_id)]"/>
                     <field name="currency_amount_id"/>
-                     
+                    <field name="company_currency_id" invisible="1"/>
+                    
+                    <!-- Budget Info (Optional) -->
+                    <field name="budget_remaining" widget="monetary" options="{'currency_field':'company_currency_id'}" optional="show" decoration-danger="budget_remaining &lt; 0"/>
+                    <field name="budget_used" widget="monetary" options="{'currency_field':'company_currency_id'}" optional="hide"/>
+                    <field name="budget_planned" widget="monetary" options="{'currency_field':'company_currency_id'}" optional="hide"/>
+
                     <field name="debit"  widget="monetary" options="{'currency_field':'currency_amount_id'}" sum="Total Debit"/>
                     <field name="credit" widget="monetary" options="{'currency_field':'currency_amount_id'}" sum="Total Credit"/>
                     <field name="description"/>

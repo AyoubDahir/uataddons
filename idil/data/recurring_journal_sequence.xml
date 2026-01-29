@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="seq_idil_recurring_journal" model="ir.sequence">
+            <field name="name">Recurring Journal Entry</field>
+            <field name="code">idil.recurring.journal</field>
+            <field name="prefix">RECUR/</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+        </record>
+    </data>
+</odoo>
