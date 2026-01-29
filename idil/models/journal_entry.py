@@ -1,5 +1,7 @@
-from venv import logger
+import logging
 from odoo import models, fields, api, _
+
+_logger = logging.getLogger(__name__)
 from odoo.exceptions import ValidationError
 
 
@@ -48,6 +50,9 @@ class JournalEntry(models.Model):
         "idil.vendor.registration", string="Vendor", ondelete="restrict"
     )
     customer_id = fields.Many2one("idil.customer.registration", string="Customer")
+    
+    recurring_source_id = fields.Many2one("idil.recurring.journal.entry", string="Recursive Source", readonly=True, index=True)
+    recurring_run_number = fields.Integer(string="Recurring Run Number", readonly=True, index=True)
 
     rate = fields.Float(
         string="Exchange Rate",
@@ -205,17 +210,33 @@ class JournalEntry(models.Model):
             ]
 
         result = super(JournalEntry, self).create(vals)
-        result.validate_account_balances()
-        result.create_transaction_booking()
+        
+        # Only validate if not draft
+        if result.state != 'draft':
+            result.validate_account_balances()
+            result.create_transaction_booking()
 
         return result
 
     def write(self, vals):
         result = super(JournalEntry, self).write(vals)
         for entry in self:
-            entry.validate_account_balances()
-            entry.update_transaction_booking()
+            # Re-validate only if not draft
+            if entry.state != 'draft':
+                entry.validate_account_balances()
+                entry.update_transaction_booking()
         return result
+
+    def action_confirm(self):
+        for entry in self:
+            entry.validate_account_balances()
+            entry.create_transaction_booking()
+            entry.write({'state': 'confirmed'})
+
+    def action_draft(self):
+        self.write({'state': 'draft'})
+        # Optionally cleanup bookings if needed, but usually kept for audit or cleared on confirm
+        self.env["idil.transaction_booking"].search([("journal_entry_id", "in", self.ids)]).unlink()
 
     def unlink(self):
         for entry in self:
@@ -241,6 +262,10 @@ class JournalEntry(models.Model):
 
     def validate_account_balances(self):
         for entry in self:
+            # Skip validation for draft entries
+            if entry.state == 'draft':
+                continue
+
             for line in entry.line_ids:
                 account = self.env["idil.chart.account"].browse(line.account_id.id)
                 account_balance = self.env["idil.transaction_bookingline"].search(
@@ -252,22 +277,20 @@ class JournalEntry(models.Model):
 
                 if account.sign == "Dr":
                     if line.credit and current_balance < line.credit:
-                        raise ValidationError(
-                            _(
-                                "Insufficient funds in account ( %s ) for credit amount %s. "
-                                "The current account balance is %s."
-                            )
-                            % (account.name, line.credit, current_balance)
-                        )
+                        msg = _(
+                            "Insufficient funds in account ( %s ) for credit amount %s. "
+                            "The current account balance is %s."
+                        ) % (account.name, line.credit, current_balance)
+                        _logger.warning("Validation Failed: %s", msg)
+                        raise ValidationError(msg)
                 elif account.sign == "Cr":
                     if line.debit and current_balance < line.debit:
-                        raise ValidationError(
-                            _(
-                                "Insufficient funds in account ( %s ) for debit amount %s. "
-                                "The current account balance is %s."
-                            )
-                            % (account.name, line.debit, current_balance)
-                        )
+                        msg = _(
+                            "Insufficient funds in account ( %s ) for debit amount %s. "
+                            "The current account balance is %s."
+                        ) % (account.name, line.debit, current_balance)
+                        _logger.warning("Validation Failed: %s", msg)
+                        raise ValidationError(msg)
 
     def get_manual_transaction_source_id(self):
         trx_source = self.env["idil.transaction.source"].search(
@@ -552,20 +575,121 @@ class JournalEntryLine(models.Model):
                 else rec.env.company.currency_id
             )
 
+    @api.onchange("account_id")
+    def _onchange_account_id(self):
+        # Existing logic for currency domain
+        res = {}
+        if self.account_id and self.currency_id:
+            accounts = self.env["idil.chart.account"].search(
+                [("currency_id", "=", self.currency_id.id)]
+            )
+            res = {"domain": {"account_id": [("id", "in", accounts.ids)]}}
+        
+        # Merge budget warning if exists
+        budget_res = self._check_budget_ui_result()
+        if budget_res:
+            res.update(budget_res)
+            
+        return res
+
     @api.onchange("debit")
     def _onchange_debit(self):
         if self.debit:
             self.credit = 0
+            return self._check_budget_ui_result()
+        return {}
 
     @api.onchange("credit")
     def _onchange_credit(self):
         if self.credit:
             self.debit = 0
 
-    @api.onchange("account_id")
-    def _onchange_account_id(self):
-        if self.account_id and self.currency_id:
-            accounts = self.env["idil.chart.account"].search(
-                [("currency_id", "=", self.currency_id.id)]
-            )
-            return {"domain": {"account_id": [("id", "in", accounts.ids)]}}
+    # Budget info fields
+    company_currency_id = fields.Many2one(
+        "res.currency", 
+        related="entry_id.company_id.currency_id", 
+        string="Company Currency", 
+        readonly=True
+    )
+    
+    budget_planned = fields.Monetary(
+        string="Budget Planned",
+        compute='_compute_budget_info',
+        currency_field='company_currency_id'
+    )
+    budget_used = fields.Monetary(
+        string="Budget Used",
+        compute='_compute_budget_info',
+        currency_field='company_currency_id'
+    )
+    budget_remaining = fields.Monetary(
+        string="Budget Remaining",
+        compute='_compute_budget_info',
+        currency_field='company_currency_id'
+    )
+    
+    @api.depends('account_id', 'entry_id.date')
+    def _compute_budget_info(self):
+        for line in self:
+            line.budget_planned = 0.0
+            line.budget_used = 0.0
+            line.budget_remaining = 0.0
+            
+            if line.account_id:
+                date_val = line.entry_id.date or fields.Date.today()
+                # Assuming global budget for now as Journal Entry doesn't specify department
+                try:
+                    state = self.env['idil.budget'].get_budget_state(line.account_id.id, date_val)
+                    if state.get('active'):
+                        line.budget_planned = state['planned']
+                        line.budget_used = state['used']
+                        line.budget_remaining = state['remaining']
+                except Exception:
+                    pass
+
+    def _check_budget_ui(self):
+        if self.account_id and self.debit > 0:
+            date_val = self.entry_id.date or fields.Date.today()
+            Budget = self.env['idil.budget']
+            allowed, msg = Budget.check_budget_availability(self.account_id.id, self.debit, date_val)
+            
+            if msg:
+                if not allowed:
+                    return {
+                        'warning': {
+                            'title': _("Budget Exceeded (Blocking)"),
+                            'message': msg
+                        }
+                    }
+                else:
+                    return {
+                        'warning': {
+                            'title': _("Budget Warning"),
+                            'message': msg
+                        }
+                    }
+        # Explicit return to ensure warning is propagated if called from onchange that expects return
+        # But helper methods don't return to view automatically. The calling onchange must return it.
+        # So manual propagation needed.
+
+    @api.onchange("account_id", "debit")
+    def _onchange_budget_wrapper(self):
+        # Wrapper to handle the return value for budget warning
+        res = self._check_budget_ui_result()
+        return res
+
+    def _check_budget_ui_result(self):
+        if self.account_id and self.debit > 0:
+            date_val = self.entry_id.date or fields.Date.today()
+            Budget = self.env['idil.budget']
+            allowed, msg = Budget.check_budget_availability(self.account_id.id, self.debit, date_val)
+            
+            if msg:
+                title = _("Budget Exceeded (Blocking)") if not allowed else _("Budget Warning")
+                return {
+                    'warning': {
+                        'title': title,
+                        'message': msg
+                    }
+                }
+        return {}
