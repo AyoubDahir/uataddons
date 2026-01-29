@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Report Action -->
+        <record id="action_report_budget" model="ir.actions.report">
+            <field name="name">Budget Report</field>
+            <field name="model">idil.budget</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">idil.report_budget_document</field>
+            <field name="report_file">idil.report_budget_document</field>
+            <field name="print_report_name">'Budget - %s' % (object.name)</field>
+            <field name="binding_model_id" ref="model_idil_budget"/>
+            <field name="binding_type">report</field>
+        </record>
+
+        <!-- Report Template -->
+        <template id="report_budget_document">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="doc">
+                    <t t-call="web.external_layout">
+                        <div class="page">
+                            <h2 class="text-center mt-4 mb-4">Budget Analysis</h2>
+                            
+                            <div class="row mb-4">
+                                <div class="col-6">
+                                    <table class="table table-borderless">
+                                        <tr>
+                                            <td><strong>Budget Name:</strong></td>
+                                            <td><span t-field="doc.name"/></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Period:</strong></td>
+                                            <td><span t-field="doc.date_start"/> to <span t-field="doc.date_end"/></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-6">
+                                    <table class="table table-borderless">
+                                        <tr>
+                                            <td><strong>Department:</strong></td>
+                                            <td><span t-field="doc.department_id"/></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Company:</strong></td>
+                                            <td><span t-field="doc.company_id.name"/></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Status:</strong></td>
+                                            <td>
+                                                <span t-field="doc.state" class="badge badge-info"/>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <table class="table table-sm table-striped table-bordered">
+                                <thead style="background-color: #f2f2f2;">
+                                    <tr>
+                                        <th>Account</th>
+                                        <th class="text-center">Code</th>
+                                        <th class="text-right">Planned Budget</th>
+                                        <th class="text-right">Actual Spent</th>
+                                        <th class="text-right">Variance</th>
+                                        <th class="text-center">Usage %</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr t-foreach="doc.line_ids" t-as="line">
+                                        <td>
+                                            <span t-field="line.account_id.name"/>
+                                        </td>
+                                        <td class="text-center">
+                                            <span t-field="line.account_id.code"/>
+                                        </td>
+                                        <td class="text-right">
+                                            <span t-field="line.planned_amount" 
+                                                  t-options='{"widget": "monetary", "display_currency": doc.company_id.currency_id}'/>
+                                        </td>
+                                        <td class="text-right">
+                                            <span t-field="line.actual_amount" 
+                                                  t-options='{"widget": "monetary", "display_currency": doc.company_id.currency_id}'/>
+                                        </td>
+                                        <td class="text-right">
+                                            <t t-set="color_style" t-value="'color: red; font-weight: bold;' if line.actual_amount > line.planned_amount else 'color: green;'"/>
+                                            <span t-field="line.variance" 
+                                                  t-options='{"widget": "monetary", "display_currency": doc.company_id.currency_id}' 
+                                                  t-att-style="color_style"/>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="progress" style="height: 20px;">
+                                                <div t-att-class="'progress-bar bg-danger' if line.percentage > 100 else 'progress-bar bg-success'" 
+                                                     role="progressbar" 
+                                                     t-att-style="'width: %s%%' % (min(line.percentage, 100))" 
+                                                     t-att-aria-valuenow="line.percentage" 
+                                                     aria-valuemin="0" 
+                                                     aria-valuemax="100">
+                                                    <span t-esc="'%.1f%%' % line.percentage"/>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr class="font-weight-bold" style="background-color: #e9ecef;">
+                                        <td colspan="2" class="text-right">Totals:</td>
+                                        <td class="text-right">
+                                            <span t-esc="sum(doc.line_ids.mapped('planned_amount'))" 
+                                                  t-options='{"widget": "monetary", "display_currency": doc.company_id.currency_id}'/>
+                                        </td>
+                                        <td class="text-right">
+                                            <span t-esc="sum(doc.line_ids.mapped('actual_amount'))" 
+                                                  t-options='{"widget": "monetary", "display_currency": doc.company_id.currency_id}'/>
+                                        </td>
+                                        <td class="text-right">
+                                            <span t-esc="sum(doc.line_ids.mapped('planned_amount')) - sum(doc.line_ids.mapped('actual_amount'))" 
+                                                  t-options='{"widget": "monetary", "display_currency": doc.company_id.currency_id}'/>
+                                        </td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                            
+                            <div class="mt-4">
+                                <p class="text-muted small">
+                                    * Actuals are calculated based on registered transactions within the budget period.
+                                    <br/>
+                                    * Variance = Planned - Actual. Negative variance indicates overspending.
+                                </p>
+                            </div>
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>

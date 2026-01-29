@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Log Tree View -->
+    <record id="view_recurring_journal_log_tree" model="ir.ui.view">
+        <field name="name">idil.recurring.journal.log.tree</field>
+        <field name="model">idil.recurring.journal.log</field>
+        <field name="arch" type="xml">
+            <tree decoration-danger="status == 'failed'" decoration-success="status == 'success'">
+                <field name="run_date"/>
+                <field name="recurring_id"/>
+                <field name="status"/>
+                <field name="journal_entry_id"/>
+                <field name="message"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Tree View -->
+    <record id="view_recurring_journal_entry_tree" model="ir.ui.view">
+        <field name="name">idil.recurring.journal.entry.tree</field>
+        <field name="model">idil.recurring.journal.entry</field>
+        <field name="arch" type="xml">
+            <tree decoration-info="state == 'draft'" decoration-success="state == 'running'" decoration-muted="state == 'stopped'">
+                <field name="name"/>
+                <field name="description"/>
+                <field name="start_date"/>
+                <field name="next_run_time"/>
+                <field name="remaining_time" optional="show" decoration-bf="1" decoration-danger="remaining_time == 'Overdue - Pending Run'"/>
+                <field name="interval_number"/>
+                <field name="interval_type"/>
+                <field name="state" widget="badge"/>
+                <field name="generated_count" string="Generated"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_recurring_journal_entry_form" model="ir.ui.view">
+        <field name="name">idil.recurring.journal.entry.form</field>
+        <field name="model">idil.recurring.journal.entry</field>
+        <field name="arch" type="xml">
+            <form string="Recurring Journal Entry">
+                <header>
+                    <button name="action_start" string="Start" type="object" class="oe_highlight" invisible="state != 'draft'"/>
+                    <button name="action_stop" string="Stop" type="object" invisible="state != 'running'"/>
+                    <button name="action_draft" string="Reset to Draft" type="object" invisible="state == 'draft'"/>
+                    
+                    <button name="action_generate_entry_manual" string="Run Manually" type="object" class="btn-warning"
+                            confirm="This will generate the next entry immediately and advance the schedule. Are you sure?"
+                            invisible="state != 'running'"/>
+                            
+                    <field name="state" widget="statusbar" statusbar_visible="draft,running,stopped"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_generated_entries" type="object" class="oe_stat_button" icon="fa-list">
+                            <field name="generated_count" widget="statinfo" string="Entries"/>
+                        </button>
+                        <button name="action_view_logs" type="object" class="oe_stat_button" icon="fa-history">
+                            <field name="log_count" widget="statinfo" string="Logs"/>
+                        </button>
+                        <button name="action_view_cron" type="object" class="oe_stat_button" icon="fa-clock-o" invisible="state != 'running' or not cron_id">
+                            <div class="o_stat_info">
+                                <span class="o_stat_text">Scheduled</span>
+                                <span class="o_stat_text">Action</span>
+                            </div>
+                        </button>
+                    </div>
+                
+                    <div class="oe_title">
+                        <h1><field name="name"/></h1>
+                        <h2 invisible="state != 'running' or not next_run_time">
+                             <span class="text-muted">Next Run In: </span>
+                             <field name="remaining_time" class="oe_inline text-primary"/>
+                        </h2>
+                    </div>
+                    
+                    <group>
+                        <group string="Schedule">
+                            <field name="description"/>
+                            <label for="interval_number" string="Repeat Every"/>
+                            <div class="o_row">
+                                <field name="interval_number" class="oe_inline"/>
+                                <field name="interval_type" class="oe_inline"/>
+                            </div>
+                            <field name="start_date"/>
+                            <field name="end_date"/>
+                        </group>
+                        <group string="Status">
+                            <field name="next_run_time"/>
+                            <field name="run_count"/>
+                            <field name="cron_id"/>
+                            <field name="company_id"/>
+                        </group>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Journal Lines">
+                            <field name="line_ids">
+                                <tree editable="bottom">
+                                    <field name="account_id"/>
+                                    <field name="description" placeholder="Optional line description"/>
+                                    <field name="debit" sum="Total Debit"/>
+                                    <field name="credit" sum="Total Credit"/>
+                                    <field name="company_id" invisible="1"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_recurring_journal_entry" model="ir.actions.act_window">
+        <field name="name">Advanced Recurring Entries</field>
+        <field name="res_model">idil.recurring.journal.entry</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+          <p class="o_view_nocontent_smiling_face">
+            Create a new Recurring Journal Entry
+          </p>
+          <p>
+            Define templates for recurring transactions like Rent, Subscriptions, or Regular Maintenance.
+            The system will automatically generate Journal Entries based on the schedule.
+          </p>
+        </field>
+    </record>
+    
+
+    <!-- Global Dispatcher: Runs frequently to catch anything the dedicated crons missed or during server boot -->
+    <record id="ir_cron_recurring_dispatcher" model="ir.cron">
+        <field name="name">Recurring JV: Global Monitor &amp; Boot Check</field>
+        <field name="model_id" ref="model_idil_recurring_journal_entry"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_check_pending_dues()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">minutes</field>
+        <field name="numbercall">-1</field>
+        <field name="active" eval="True"/>
+    </record>
+</odoo>

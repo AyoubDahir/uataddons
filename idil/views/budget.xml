@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Budget Line Tree View -->
+    <record id="view_idil_budget_line_tree" model="ir.ui.view">
+        <field name="name">idil.budget.line.tree</field>
+        <field name="model">idil.budget.line</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom">
+                <field name="account_id"/>
+                <field name="planned_amount"/>
+                <field name="actual_amount" readonly="1"/>
+                <field name="variance" readonly="1"/>
+                <field name="percentage" widget="progressbar"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Budget Form View -->
+    <record id="view_idil_budget_form" model="ir.ui.view">
+        <field name="name">idil.budget.form</field>
+        <field name="model">idil.budget</field>
+        <field name="arch" type="xml">
+            <form string="Budget">
+                <header>
+                    <button name="action_confirm" string="Confirm" type="object" class="oe_highlight" invisible="state != 'draft'"/>
+                    <button name="action_done" string="Mark Done" type="object" class="oe_highlight" invisible="state != 'confirmed'"/>
+                    
+                    <button name="action_refresh_actuals" string="Update Actuals" type="object" class="btn-info"/>
+                    <button name="action_print_report" string="Print Report" type="object" class="btn-secondary"/>
+                    
+                    <button name="action_draft" string="Reset to Draft" type="object" invisible="state == 'draft'"/>
+                    <button name="action_cancel" string="Cancel" type="object" invisible="state == 'cancel'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,done"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="e.g. Q1 2025 Marketing"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="department_id"/>
+                            <field name="control_action"/>
+                            <field name="company_id" invisible="1"/>
+                        </group>
+                        <group>
+                            <field name="date_start"/>
+                            <field name="date_end"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Budget Lines">
+                            <field name="line_ids">
+                                <tree editable="bottom">
+                                    <field name="account_id"/>
+                                    <field name="planned_amount" sum="Total Planned"/>
+                                    <field name="actual_amount" sum="Total Actual"/>
+                                    <field name="variance" sum="Total Variance"/>
+                                    <field name="percentage" widget="progressbar"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <!--
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+                -->
+            </form>
+        </field>
+    </record>
+
+    <!-- Budget Line Pivot View -->
+    <record id="view_idil_budget_line_pivot" model="ir.ui.view">
+        <field name="name">idil.budget.line.pivot</field>
+        <field name="model">idil.budget.line</field>
+        <field name="arch" type="xml">
+            <pivot string="Budget Analysis">
+                <field name="budget_id" type="row"/>
+                <field name="account_id" type="row"/>
+                <field name="planned_amount" type="measure"/>
+                <field name="actual_amount" type="measure"/>
+                <field name="variance" type="measure"/>
+                <field name="percentage" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- Budget Tree View -->
+    <record id="view_idil_budget_tree" model="ir.ui.view">
+        <field name="name">idil.budget.tree</field>
+        <field name="model">idil.budget</field>
+        <field name="arch" type="xml">
+            <tree string="Budgets" decoration-info="state == 'draft'" decoration-muted="state == 'cancel'">
+                <field name="name"/>
+                <field name="department_id"/>
+                <field name="date_start"/>
+                <field name="date_end"/>
+                <field name="state" widget="badge" decoration-success="state == 'confirmed'"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_idil_budget" model="ir.actions.act_window">
+        <field name="name">Budgets</field>
+        <field name="res_model">idil.budget</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+          <p class="o_view_nocontent_smiling_face">
+            Create a newly Budget
+          </p>
+        </field>
+    </record>
+
+    <record id="action_idil_budget_analysis" model="ir.actions.act_window">
+        <field name="name">Budget Analysis</field>
+        <field name="res_model">idil.budget.line</field>
+        <field name="view_mode">pivot,tree</field>
+    </record>
+
+    <!-- Menu -->
+    <menuitem id="menu_idil_budget_root"
+              name="📊 Budgeting &amp; Control"
+              parent="idil.menu_idil_home"
+              sequence="20"
+              groups="base.group_user"/>
+              
+    <menuitem id="menu_idil_budget"
+              name="Budgets"
+              parent="menu_idil_budget_root"
+              action="action_idil_budget"
+              sequence="1"/>
+
+    <menuitem id="menu_idil_budget_analysis"
+              name="Budget Analysis (Pivot)"
+              parent="menu_idil_budget_root"
+              action="action_idil_budget_analysis"
+              sequence="2"/>
+
+</odoo>

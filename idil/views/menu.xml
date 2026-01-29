@@ -405,6 +405,12 @@
                                 action="action_transaction_booking"
                                 sequence="3"/>
 
+                        <menuitem id="menu_recurring_journal_entry"
+                                name="🔄 Recurring Entries"
+                                parent="menu_journal_entry_main"
+                                action="action_recurring_journal_entry"
+                                sequence="4"/>
+
                 <menuitem id="menu_currency_exchange_root"
                         name="💱 Currency Exchange Operations"
                         parent="menu_idil_accounting"
@@ -624,6 +630,16 @@
             action="action_executive_business_summary_wizard"
             sequence="10"
         />
+
+
+        <menuitem
+                id="menu_report_budget"
+                name="Budget Report"
+                parent="OtherReports"
+                action="action_report_budget"
+                sequence="11"
+                />
+
 
 
 

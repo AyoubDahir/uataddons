@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Bank Statement Line Form View -->
+    <record id="view_bank_statement_line_form" model="ir.ui.view">
+        <field name="name">idil.bank.statement.line.form</field>
+        <field name="model">idil.bank.statement.line</field>
+        <field name="arch" type="xml">
+            <form string="Statement Line">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="date"/>
+                            <field name="payment_ref"/>
+                            <field name="partner_id"/>
+                        </group>
+                        <group>
+                            <field name="amount"/>
+                            <field name="is_reconciled" readonly="1"/>
+                            <field name="match_status" readonly="1"/>
+                        </group>
+                    </group>
+                    <field name="note" placeholder="Notes..."/>
+                    <notebook>
+                        <page string="Matched Transactions">
+                            <field name="match_ids">
+                                <tree editable="bottom">
+                                    <field name="booking_line_id" domain="[('is_reconciled', '=', False)]"/>
+                                    <field name="amount"/>
+                                    <field name="match_type" readonly="1"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Bank Statement Form View -->
+    <record id="view_bank_statement_form" model="ir.ui.view">
+        <field name="name">idil.bank.statement.form</field>
+        <field name="model">idil.bank.statement</field>
+        <field name="arch" type="xml">
+            <form string="Bank Statement">
+                <header>
+                    <button name="action_open" string="Open" type="object" invisible="state != 'draft'" class="oe_highlight"/>
+                    
+                    <button name="action_download_template" string="Download Template" type="object" invisible="state != 'open'" class="btn-secondary" icon="fa-download"/>
+                    <button name="action_import_excel" string="Import Excel" type="object" invisible="state != 'open'" class="btn-primary" icon="fa-upload"/>
+                    <button name="action_auto_match_advanced" string="Run Matching (Ref/Date)" type="object" invisible="state != 'open'" class="btn-info" icon="fa-cogs"/>
+                    
+                    <button name="action_validate" string="Validate" type="object" invisible="state != 'open'" class="oe_highlight"/>
+                    <button name="action_cancel" string="Cancel" type="object" invisible="state not in ('draft', 'open')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,open,posted"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="account_id"/>
+                            <field name="date"/>
+                            <field name="company_id" invisible="1"/>
+                        </group>
+                        <group>
+                            <field name="balance_start"/>
+                            <field name="balance_end_real"/>
+                            <field name="excel_file" filename="excel_filename" invisible="state != 'open'"/>
+                            <field name="excel_filename" invisible="1"/>
+                        </group>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Bank Transactions">
+                            <field name="line_ids">
+                                <tree string="Statement Lines" editable="bottom" 
+                                      decoration-success="match_status == 'matched'" 
+                                      decoration-warning="match_status == 'mismatch'"
+                                      decoration-danger="match_status == 'unmatched'">
+                                    <field name="date"/>
+                                    <field name="payment_ref"/>
+                                    <field name="partner_id"/>
+                                    <field name="amount" sum="Total Amount"/>
+                                    <field name="match_status"/>
+                                    <field name="note"/>
+                                    <field name="is_reconciled" width="100px" invisible="1"/>
+                                    <button name="action_manual_reconciliation" type="object" icon="fa-link" title="Manual Match" invisible="is_reconciled"/>
+                                    <button name="action_open_matches_view" type="object" icon="fa-list-ul" title="View Matches"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Unmatched System Items">
+                            <div class="alert alert-info" role="alert">
+                                These are system transactions for this account that are <b>not</b> in your bank statement yet.
+                            </div>
+                            <field name="unmatched_system_line_ids" readonly="1">
+                                <tree>
+                                    <field name="transaction_date"/>
+                                    <field name="transaction_booking_id"/>
+                                    <field name="description"/>
+                                    <field name="dr_amount" sum="Total Dr"/>
+                                    <field name="cr_amount" sum="Total Cr"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                    
+                    <group class="oe_subtotal_footer oe_right">
+                        <field name="balance_start"/>
+                        <field name="balance_end"/>
+                        <field name="balance_end_real"/>
+                        <field name="difference" class="oe_subtotal_footer_separator" decoration-danger="difference != 0"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Bank Statement Tree View -->
+    <record id="view_bank_statement_tree" model="ir.ui.view">
+        <field name="name">idil.bank.statement.tree</field>
+        <field name="model">idil.bank.statement</field>
+        <field name="arch" type="xml">
+            <tree string="Bank Statements" decoration-muted="state=='cancel'" decoration-info="state=='draft'">
+                <field name="name"/>
+                <field name="date"/>
+                <field name="account_id"/>
+                <field name="balance_start"/>
+                <field name="balance_end_real"/>
+                <field name="state" widget="badge" decoration-success="state == 'posted'" decoration-info="state == 'open'"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Actions -->
+    <record id="action_bank_statement" model="ir.actions.act_window">
+        <field name="name">Bank Statements</field>
+        <field name="res_model">idil.bank.statement</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+          <p class="o_view_nocontent_smiling_face">
+            Create a new Bank Statement
+          </p>
+        </field>
+    </record>
+
+    <!-- Menu Item -->
+    <menuitem id="menu_bank_reconciliation"
+              name="Bank Reconciliation"
+              parent="idil.menu_idil_accounting"
+              sequence="50"/>
+
+    <menuitem id="menu_bank_statement"
+              name="Bank Statements"
+              parent="menu_bank_reconciliation"
+              action="action_bank_statement"
+              sequence="10"/>
+
+</odoo>
