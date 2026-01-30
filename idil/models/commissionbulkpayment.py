@@ -1,6 +1,8 @@
 from odoo import models, fields, api
 from odoo.exceptions import ValidationError
 
+from odoo.tools.float_utils import float_compare, float_round
+
 
 class CommissionBulkPayment(models.Model):
     _name = "idil.commission.bulk.payment"
@@ -129,8 +131,19 @@ class CommissionBulkPayment(models.Model):
                 ],
                 order="id asc",
             )
-            total_remaining = sum(c.commission_remaining for c in unpaid_commissions)
-            if self.amount_to_pay > total_remaining:
+            total_remaining = self._money_round(
+                sum(c.commission_remaining for c in unpaid_commissions)
+            )
+            amt = self._money_round(self.amount_to_pay)
+
+            if (
+                float_compare(
+                    amt,
+                    total_remaining,
+                    precision_digits=(self.currency_id.decimal_places or 2),
+                )
+                > 0
+            ):
                 self.amount_to_pay = 0
                 return {
                     "warning": {
@@ -138,6 +151,7 @@ class CommissionBulkPayment(models.Model):
                         "message": f"Total Amount to Pay cannot exceed the sum of all unpaid commissions ({total_remaining}).",
                     }
                 }
+
             lines = []
             remaining_payment = self.amount_to_pay
             for commission in unpaid_commissions:
@@ -167,6 +181,11 @@ class CommissionBulkPayment(models.Model):
         else:
             self.line_ids = [(5, 0, 0)]  # Clear lines again if no employee or amount
 
+    def _money_round(self, amount):
+        self.ensure_one()
+        precision = (self.currency_id and self.currency_id.decimal_places) or 2
+        return float_round(amount or 0.0, precision_digits=precision)
+
     @api.constrains("amount_to_pay", "employee_id")
     def _check_amount_to_pay(self):
         for rec in self:
@@ -177,12 +196,21 @@ class CommissionBulkPayment(models.Model):
                         ("payment_status", "!=", "paid"),
                     ]
                 )
-                total_remaining = sum(
-                    c.commission_remaining for c in unpaid_commissions
+
+                precision = rec.currency_id.decimal_places or 2
+                total_remaining = (
+                    sum(c.commission_remaining for c in unpaid_commissions) or 0.0
                 )
-                if rec.amount_to_pay > total_remaining:
+
+                total_remaining = float_round(
+                    total_remaining, precision_digits=precision
+                )
+                amt = float_round(rec.amount_to_pay or 0.0, precision_digits=precision)
+
+                if float_compare(amt, total_remaining, precision_digits=precision) > 0:
+                    diff = amt - total_remaining
                     raise ValidationError(
-                        f"Total Amount to Pay ({rec.amount_to_pay}) cannot exceed total unpaid commission ({total_remaining}) for this employee."
+                        f"Total Amount to Pay ({amt}) cannot exceed total unpaid commission ({total_remaining}) for this employee. Difference: {diff}"
                     )
 
     def action_confirm_payment(self):

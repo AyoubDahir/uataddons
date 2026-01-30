@@ -2,6 +2,8 @@ from odoo import models, fields, api
 from datetime import datetime
 from odoo.exceptions import ValidationError
 
+from odoo.tools.float_utils import float_compare, float_round
+
 
 class Commission(models.Model):
     _name = "idil.commission"
@@ -206,13 +208,37 @@ class Commission(models.Model):
                 "Commission account and cash account must have the same currency to proceed with the transaction."
             )
 
-        if self._get_cash_account_balance() < self.amount:
-            raise ValidationError("No sufficient amount in the cash account.")
+        precision = self.currency_id.decimal_places or 2
+        bal = float_round(
+            self._get_cash_account_balance() or 0.0, precision_digits=precision
+        )
+        amt = float_round(self.amount or 0.0, precision_digits=precision)
 
-        if self.amount > self.commission_remaining:
+        if float_compare(amt, bal, precision_digits=precision) > 0:
+            raise ValidationError(_("No sufficient amount in the cash account."))
+
+        precision = self.currency_id.decimal_places or 2
+
+        remaining = float_round(
+            self.commission_remaining or 0.0, precision_digits=precision
+        )
+        amt = float_round(self.amount or 0.0, precision_digits=precision)
+
+        # allow tiny float noise
+        if float_compare(amt, remaining, precision_digits=precision) > 0:
+            diff = amt - remaining
             raise ValidationError(
-                f"The amount to pay exceeds the remaining commission amount. Remaining Commission: {self.commission_remaining}. Amount to Pay: {self.amount}. difference: {self.amount - self.commission_remaining}."
+                _(
+                    "The amount to pay exceeds the remaining commission amount.\n"
+                    "Remaining Commission: %s\nAmount to Pay: %s\nDifference: %s"
+                )
+                % (remaining, amt, diff)
             )
+
+        # optional: snap to exact remaining when very close
+        if float_compare(amt, remaining, precision_digits=precision) == 0:
+            self.amount = remaining
+
         payment_vals = {
             "commission_id": self.id,
             "employee_id": self.employee_id.id,
@@ -268,38 +294,6 @@ class Commission(models.Model):
         self._compute_commission_paid()
         self._compute_commission_remaining()
         self._compute_payment_status()
-
-    # def _create_commission_payment_transaction_lines(self, payment):
-
-    #     # Debit line for reducing cash
-    #     debit_line_vals = {
-    #         "transaction_booking_id": self.manufacturing_order_id.transaction_booking_id.id,
-    #         "sl_line": 1,
-    #         "description": "Commission Payment - Debit",
-    #         "product_id": self.manufacturing_order_id.product_id.id,
-    #         "account_number": self.employee_id.account_id.id,
-    #         "transaction_type": "dr",
-    #         "dr_amount": payment.amount,
-    #         "cr_amount": 0.0,
-    #         "transaction_date": fields.Date.today(),
-    #         "commission_payment_id": payment.id,
-    #     }
-    #     self.env["idil.transaction_bookingline"].create(debit_line_vals)
-
-    #     # Credit line for reducing employee's commission account
-    #     credit_line_vals = {
-    #         "transaction_booking_id": self.manufacturing_order_id.transaction_booking_id.id,
-    #         "sl_line": 2,
-    #         "description": "Commission Payment - Credit",
-    #         "product_id": self.manufacturing_order_id.product_id.id,
-    #         "account_number": self.cash_account_id.id,
-    #         "transaction_type": "cr",
-    #         "dr_amount": 0.0,
-    #         "cr_amount": payment.amount,
-    #         "transaction_date": fields.Date.today(),
-    #         "commission_payment_id": payment.id,
-    #     }
-    #     self.env["idil.transaction_bookingline"].create(credit_line_vals)
 
     def _create_commission_payment_transaction_lines(self, payment):
         Booking = self.env["idil.transaction_booking"]
