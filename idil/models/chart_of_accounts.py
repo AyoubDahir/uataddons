@@ -97,13 +97,13 @@ class AccountHeader(models.Model):
         usd_currency = self.env.ref("base.USD")
         # Data structure for the template
         report_data = {
-            'assets': {'headers': [], 'total': 0},
-            'liabilities': {'headers': [], 'total': 0},
-            'equity': {'headers': [], 'total': 0},
-            'net_profit_loss': 0,
-            'is_balanced': False,
-            'difference': 0,
-            'currency_symbol': usd_currency.symbol
+            "assets": {"headers": [], "total": 0},
+            "liabilities": {"headers": [], "total": 0},
+            "equity": {"headers": [], "total": 0},
+            "net_profit_loss": 0,
+            "is_balanced": False,
+            "difference": 0,
+            "currency_symbol": usd_currency.symbol,
         }
 
         total_pl_balance = 0
@@ -113,17 +113,17 @@ class AccountHeader(models.Model):
             # Identify category based on first digit
             first_digit = header.code[:1]
             category = None
-            if first_digit == '1':
-                category = 'assets'
-            elif first_digit == '2':
-                category = 'liabilities'
-            elif first_digit == '3':
-                category = 'equity'
-            
-            # Note: 4, 5, 6 etc. are PL and don't get their own BS section, 
+            if first_digit == "1":
+                category = "assets"
+            elif first_digit == "2":
+                category = "liabilities"
+            elif first_digit == "3":
+                category = "equity"
+
+            # Note: 4, 5, 6 etc. are PL and don't get their own BS section,
             # but we iterate through all to compute Net Profit/Loss
-            is_credit_nature = first_digit in ['2', '3', '4', '7', '9']
-            
+            is_credit_nature = first_digit in ["2", "3", "4", "7", "9"]
+
             subheaders_data = []
 
             for subheader in header.sub_header_ids:
@@ -132,11 +132,13 @@ class AccountHeader(models.Model):
 
                 for account in subheader.account_ids:
                     # Point 1: Hide specific clearing accounts
-                    if account.code in ['100998', '100994']:
+                    if account.code in ["100998", "100994"]:
                         continue
-                        
-                    balance = account.get_balance_as_of_date_for_bs(report_date, company_id)
-                    
+
+                    balance = account.get_balance_as_of_date_for_bs(
+                        report_date, company_id
+                    )
+
                     # Accumulate for Net Profit/Loss (relying on PL flag)
                     if account.FinancialReporting == "PL":
                         total_pl_balance += balance
@@ -148,72 +150,96 @@ class AccountHeader(models.Model):
 
                         # Flip sign for display if it's a Credit nature category
                         display_balance = -balance if is_credit_nature else balance
-                            
-                        accounts_data.append({
-                            "account_id": account.id,
-                            "account_code": account.code,
-                            "account_name": account.name,
-                            "balance": "${:,.3f}".format(display_balance),
-                        })
+
+                        accounts_data.append(
+                            {
+                                "account_id": account.id,
+                                "account_code": account.code,
+                                "account_name": account.name,
+                                "balance": "${:,.3f}".format(display_balance),
+                            }
+                        )
                         subheader_total += balance
 
                 if accounts_data:
-                    display_subheader_total = -subheader_total if is_credit_nature else subheader_total
-                    subheaders_data.append({
-                        "sub_header_name": subheader.name,
-                        "accounts": accounts_data,
-                        "sub_header_total": "${:,.3f}".format(display_subheader_total),
-                    })
+                    display_subheader_total = (
+                        -subheader_total if is_credit_nature else subheader_total
+                    )
+                    subheaders_data.append(
+                        {
+                            "sub_header_name": subheader.name,
+                            "accounts": accounts_data,
+                            "sub_header_total": "${:,.3f}".format(
+                                display_subheader_total
+                            ),
+                        }
+                    )
                     header_total += subheader_total
 
             if subheaders_data and category:
-                display_header_total = -header_total if is_credit_nature else header_total
-                report_data[category]['headers'].append({
-                    "header_name": header.name,
-                    "sub_headers": subheaders_data,
-                    "header_total": "${:,.3f}".format(display_header_total),
-                })
-                report_data[category]['total'] += header_total
+                display_header_total = (
+                    -header_total if is_credit_nature else header_total
+                )
+                report_data[category]["headers"].append(
+                    {
+                        "header_name": header.name,
+                        "sub_headers": subheaders_data,
+                        "header_total": "${:,.3f}".format(display_header_total),
+                    }
+                )
+                report_data[category]["total"] += header_total
 
         # Net Profit/Loss (Current Year Earnings)
         # Reversing sign because Profit is a net Credit (negative in my net Dr-Cr calc)
-        report_data['net_profit_loss'] = -total_pl_balance
-        
+        report_data["net_profit_loss"] = -total_pl_balance
+
         # Balance Check: Assets = Liabilities + Equity + Net Profit
-        total_assets = report_data['assets']['total']
-        total_liab_equity = report_data['liabilities']['total'] + report_data['equity']['total'] - total_pl_balance
-        
+        total_assets = report_data["assets"]["total"]
+        total_liab_equity = (
+            report_data["liabilities"]["total"]
+            + report_data["equity"]["total"]
+            - total_pl_balance
+        )
+
         # We use Liabilities and Equity totals as positive values for comparison
         # (Liability and Equity totals in the dict are currently 'debit' sums, so they are likely negative)
         asset_sum = total_assets
-        liab_sum = -report_data['liabilities']['total']
-        equity_sum = -report_data['equity']['total']
+        liab_sum = -report_data["liabilities"]["total"]
+        equity_sum = -report_data["equity"]["total"]
         profit_sum = -total_pl_balance
-        
-        report_data['difference'] = asset_sum - (liab_sum + equity_sum + profit_sum)
-        report_data['is_balanced'] = abs(report_data['difference']) < 0.01
+
+        report_data["difference"] = asset_sum - (liab_sum + equity_sum + profit_sum)
+        report_data["is_balanced"] = abs(report_data["difference"]) < 0.01
 
         # Format totals for display
-        report_data['total_assets_formatted'] = "${:,.3f}".format(asset_sum)
-        report_data['total_liabilities_formatted'] = "${:,.3f}".format(liab_sum)
-        report_data['total_equity_formatted'] = "${:,.3f}".format(equity_sum + profit_sum)
-        report_data['total_liab_equity_formatted'] = "${:,.3f}".format(liab_sum + equity_sum + profit_sum)
-        report_data['net_profit_formatted'] = "${:,.3f}".format(profit_sum)
+        report_data["total_assets_formatted"] = "${:,.3f}".format(asset_sum)
+        report_data["total_liabilities_formatted"] = "${:,.3f}".format(liab_sum)
+        report_data["total_equity_formatted"] = "${:,.3f}".format(
+            equity_sum + profit_sum
+        )
+        report_data["total_liab_equity_formatted"] = "${:,.3f}".format(
+            liab_sum + equity_sum + profit_sum
+        )
+        report_data["net_profit_formatted"] = "${:,.3f}".format(profit_sum)
 
     @api.model
     def get_trial_balance_report_data(self, company_id, report_date):
-        company = self.env['res.company'].browse(company_id) if company_id else self.env.company
+        company = (
+            self.env["res.company"].browse(company_id)
+            if company_id
+            else self.env.company
+        )
         r_date = report_date or fields.Date.today()
 
         headers = self.search([])
         report_data = {
-            'headers': [],
-            'grand_total_debit': 0,
-            'grand_total_credit': 0,
-            'grand_total_balance': 0,
-            'report_date': r_date,
-            'company_name': company.name,
-            'company_id': company.id
+            "headers": [],
+            "grand_total_debit": 0,
+            "grand_total_credit": 0,
+            "grand_total_balance": 0,
+            "report_date": r_date,
+            "company_name": company.name,
+            "company_id": company.id,
         }
 
         total_dr = 0
@@ -236,75 +262,85 @@ class AccountHeader(models.Model):
                         continue
 
                     net = dr - cr
-                    accounts_data.append({
-                        "code": account.code,
-                        "name": account.name,
-                        "debit": "${:,.3f}".format(dr),
-                        "credit": "${:,.3f}".format(cr),
-                        "balance": "${:,.3f}".format(net),
-                    })
+                    accounts_data.append(
+                        {
+                            "code": account.code,
+                            "name": account.name,
+                            "debit": "${:,.3f}".format(dr),
+                            "credit": "${:,.3f}".format(cr),
+                            "balance": "${:,.3f}".format(net),
+                        }
+                    )
                     subheader_dr += dr
                     subheader_cr += cr
 
                 if accounts_data:
-                    subheaders_data.append({
-                        "name": subheader.name,
-                        "accounts": accounts_data,
-                        "total_debit": "${:,.3f}".format(subheader_dr),
-                        "total_credit": "${:,.3f}".format(subheader_cr),
-                    })
+                    subheaders_data.append(
+                        {
+                            "name": subheader.name,
+                            "accounts": accounts_data,
+                            "total_debit": "${:,.3f}".format(subheader_dr),
+                            "total_credit": "${:,.3f}".format(subheader_cr),
+                        }
+                    )
                     header_dr += subheader_dr
                     header_cr += subheader_cr
 
             if subheaders_data:
-                report_data['headers'].append({
-                    "name": header.name,
-                    "sub_headers": subheaders_data,
-                    "total_debit": "${:,.3f}".format(header_dr),
-                    "total_credit": "${:,.3f}".format(header_cr),
-                })
+                report_data["headers"].append(
+                    {
+                        "name": header.name,
+                        "sub_headers": subheaders_data,
+                        "total_debit": "${:,.3f}".format(header_dr),
+                        "total_credit": "${:,.3f}".format(header_cr),
+                    }
+                )
                 total_dr += header_dr
                 total_cr += header_cr
 
-        report_data['grand_total_debit'] = "${:,.3f}".format(total_dr)
-        report_data['grand_total_credit'] = "${:,.3f}".format(total_cr)
-        report_data['grand_total_balance'] = "${:,.3f}".format(total_dr - total_cr)
+        report_data["grand_total_debit"] = "${:,.3f}".format(total_dr)
+        report_data["grand_total_credit"] = "${:,.3f}".format(total_cr)
+        report_data["grand_total_balance"] = "${:,.3f}".format(total_dr - total_cr)
 
         return report_data
 
     @api.model
     def get_income_statement_advanced_data(self, company_id, report_date):
-        company = self.env['res.company'].browse(company_id) if company_id else self.env.company
+        company = (
+            self.env["res.company"].browse(company_id)
+            if company_id
+            else self.env.company
+        )
         r_date = report_date or fields.Date.today()
         headers = self.search([])
 
         report_data = {
-            'revenue': {'headers': [], 'total': 0},
-            'cogs': {'headers': [], 'total': 0},
-            'expenses': {'headers': [], 'total': 0},
-            'other': {'headers': [], 'total': 0},
-            'net_profit': 0,
-            'report_date': r_date,
-            'company_name': company.name,
-            'company_id': company.id
+            "revenue": {"headers": [], "total": 0},
+            "cogs": {"headers": [], "total": 0},
+            "expenses": {"headers": [], "total": 0},
+            "other": {"headers": [], "total": 0},
+            "net_profit": 0,
+            "report_date": r_date,
+            "company_name": company.name,
+            "company_id": company.id,
         }
 
         for header in headers:
             first_digit = header.code[:1]
             category = None
-            if first_digit == '4':
-                category = 'revenue'
-            elif first_digit == '5':
-                category = 'cogs'
-            elif first_digit == '6':
-                category = 'expenses'
-            elif first_digit in ['7', '8', '9']:
-                category = 'other'
+            if first_digit == "4":
+                category = "revenue"
+            elif first_digit == "5":
+                category = "cogs"
+            elif first_digit == "6":
+                category = "expenses"
+            elif first_digit in ["7", "8", "9"]:
+                category = "other"
 
             if not category:
                 continue
 
-            is_credit_nature = first_digit in ['4', '7', '9']
+            is_credit_nature = first_digit in ["4", "7", "9"]
 
             header_total = 0
             subheaders_data = []
@@ -322,214 +358,440 @@ class AccountHeader(models.Model):
 
                     display_balance = -balance if is_credit_nature else balance
 
-                    accounts_data.append({
-                        "code": account.code,
-                        "name": account.name,
-                        "balance": "${:,.3f}".format(display_balance),
-                    })
+                    accounts_data.append(
+                        {
+                            "code": account.code,
+                            "name": account.name,
+                            "balance": "${:,.3f}".format(display_balance),
+                        }
+                    )
                     subheader_total += balance
 
                 if accounts_data:
-                    display_subheader_total = -subheader_total if is_credit_nature else subheader_total
-                    subheaders_data.append({
-                        "name": subheader.name,
-                        "accounts": accounts_data,
-                        "total": "${:,.3f}".format(display_subheader_total),
-                    })
+                    display_subheader_total = (
+                        -subheader_total if is_credit_nature else subheader_total
+                    )
+                    subheaders_data.append(
+                        {
+                            "name": subheader.name,
+                            "accounts": accounts_data,
+                            "total": "${:,.3f}".format(display_subheader_total),
+                        }
+                    )
                     header_total += subheader_total
 
             if subheaders_data:
-                display_header_total = -header_total if is_credit_nature else header_total
-                report_data[category]['headers'].append({
-                    "name": header.name,
-                    "sub_headers": subheaders_data,
-                    "total": "${:,.3f}".format(display_header_total),
-                })
-                report_data[category]['total'] += header_total
+                display_header_total = (
+                    -header_total if is_credit_nature else header_total
+                )
+                report_data[category]["headers"].append(
+                    {
+                        "name": header.name,
+                        "sub_headers": subheaders_data,
+                        "total": "${:,.3f}".format(display_header_total),
+                    }
+                )
+                report_data[category]["total"] += header_total
 
-        total_balance = report_data['revenue']['total'] + report_data['cogs']['total'] + \
-                        report_data['expenses']['total'] + report_data['other']['total']
-        report_data['net_profit'] = -total_balance
-        report_data['net_profit_formatted'] = "${:,.3f}".format(-total_balance)
+        total_balance = (
+            report_data["revenue"]["total"]
+            + report_data["cogs"]["total"]
+            + report_data["expenses"]["total"]
+            + report_data["other"]["total"]
+        )
+        report_data["net_profit"] = -total_balance
+        report_data["net_profit_formatted"] = "${:,.3f}".format(-total_balance)
 
-        for cat in ['revenue', 'cogs', 'expenses', 'other']:
-            if cat in ['revenue', 'other']:
-                report_data[cat]['total_formatted'] = "${:,.3f}".format(-report_data[cat]['total'])
+        for cat in ["revenue", "cogs", "expenses", "other"]:
+            if cat in ["revenue", "other"]:
+                report_data[cat]["total_formatted"] = "${:,.3f}".format(
+                    -report_data[cat]["total"]
+                )
             else:
-                report_data[cat]['total_formatted'] = "${:,.3f}".format(report_data[cat]['total'])
+                report_data[cat]["total_formatted"] = "${:,.3f}".format(
+                    report_data[cat]["total"]
+                )
 
         return report_data
 
     @api.model
-    def get_account_statement_advanced_data(self, account_id, start_date, end_date, company_id):
-        account = self.env['idil.chart.account'].browse(account_id)
-        company = self.env['res.company'].browse(company_id) if company_id else self.env.company
-        
+    def get_account_statement_advanced_data(
+        self, account_id, start_date, end_date, company_id
+    ):
+        account = self.env["idil.chart.account"].browse(account_id)
+        company = (
+            self.env["res.company"].browse(company_id)
+            if company_id
+            else self.env.company
+        )
+
         # Opening Balance computation in USD
-        opening_transactions = self.env["idil.transaction_bookingline"].search([
-            ("account_number", "=", account.id),
-            ("transaction_date", "<", start_date),
-            ("company_id", "=", company.id),
-        ])
-        
+        opening_transactions = self.env["idil.transaction_bookingline"].search(
+            [
+                ("account_number", "=", account.id),
+                ("transaction_date", "<", start_date),
+                ("company_id", "=", company.id),
+            ]
+        )
+
         opening_dr = 0
         opening_cr = 0
         for trx in opening_transactions:
-            rate = trx.rate or account._get_conversion_rate(trx.currency_id.id, trx.transaction_date) or 1.0
-            if trx.currency_id.name == 'USD': rate = 1.0
+            rate = (
+                trx.rate
+                or account._get_conversion_rate(
+                    trx.currency_id.id, trx.transaction_date
+                )
+                or 1.0
+            )
+            if trx.currency_id.name == "USD":
+                rate = 1.0
             opening_dr += trx.dr_amount / rate
             opening_cr += trx.cr_amount / rate
-        
+
         opening_balance = opening_dr - opening_cr
-        
+
         # Period Transactions
-        transactions = self.env["idil.transaction_bookingline"].search([
-            ("account_number", "=", account.id),
-            ("transaction_date", ">=", start_date),
-            ("transaction_date", "<=", end_date),
-            ("company_id", "=", company.id),
-        ], order="transaction_date asc, id asc")
-        
+        transactions = self.env["idil.transaction_bookingline"].search(
+            [
+                ("account_number", "=", account.id),
+                ("transaction_date", ">=", start_date),
+                ("transaction_date", "<=", end_date),
+                ("company_id", "=", company.id),
+            ],
+            order="transaction_date asc, id asc",
+        )
+
         lines = []
         running_balance = opening_balance
         total_dr = 0
         total_cr = 0
-        
+
         for trx in transactions:
-            rate = trx.rate or account._get_conversion_rate(trx.currency_id.id, trx.transaction_date) or 1.0
-            if trx.currency_id.name == 'USD': rate = 1.0
-            
+            rate = (
+                trx.rate
+                or account._get_conversion_rate(
+                    trx.currency_id.id, trx.transaction_date
+                )
+                or 1.0
+            )
+            if trx.currency_id.name == "USD":
+                rate = 1.0
+
             dr_usd = trx.dr_amount / rate
             cr_usd = trx.cr_amount / rate
-            running_balance += (dr_usd - cr_usd)
-            
+            running_balance += dr_usd - cr_usd
+
             total_dr += dr_usd
             total_cr += cr_usd
-            
-            lines.append({
-                'date': trx.transaction_date,
-                'ref': trx.transaction_booking_id.transaction_number if trx.transaction_booking_id else '',
-                'description': trx.description or '',
-                'debit': "${:,.3f}".format(dr_usd),
-                'credit': "${:,.3f}".format(cr_usd),
-                'balance': "${:,.3f}".format(running_balance),
-            })
-            
+
+            lines.append(
+                {
+                    "date": trx.transaction_date,
+                    "ref": (
+                        trx.transaction_booking_id.transaction_number
+                        if trx.transaction_booking_id
+                        else ""
+                    ),
+                    "description": trx.description or "",
+                    "debit": "${:,.3f}".format(dr_usd),
+                    "credit": "${:,.3f}".format(cr_usd),
+                    "balance": "${:,.3f}".format(running_balance),
+                }
+            )
+
         return {
-            'account_name': account.name,
-            'account_code': account.code,
-            'currency': account.currency_id.name,
-            'company_name': company.name,
-            'company_id': company.id,
-            'start_date': start_date,
-            'end_date': end_date,
-            'opening_balance': "${:,.3f}".format(opening_balance),
-            'lines': lines,
-            'total_debit': "${:,.3f}".format(total_dr),
-            'total_credit': "${:,.3f}".format(total_cr),
-            'closing_balance': "${:,.3f}".format(running_balance),
-            'report_date': fields.Date.today(),
+            "account_name": account.name,
+            "account_code": account.code,
+            "currency": account.currency_id.name,
+            "company_name": company.name,
+            "company_id": company.id,
+            "start_date": start_date,
+            "end_date": end_date,
+            "opening_balance": "${:,.3f}".format(opening_balance),
+            "lines": lines,
+            "total_debit": "${:,.3f}".format(total_dr),
+            "total_credit": "${:,.3f}".format(total_cr),
+            "closing_balance": "${:,.3f}".format(running_balance),
+            "report_date": fields.Date.today(),
         }
 
     @api.model
     def get_cash_flow_advanced_data(self, company_id, start_date, end_date):
-        company = self.env['res.company'].browse(company_id) if company_id else self.env.company
+        company = (
+            self.env["res.company"].browse(company_id)
+            if company_id
+            else self.env.company
+        )
         usd_currency = self.env.ref("base.USD")
-        
-        # 1. Get Cash Accounts
-        cash_accounts = self.env['idil.chart.account'].search([
-            ('account_type', 'in', ['cash', 'bank_transfer']),
-            ('company_id', '=', company.id)
-        ])
+
+        # 1) Cash / Bank accounts
+        cash_accounts = self.env["idil.chart.account"].search(
+            [
+                ("account_type", "in", ["cash", "bank_transfer"]),
+                ("company_id", "=", company.id),
+            ]
+        )
         cash_account_ids = cash_accounts.ids
 
-        # 2. Fetch Transactions for Cash Accounts
+        # 2) Booking lines for cash accounts (date range)
         domain = [
-            ('account_number', 'in', cash_account_ids),
-            ('transaction_date', '>=', start_date),
-            ('transaction_date', '<=', end_date),
-            ('company_id', '=', company.id)
+            ("account_number", "in", cash_account_ids),
+            ("transaction_date", ">=", start_date),
+            ("transaction_date", "<=", end_date),
+            ("company_id", "=", company.id),
         ]
-        lines = self.env['idil.transaction_bookingline'].search(domain)
+        lines = self.env["idil.transaction_bookingline"].search(domain)
 
-        # 3. Categorize
         categories = {
-            'operating': {'inflows': {}, 'outflows': {}, 'total_in': 0, 'total_out': 0},
-            'investing': {'inflows': {}, 'outflows': {}, 'total_in': 0, 'total_out': 0},
-            'financing': {'inflows': {}, 'outflows': {}, 'total_in': 0, 'total_out': 0},
+            "operating": {
+                "inflows": {},
+                "outflows": {},
+                "total_in": 0.0,
+                "total_out": 0.0,
+            },
+            "investing": {
+                "inflows": {},
+                "outflows": {},
+                "total_in": 0.0,
+                "total_out": 0.0,
+            },
+            "financing": {
+                "inflows": {},
+                "outflows": {},
+                "total_in": 0.0,
+                "total_out": 0.0,
+            },
         }
+
+        def to_usd(amount, line):
+            """Convert line amount to USD if needed."""
+            if not amount:
+                return 0.0
+
+            line_currency = line.currency_id or (
+                line.account_number.currency_id if line.account_number else None
+            )
+            if not line_currency or line_currency.id == usd_currency.id:
+                return amount
+
+            # rate priority: booking.rate then fallback conversion
+            booking = line.transaction_booking_id
+            tx_rate = (
+                booking.rate
+                or self._get_conversion_rate(line_currency.id, line.transaction_date)
+                or 1.0
+            )
+
+            # ASSUMPTION: tx_rate = (local per 1 USD) e.g. SL per USD
+            # local_amount / rate = USD
+            return amount / tx_rate
 
         for line in lines:
             booking = line.transaction_booking_id
-            all_accounts = booking.booking_lines.mapped('account_number')
-            
-            # Skip internal transfers
-            if all(acc.account_type in ['cash', 'bank_transfer'] for acc in all_accounts if acc):
+            if not booking:
                 continue
-            
-            other_accounts = [acc for acc in all_accounts if acc and acc.account_type not in ['cash', 'bank_transfer']]
-            if not other_accounts: continue
-            other_account = other_accounts[0]
-            
-            amount_usd = 0.0
-            if line.transaction_type == 'dr':
-                amount_usd = line.dr_amount
+
+            # Skip pure cash-to-cash internal transfers
+            all_accounts = booking.booking_lines.mapped("account_number")
+            if all(
+                acc and acc.account_type in ["cash", "bank_transfer"]
+                for acc in all_accounts
+            ):
+                continue
+
+            # Amount on CASH line: dr - cr
+            raw_amount = (line.dr_amount or 0.0) - (line.cr_amount or 0.0)
+            if abs(raw_amount) < 0.000001:
+                continue
+
+            amount_usd = to_usd(raw_amount, line)
+
+            # Determine inflow/outflow by sign
+            is_inflow = amount_usd > 0
+
+            # Find NON-cash booking lines and choose the main one (largest absolute movement)
+            other_lines = booking.booking_lines.filtered(
+                lambda bl: bl.account_number
+                and bl.account_number.account_type not in ["cash", "bank_transfer"]
+            )
+            if not other_lines:
+                continue
+
+            # pick main other line by abs(dr-cr)
+            def other_line_strength(bl):
+                return abs((bl.dr_amount or 0.0) - (bl.cr_amount or 0.0))
+
+            main_other = max(other_lines, key=other_line_strength)
+            other_account = main_other.account_number
+
+            # Classify category
+            cat = "operating"
+            if other_account.FinancialReporting == "PL":
+                cat = "operating"
+            elif other_account.FinancialReporting == "BS":
+                code = other_account.code or ""
+                name = (other_account.name or "").lower()
+                if code.startswith(("15", "16")) or any(
+                    w in name for w in ["equipment", "machinery", "vehicle", "building"]
+                ):
+                    cat = "investing"
+                elif code.startswith("3") or any(
+                    w in name
+                    for w in ["equity", "capital", "loan", "drawing", "dividend"]
+                ):
+                    cat = "financing"
+
+            # Accumulate
+            label = other_account.name or "Unclassified"
+            amt = abs(amount_usd)
+
+            if is_inflow:
+                categories[cat]["inflows"][label] = (
+                    categories[cat]["inflows"].get(label, 0.0) + amt
+                )
+                categories[cat]["total_in"] += amt
             else:
-                amount_usd = line.cr_amount
-                
-            if amount_usd == 0: continue
+                categories[cat]["outflows"][label] = (
+                    categories[cat]["outflows"].get(label, 0.0) + amt
+                )
+                categories[cat]["total_out"] += amt
 
-            # Currency Conversion
-            account_currency = line.currency_id or line.account_number.currency_id
-            if account_currency and account_currency.id != usd_currency.id:
-                tx_rate = line.transaction_booking_id.rate or self._get_conversion_rate(account_currency.id, line.transaction_date) or 1.0
-                amount_usd = amount_usd / tx_rate
-
-            # Classify
-            cat = 'operating'
-            if other_account.FinancialReporting == 'PL':
-                cat = 'operating'
-            elif other_account.FinancialReporting == 'BS':
-                code = other_account.code or ''
-                name = (other_account.name or '').lower()
-                if code.startswith('15') or code.startswith('16') or any(w in name for w in ['equipment', 'machinery', 'vehicle', 'building']):
-                    cat = 'investing'
-                elif code.startswith('3') or any(w in name for w in ['equity', 'capital', 'loan', 'drawing', 'dividend']):
-                    cat = 'financing'
-
-            target_dict = categories[cat]['inflows'] if line.transaction_type == 'dr' else categories[cat]['outflows']
-            label = other_account.name
-            target_dict[label] = target_dict.get(label, 0) + amount_usd
-            if line.transaction_type == 'dr':
-                categories[cat]['total_in'] += amount_usd
-            else:
-                categories[cat]['total_out'] += amount_usd
-
-        # Format for output
         def pack_cat(slug):
             c = categories[slug]
             return {
-                'inflows': [{'name': k, 'amount': "${:,.3f}".format(v)} for k, v in c['inflows'].items()],
-                'outflows': [{'name': k, 'amount': "${:,.3f}".format(v)} for k, v in c['outflows'].items()],
-                'total_in': "${:,.3f}".format(c['total_in']),
-                'total_out': "${:,.3f}".format(c['total_out']),
-                'net': "${:,.3f}".format(c['total_in'] - c['total_out']),
-                'net_raw': c['total_in'] - c['total_out']
+                "inflows": [
+                    {"name": k, "amount": "${:,.3f}".format(v)}
+                    for k, v in c["inflows"].items()
+                ],
+                "outflows": [
+                    {"name": k, "amount": "${:,.3f}".format(v)}
+                    for k, v in c["outflows"].items()
+                ],
+                "total_in": "${:,.3f}".format(c["total_in"]),
+                "total_out": "${:,.3f}".format(c["total_out"]),
+                "net": "${:,.3f}".format(c["total_in"] - c["total_out"]),
+                "net_raw": c["total_in"] - c["total_out"],
             }
 
         report_data = {
-            'operating': pack_cat('operating'),
-            'investing': pack_cat('investing'),
-            'financing': pack_cat('financing'),
-            'company_name': company.name,
-            'company_id': company.id,
-            'start_date': start_date,
-            'end_date': end_date,
-            'report_date': fields.Date.today(),
+            "operating": pack_cat("operating"),
+            "investing": pack_cat("investing"),
+            "financing": pack_cat("financing"),
+            "company_name": company.name,
+            "company_id": company.id,
+            "start_date": start_date,
+            "end_date": end_date,
+            "report_date": fields.Date.today(),
         }
-        report_data['net_cash_flow'] = "${:,.3f}".format(report_data['operating']['net_raw'] + report_data['investing']['net_raw'] + report_data['financing']['net_raw'])
-        
+
+        report_data["net_cash_flow"] = "${:,.3f}".format(
+            report_data["operating"]["net_raw"]
+            + report_data["investing"]["net_raw"]
+            + report_data["financing"]["net_raw"]
+        )
+
         return report_data
+
+    # @api.model
+    # def get_cash_flow_advanced_data(self, company_id, start_date, end_date):
+    #     company = self.env['res.company'].browse(company_id) if company_id else self.env.company
+    #     usd_currency = self.env.ref("base.USD")
+
+    #     # 1. Get Cash Accounts
+    #     cash_accounts = self.env['idil.chart.account'].search([
+    #         ('account_type', 'in', ['cash', 'bank_transfer']),
+    #         ('company_id', '=', company.id)
+    #     ])
+    #     cash_account_ids = cash_accounts.ids
+
+    #     # 2. Fetch Transactions for Cash Accounts
+    #     domain = [
+    #         ('account_number', 'in', cash_account_ids),
+    #         ('transaction_date', '>=', start_date),
+    #         ('transaction_date', '<=', end_date),
+    #         ('company_id', '=', company.id)
+    #     ]
+    #     lines = self.env['idil.transaction_bookingline'].search(domain)
+
+    #     # 3. Categorize
+    #     categories = {
+    #         'operating': {'inflows': {}, 'outflows': {}, 'total_in': 0, 'total_out': 0},
+    #         'investing': {'inflows': {}, 'outflows': {}, 'total_in': 0, 'total_out': 0},
+    #         'financing': {'inflows': {}, 'outflows': {}, 'total_in': 0, 'total_out': 0},
+    #     }
+
+    #     for line in lines:
+    #         booking = line.transaction_booking_id
+    #         all_accounts = booking.booking_lines.mapped('account_number')
+
+    #         # Skip internal transfers
+    #         if all(acc.account_type in ['cash', 'bank_transfer'] for acc in all_accounts if acc):
+    #             continue
+
+    #         other_accounts = [acc for acc in all_accounts if acc and acc.account_type not in ['cash', 'bank_transfer']]
+    #         if not other_accounts: continue
+    #         other_account = other_accounts[0]
+
+    #         amount_usd = 0.0
+    #         if line.transaction_type == 'dr':
+    #             amount_usd = line.dr_amount
+    #         else:
+    #             amount_usd = line.cr_amount
+
+    #         if amount_usd == 0: continue
+
+    #         # Currency Conversion
+    #         account_currency = line.currency_id or line.account_number.currency_id
+    #         if account_currency and account_currency.id != usd_currency.id:
+    #             tx_rate = line.transaction_booking_id.rate or self._get_conversion_rate(account_currency.id, line.transaction_date) or 1.0
+    #             amount_usd = amount_usd / tx_rate
+
+    #         # Classify
+    #         cat = 'operating'
+    #         if other_account.FinancialReporting == 'PL':
+    #             cat = 'operating'
+    #         elif other_account.FinancialReporting == 'BS':
+    #             code = other_account.code or ''
+    #             name = (other_account.name or '').lower()
+    #             if code.startswith('15') or code.startswith('16') or any(w in name for w in ['equipment', 'machinery', 'vehicle', 'building']):
+    #                 cat = 'investing'
+    #             elif code.startswith('3') or any(w in name for w in ['equity', 'capital', 'loan', 'drawing', 'dividend']):
+    #                 cat = 'financing'
+
+    #         target_dict = categories[cat]['inflows'] if line.transaction_type == 'dr' else categories[cat]['outflows']
+    #         label = other_account.name
+    #         target_dict[label] = target_dict.get(label, 0) + amount_usd
+    #         if line.transaction_type == 'dr':
+    #             categories[cat]['total_in'] += amount_usd
+    #         else:
+    #             categories[cat]['total_out'] += amount_usd
+
+    #     # Format for output
+    #     def pack_cat(slug):
+    #         c = categories[slug]
+    #         return {
+    #             'inflows': [{'name': k, 'amount': "${:,.3f}".format(v)} for k, v in c['inflows'].items()],
+    #             'outflows': [{'name': k, 'amount': "${:,.3f}".format(v)} for k, v in c['outflows'].items()],
+    #             'total_in': "${:,.3f}".format(c['total_in']),
+    #             'total_out': "${:,.3f}".format(c['total_out']),
+    #             'net': "${:,.3f}".format(c['total_in'] - c['total_out']),
+    #             'net_raw': c['total_in'] - c['total_out']
+    #         }
+
+    #     report_data = {
+    #         'operating': pack_cat('operating'),
+    #         'investing': pack_cat('investing'),
+    #         'financing': pack_cat('financing'),
+    #         'company_name': company.name,
+    #         'company_id': company.id,
+    #         'start_date': start_date,
+    #         'end_date': end_date,
+    #         'report_date': fields.Date.today(),
+    #     }
+    #     report_data['net_cash_flow'] = "${:,.3f}".format(report_data['operating']['net_raw'] + report_data['investing']['net_raw'] + report_data['financing']['net_raw'])
+
+    #     return report_data
 
 
 class AccountStatementAdvancedWizard(models.TransientModel):
@@ -560,7 +822,7 @@ class AccountStatementAdvancedWizard(models.TransientModel):
 
     def generate_report(self):
         self.ensure_one()
-        docids = self.env['idil.chart.account.header'].search([], limit=1).ids
+        docids = self.env["idil.chart.account.header"].search([], limit=1).ids
         data = {
             "account_id": self.account_id.id,
             "start_date": self.start_date,
@@ -594,7 +856,7 @@ class IncomeStatementAdvancedWizard(models.TransientModel):
 
     def generate_report(self):
         self.ensure_one()
-        docids = self.env['idil.chart.account.header'].search([], limit=1).ids
+        docids = self.env["idil.chart.account.header"].search([], limit=1).ids
         data = {
             "report_date": self.report_date,
             "company_id": self.company_id.id,
@@ -627,7 +889,7 @@ class TrialBalanceAdvancedWizard(models.TransientModel):
     def generate_report(self):
         self.ensure_one()
         # Ensure docs is not empty by passing some IDs
-        docids = self.env['idil.chart.account.header'].search([], limit=1).ids
+        docids = self.env["idil.chart.account.header"].search([], limit=1).ids
         data = {
             "report_date": self.report_date,
             "company_id": self.company_id.id,
@@ -664,7 +926,7 @@ class CashFlowAdvancedWizard(models.TransientModel):
 
     def generate_report(self):
         self.ensure_one()
-        docids = self.env['idil.chart.account.header'].search([], limit=1).ids
+        docids = self.env["idil.chart.account.header"].search([], limit=1).ids
         data = {
             "start_date": self.start_date,
             "end_date": self.end_date,
@@ -826,7 +1088,6 @@ class AccountSubHeader(models.Model):
                     f"Your record: Name='{rec.name}', Code='{rec.sub_header_code}', Header='{rec.header_id.name}'.\n"
                     f"Existing: Name='{other.name}', Code='{other.sub_header_code}', Header='{other.header_id.name}' (ID {other.id})."
                 )
-
 
 
 class Account(models.Model):
@@ -1113,6 +1374,7 @@ class Account(models.Model):
             if transaction.transaction_type == "cr"
         )
         return abs(debit - credit)
+
     @api.model
     def get_balance_as_of_date_for_bs(self, date, company_id):
         self.ensure_one()
@@ -1134,13 +1396,13 @@ class Account(models.Model):
         total_credit_usd = 0
 
         for transaction in transactions:
-            if transaction.currency_id.name == 'USD':
+            if transaction.currency_id.name == "USD":
                 rate = 1.0
             else:
                 rate = transaction.rate or self._get_conversion_rate(
                     transaction.currency_id.id, transaction.transaction_date
                 )
-            
+
             if not rate or rate == 0:
                 rate = 1.0
 
