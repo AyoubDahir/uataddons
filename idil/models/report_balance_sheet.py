@@ -160,7 +160,7 @@ class BalanceSheetWizard(models.TransientModel):
         self.write({"line_ids": lines})
 
     def _compute_balance_sheet_data(self):
-        """Compute balance sheet structure"""
+        """Compute balance sheet structure + real Net Profit from Income Statement"""
         Header = self.env["idil.chart.account.header"]
         SubHeader = self.env["idil.chart.account.subheader"]
         Account = self.env["idil.chart.account"]
@@ -169,11 +169,10 @@ class BalanceSheetWizard(models.TransientModel):
         liabilities_data = []
         equity_data = []
 
-        total_assets = 0.0
-        total_liabilities = 0.0
-        total_equity = 0.0
+        total_assets_signed = 0.0
+        total_liabilities_signed = 0.0
+        total_equity_signed = 0.0
 
-        # Get all headers
         headers = Header.search([], order="code")
 
         for header in headers:
@@ -184,16 +183,24 @@ class BalanceSheetWizard(models.TransientModel):
                 "name": header.name,
                 "code": header.code,
                 "subheaders": [],
-                "total": 0.0,
+                "total_signed": 0.0,
             }
 
             subheaders = SubHeader.search([("header_id", "=", header.id)], order="name")
 
             for subheader in subheaders:
-                sub_dict = {"name": subheader.name, "accounts": [], "total": 0.0}
+                sub_dict = {
+                    "name": subheader.name,
+                    "accounts": [],
+                    "total_signed": 0.0,
+                }
 
                 accounts = Account.search(
-                    [("subheader_id", "=", subheader.id)], order="code"
+                    [
+                        ("subheader_id", "=", subheader.id),
+                        ("company_id", "=", self.company_id.id),
+                    ],
+                    order="code",
                 )
 
                 for account in accounts:
@@ -201,83 +208,266 @@ class BalanceSheetWizard(models.TransientModel):
                     if account.code in ["100994", "100998"]:
                         continue
 
-                    # Use helper to get USD balance properly
                     dr_usd, cr_usd = account.get_dr_cr_balance_usd(
                         self.report_date, self.company_id.id
                     )
-                    balance = dr_usd - cr_usd
+                    signed_balance = (dr_usd or 0.0) - (cr_usd or 0.0)
 
-                    if abs(balance) > 0.001:
+                    if abs(signed_balance) > 0.001:
+                        # Display always positive like your current style
                         sub_dict["accounts"].append(
                             {
                                 "code": account.code or "",
                                 "name": account.name or "",
-                                "balance": abs(balance),
+                                "balance": abs(signed_balance),
                             }
                         )
-                        sub_dict["total"] += balance
+                        sub_dict["total_signed"] += signed_balance
 
                 if sub_dict["accounts"]:
+                    # For display subtotal, show positive (abs) like you do now
+                    sub_dict["total"] = abs(sub_dict["total_signed"])
                     header_dict["subheaders"].append(sub_dict)
-                    header_dict["total"] += sub_dict["total"]
+                    header_dict["total_signed"] += sub_dict["total_signed"]
 
             if header_dict["subheaders"]:
-                # The logic below assumes:
-                # Assets = Debit nature (Positive balance means Debit > Credit)
-                # Liabilities/Equity = Credit nature
-                # Ideally, we should normalize everything to Positive for display
-                # and handle the accounting equation logic in the Net Profit calc.
+                # For display header total
+                header_dict["total"] = abs(header_dict["total_signed"])
 
                 if header.code.startswith("1"):
                     assets_data.append(header_dict)
-                    total_assets += header_dict["total"]
+                    total_assets_signed += header_dict["total_signed"]
+
                 elif header.code.startswith("2"):
                     liabilities_data.append(header_dict)
-                    total_liabilities += header_dict[
-                        "total"
-                    ]  # Likely negative if Cr > Dr
+                    total_liabilities_signed += header_dict["total_signed"]
+
                 elif header.code.startswith("3"):
                     equity_data.append(header_dict)
-                    total_equity += header_dict["total"]  # Likely negative if Cr > Dr
+                    total_equity_signed += header_dict["total_signed"]
 
-        # With convert_to_usd, balances are:
-        # Asset: Dr - Cr (Positive)
-        # Liab: Dr - Cr (Negative)
-        # Equity: Dr - Cr (Negative)
+        # ✅ Real Net Profit from Income Statement (4/5)
+        net_profit = self._compute_income_statement_net_profit()
 
-        # Net Profit in Balance Sheet = Assets - (Liabilities + Equity)
-        # Since Liab and Equity are negative numbers here (from Dr-Cr), we do:
-        # Net Profit = Total Assets + Total Liab + Total Equity
-        # Example: Assets=100, Liab=-40, Equity=-50. Net Profit = 100 + (-40) + (-50) = 10
-        # Wait, usually BS equation is Assets = Liab + Equity.
-        # So Assets - Liab - Equity = 0 (if balanced).
-        # Any difference is Net Profit/Loss (retained earnings for current period).
+        # Signed BS equation:
+        # assets_signed = liabilities_signed + equity_signed + (-net_profit?) depends on sign convention used in equity
+        #
+        # For DISPLAY totals (positive):
+        total_assets = abs(total_assets_signed)
+        total_liabilities = abs(total_liabilities_signed)
+        total_equity = abs(total_equity_signed)
 
-        # Let's verify signs.
-        # If I have Revenue (Cr 100). Profit is 100.
-        # My Asset (Cash) increases by 100 (Dr 100).
-        # Assets = 100. Liab=0. Equity=0.
-        # sum(Assets) = 100. sum(Liab)=0. sum(Equity)=0.
-        # Calculation: 100 + 0 + 0 = 100. So Net Profit = 100. Correct.
-        # If Expense (Dr 20). Cash decreases (dist attribute: Cr 20).
-        # Assets = 80.
-        # Calculation: 80 + 0 + 0 = 80. Net Profit = 80. Correct.
-
-        net_profit = total_assets + total_liabilities + total_equity
+        # ✅ Display logic:
+        # TOTAL LIAB & EQUITY should equal TOTAL ASSETS:
+        # We display Liab positive + Equity positive + Net Profit (profit positive, loss negative)
+        total_liab_equity = total_liabilities + total_equity + net_profit
 
         return {
             "assets": assets_data,
             "liabilities": liabilities_data,
             "equity": equity_data,
-            "total_assets": abs(total_assets),
-            "total_liabilities": abs(total_liabilities),
-            "total_equity": abs(total_equity),
+            "total_assets": total_assets,
+            "total_liabilities": total_liabilities,
+            "total_equity": total_equity,
             "net_profit": net_profit,
-            "total_liab_equity": abs(total_liabilities)
-            + abs(total_equity)
-            + net_profit,  # Display logic: |Liab| + |Eq| + Profit
-            "is_balanced": True,  # Calculated correctly it should inherently balance if all transaction lines are fetched
+            "total_liab_equity": total_liab_equity,
+            # optional debug
+            "debug_signed": {
+                "assets_signed": total_assets_signed,
+                "liabilities_signed": total_liabilities_signed,
+                "equity_signed": total_equity_signed,
+            },
+            "is_balanced": abs(total_assets - total_liab_equity) < 0.01,
         }
+
+    # def _compute_balance_sheet_data(self):
+    #     """Compute balance sheet structure"""
+    #     Header = self.env["idil.chart.account.header"]
+    #     SubHeader = self.env["idil.chart.account.subheader"]
+    #     Account = self.env["idil.chart.account"]
+
+    #     assets_data = []
+    #     liabilities_data = []
+    #     equity_data = []
+
+    #     total_assets = 0.0
+    #     total_liabilities = 0.0
+    #     total_equity = 0.0
+
+    #     # Get all headers
+    #     headers = Header.search([], order="code")
+
+    #     for header in headers:
+    #         if not header.code or header.code[0] not in ["1", "2", "3"]:
+    #             continue
+
+    #         header_dict = {
+    #             "name": header.name,
+    #             "code": header.code,
+    #             "subheaders": [],
+    #             "total": 0.0,
+    #         }
+
+    #         subheaders = SubHeader.search([("header_id", "=", header.id)], order="name")
+
+    #         for subheader in subheaders:
+    #             sub_dict = {"name": subheader.name, "accounts": [], "total": 0.0}
+
+    #             accounts = Account.search(
+    #                 [("subheader_id", "=", subheader.id)], order="code"
+    #             )
+
+    #             for account in accounts:
+    #                 # Filter out clearing accounts
+    #                 if account.code in ["100994", "100998"]:
+    #                     continue
+
+    #                 # Use helper to get USD balance properly
+    #                 dr_usd, cr_usd = account.get_dr_cr_balance_usd(
+    #                     self.report_date, self.company_id.id
+    #                 )
+    #                 balance = dr_usd - cr_usd
+
+    #                 if abs(balance) > 0.001:
+    #                     sub_dict["accounts"].append(
+    #                         {
+    #                             "code": account.code or "",
+    #                             "name": account.name or "",
+    #                             "balance": abs(balance),
+    #                         }
+    #                     )
+    #                     sub_dict["total"] += balance
+
+    #             if sub_dict["accounts"]:
+    #                 header_dict["subheaders"].append(sub_dict)
+    #                 header_dict["total"] += sub_dict["total"]
+
+    #         if header_dict["subheaders"]:
+    #             # The logic below assumes:
+    #             # Assets = Debit nature (Positive balance means Debit > Credit)
+    #             # Liabilities/Equity = Credit nature
+    #             # Ideally, we should normalize everything to Positive for display
+    #             # and handle the accounting equation logic in the Net Profit calc.
+
+    #             if header.code.startswith("1"):
+    #                 assets_data.append(header_dict)
+    #                 total_assets += header_dict["total"]
+    #             elif header.code.startswith("2"):
+    #                 liabilities_data.append(header_dict)
+    #                 total_liabilities += header_dict[
+    #                     "total"
+    #                 ]  # Likely negative if Cr > Dr
+    #             elif header.code.startswith("3"):
+    #                 equity_data.append(header_dict)
+    #                 total_equity += header_dict["total"]  # Likely negative if Cr > Dr
+
+    #     # With convert_to_usd, balances are:
+    #     # Asset: Dr - Cr (Positive)
+    #     # Liab: Dr - Cr (Negative)
+    #     # Equity: Dr - Cr (Negative)
+
+    #     # Net Profit in Balance Sheet = Assets - (Liabilities + Equity)
+    #     # Since Liab and Equity are negative numbers here (from Dr-Cr), we do:
+    #     # Net Profit = Total Assets + Total Liab + Total Equity
+    #     # Example: Assets=100, Liab=-40, Equity=-50. Net Profit = 100 + (-40) + (-50) = 10
+    #     # Wait, usually BS equation is Assets = Liab + Equity.
+    #     # So Assets - Liab - Equity = 0 (if balanced).
+    #     # Any difference is Net Profit/Loss (retained earnings for current period).
+
+    #     # Let's verify signs.
+    #     # If I have Revenue (Cr 100). Profit is 100.
+    #     # My Asset (Cash) increases by 100 (Dr 100).
+    #     # Assets = 100. Liab=0. Equity=0.
+    #     # sum(Assets) = 100. sum(Liab)=0. sum(Equity)=0.
+    #     # Calculation: 100 + 0 + 0 = 100. So Net Profit = 100. Correct.
+    #     # If Expense (Dr 20). Cash decreases (dist attribute: Cr 20).
+    #     # Assets = 80.
+    #     # Calculation: 80 + 0 + 0 = 80. Net Profit = 80. Correct.
+
+    #     net_profit = total_assets + total_liabilities + total_equity
+
+    #     return {
+    #         "assets": assets_data,
+    #         "liabilities": liabilities_data,
+    #         "equity": equity_data,
+    #         "total_assets": abs(total_assets),
+    #         "total_liabilities": abs(total_liabilities),
+    #         "total_equity": abs(total_equity),
+    #         "net_profit": net_profit,
+    #         "total_liab_equity": abs(total_liabilities)
+    #         + abs(total_equity)
+    #         + net_profit,  # Display logic: |Liab| + |Eq| + Profit
+    #         "is_balanced": True,  # Calculated correctly it should inherently balance if all transaction lines are fetched
+    #     }
+
+    def _compute_income_statement_net_profit(self):
+        """
+        Compute Net Profit/Loss from Income Statement:
+        - header code startswith '4' => Income/Revenue
+        - header code startswith '5' => Expense
+
+        Uses: account.get_dr_cr_balance_usd(report_date, company_id)
+        Convention:
+        signed_balance = dr - cr
+
+        Revenue is typically credit => signed negative
+        Expense is typically debit => signed positive
+
+        Return:
+        net_profit > 0 => profit
+        net_profit < 0 => loss
+        """
+        Header = self.env["idil.chart.account.header"]
+        SubHeader = self.env["idil.chart.account.subheader"]
+        Account = self.env["idil.chart.account"]
+
+        report_date = self.report_date
+        company_id = self.company_id.id
+
+        income_signed_total = 0.0
+        expense_signed_total = 0.0
+
+        headers = Header.search([], order="code")
+        for header in headers:
+            if not header.code:
+                continue
+
+            first = header.code[0]
+            if first not in ("4", "5"):
+                continue
+
+            subheaders = SubHeader.search([("header_id", "=", header.id)], order="name")
+            for subheader in subheaders:
+                accounts = Account.search(
+                    [
+                        ("subheader_id", "=", subheader.id),
+                        ("company_id", "=", company_id),
+                    ],
+                    order="code",
+                )
+
+                for account in accounts:
+                    # skip clearing if you don't want them in reports
+                    if account.code in ["100994", "100998"]:
+                        continue
+
+                    dr_usd, cr_usd = account.get_dr_cr_balance_usd(
+                        report_date, company_id
+                    )
+                    signed = (dr_usd or 0.0) - (cr_usd or 0.0)
+
+                    if first == "4":
+                        income_signed_total += signed
+                    else:
+                        expense_signed_total += signed
+
+        # Convert to normal profit:
+        # profit = income - expense
+        # with signed totals (dr-cr): income is negative, expense positive
+        # so profit = (-income_signed_total) - (expense_signed_total)
+        net_profit = (-income_signed_total) - (expense_signed_total)
+
+        return net_profit
 
 
 class ReportBalanceSheetPDF(models.AbstractModel):
