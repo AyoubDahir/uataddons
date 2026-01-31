@@ -160,7 +160,7 @@ class BalanceSheetWizard(models.TransientModel):
         self.write({"line_ids": lines})
 
     def _compute_balance_sheet_data(self):
-        """Compute balance sheet structure + real Net Profit from Income Statement"""
+        """Compute balance sheet structure + real Net Profit from Income Statement (4/5)"""
         Header = self.env["idil.chart.account.header"]
         SubHeader = self.env["idil.chart.account.subheader"]
         Account = self.env["idil.chart.account"]
@@ -169,9 +169,9 @@ class BalanceSheetWizard(models.TransientModel):
         liabilities_data = []
         equity_data = []
 
-        total_assets_signed = 0.0
-        total_liabilities_signed = 0.0
-        total_equity_signed = 0.0
+        total_assets = 0.0
+        total_liabilities = 0.0
+        total_equity = 0.0
 
         headers = Header.search([], order="code")
 
@@ -179,11 +179,13 @@ class BalanceSheetWizard(models.TransientModel):
             if not header.code or header.code[0] not in ["1", "2", "3"]:
                 continue
 
+            header_type = header.code[0]  # '1' assets, '2' liabilities, '3' equity
+
             header_dict = {
                 "name": header.name,
                 "code": header.code,
                 "subheaders": [],
-                "total_signed": 0.0,
+                "total": 0.0,  # DISPLAY total (already sign-correct)
             }
 
             subheaders = SubHeader.search([("header_id", "=", header.id)], order="name")
@@ -192,7 +194,7 @@ class BalanceSheetWizard(models.TransientModel):
                 sub_dict = {
                     "name": subheader.name,
                     "accounts": [],
-                    "total_signed": 0.0,
+                    "total": 0.0,  # DISPLAY subtotal
                 }
 
                 accounts = Account.search(
@@ -211,55 +213,47 @@ class BalanceSheetWizard(models.TransientModel):
                     dr_usd, cr_usd = account.get_dr_cr_balance_usd(
                         self.report_date, self.company_id.id
                     )
-                    signed_balance = (dr_usd or 0.0) - (cr_usd or 0.0)
 
-                    if abs(signed_balance) > 0.001:
-                        # Display always positive like your current style
+                    signed = (dr_usd or 0.0) - (cr_usd or 0.0)  # dr-cr
+
+                    # ✅ Correct display by nature:
+                    # Assets: dr-cr
+                    # Liabilities/Equity: cr-dr => -(dr-cr)
+                    if header_type in ("2", "3"):
+                        display_balance = -signed
+                    else:
+                        display_balance = signed
+
+                    if abs(display_balance) > 0.001:
                         sub_dict["accounts"].append(
                             {
                                 "code": account.code or "",
                                 "name": account.name or "",
-                                "balance": abs(signed_balance),
+                                "balance": display_balance,  # <-- keep sign!
                             }
                         )
-                        sub_dict["total_signed"] += signed_balance
+                        sub_dict["total"] += display_balance
 
                 if sub_dict["accounts"]:
-                    # For display subtotal, show positive (abs) like you do now
-                    sub_dict["total"] = abs(sub_dict["total_signed"])
                     header_dict["subheaders"].append(sub_dict)
-                    header_dict["total_signed"] += sub_dict["total_signed"]
+                    header_dict["total"] += sub_dict["total"]
 
             if header_dict["subheaders"]:
-                # For display header total
-                header_dict["total"] = abs(header_dict["total_signed"])
-
-                if header.code.startswith("1"):
+                if header_type == "1":
                     assets_data.append(header_dict)
-                    total_assets_signed += header_dict["total_signed"]
-
-                elif header.code.startswith("2"):
+                    total_assets += header_dict["total"]
+                elif header_type == "2":
                     liabilities_data.append(header_dict)
-                    total_liabilities_signed += header_dict["total_signed"]
-
-                elif header.code.startswith("3"):
+                    total_liabilities += header_dict["total"]
+                elif header_type == "3":
                     equity_data.append(header_dict)
-                    total_equity_signed += header_dict["total_signed"]
+                    total_equity += header_dict["total"]
 
-        # ✅ Real Net Profit from Income Statement (4/5)
+        # ✅ Profit from Income Statement (headers 4/5) (profit positive, loss negative)
         net_profit = self._compute_income_statement_net_profit()
 
-        # Signed BS equation:
-        # assets_signed = liabilities_signed + equity_signed + (-net_profit?) depends on sign convention used in equity
-        #
-        # For DISPLAY totals (positive):
-        total_assets = abs(total_assets_signed)
-        total_liabilities = abs(total_liabilities_signed)
-        total_equity = abs(total_equity_signed)
-
-        # ✅ Display logic:
-        # TOTAL LIAB & EQUITY should equal TOTAL ASSETS:
-        # We display Liab positive + Equity positive + Net Profit (profit positive, loss negative)
+        # ✅ Standard BS:
+        # Assets should equal Liabilities + Equity + Current Profit
         total_liab_equity = total_liabilities + total_equity + net_profit
 
         return {
@@ -271,12 +265,6 @@ class BalanceSheetWizard(models.TransientModel):
             "total_equity": total_equity,
             "net_profit": net_profit,
             "total_liab_equity": total_liab_equity,
-            # optional debug
-            "debug_signed": {
-                "assets_signed": total_assets_signed,
-                "liabilities_signed": total_liabilities_signed,
-                "equity_signed": total_equity_signed,
-            },
             "is_balanced": abs(total_assets - total_liab_equity) < 0.01,
         }
 
