@@ -312,107 +312,107 @@ class AccountHeader(models.Model):
             else self.env.company
         )
         r_date = report_date or fields.Date.today()
-        headers = self.search([])
+        
+        Header = self.env["idil.chart.account.header"]
+        SubHeader = self.env["idil.chart.account.subheader"]
+        Account = self.env["idil.chart.account"]
 
-        report_data = {
-            "revenue": {"headers": [], "total": 0},
-            "cogs": {"headers": [], "total": 0},
-            "expenses": {"headers": [], "total": 0},
-            "other": {"headers": [], "total": 0},
-            "net_profit": 0,
+        def acc_signed_usd(acc):
+            dr, cr = acc.get_dr_cr_balance_usd(r_date, company.id)
+            return (dr or 0.0) - (cr or 0.0)
+
+        def is_cogs(acc):
+            """
+            Strict Logic: Account is COGS only if Type is COGS.
+            Safety: Explicitly Exclude common OPEX names even if Type is COGS.
+            """
+            sh_name = (acc.subheader_id.name or "").lower()
+            if any(x in sh_name for x in ['rent', 'utility', 'utilities', 'salary', 'payroll', 'commission', 'admin', 'operating', 'expense']):
+                return False
+            return getattr(acc, "account_type", None) in ("cogs", "COGS")
+
+        def build_sections(prefixes, mode="income", filter_fn=None):
+            """
+            Flattens the report structure: Group by SubHeader (Type) directly.
+            prefixes: list of strings, e.g. ['4'] or ['5', '6', '7']
+            """
+            flat_types = []
+            grand_total = 0.0
+
+            # 1. Match Headers by prefix
+            domain = ['|'] * (len(prefixes) - 1) + [('code', '=like', p + '%') for p in prefixes]
+            if len(prefixes) == 1: domain = [('code', '=like', prefixes[0] + '%')]
+            
+            headers = Header.search(domain, order="code")
+
+            for h in headers:
+                subs = SubHeader.search([("header_id", "=", h.id)], order="name")
+                for s in subs:
+                    t_block = {"name": s.name, "lines": [], "subtotal": 0.0}
+                    
+                    accs = Account.search(
+                        [("subheader_id", "=", s.id), ("company_id", "=", company.id)],
+                        order="code",
+                    )
+
+                    for acc in accs:
+                        if filter_fn and not filter_fn(acc):
+                            continue
+
+                        signed = acc_signed_usd(acc)
+                        amount = (-signed) if mode == "income" else signed
+                        
+                        if abs(amount) > 0.001:
+                            t_block["lines"].append({
+                                "code": acc.code or "",
+                                "name": acc.name or "",
+                                "amount": "${:,.3f}".format(amount),
+                                "amount_raw": amount
+                            })
+                            t_block["subtotal"] += amount
+
+                    if t_block["lines"]:
+                        t_block["subtotal_fmt"] = "${:,.3f}".format(t_block["subtotal"])
+                        flat_types.append(t_block)
+                        grand_total += t_block["subtotal"]
+            
+            return flat_types, grand_total
+
+        # 1. Income (4xxx)
+        income_data, total_income = build_sections(["4"], mode="income")
+
+        # 2. COGS (5-9xxx where is_cogs is True)
+        expense_prefixes = ["5", "6", "7", "8", "9"]
+        cogs_data, total_cogs = build_sections(expense_prefixes, mode="expense", filter_fn=is_cogs)
+
+        # 3. Gross Profit
+        gross_profit = total_income - total_cogs
+        gross_profit_fmt = "${:,.3f}".format(gross_profit)
+
+        # 4. Operating Expenses (5-9xxx where is_cogs is False)
+        opex_data, total_opex = build_sections(expense_prefixes, mode="expense", filter_fn=lambda a: not is_cogs(a))
+
+        # 5. Net Profit
+        net_profit = gross_profit - total_opex
+        net_profit_fmt = "${:,.3f}".format(net_profit)
+
+        # Return flattened structure directly accessible by template
+        return {
+            "title": "Income Statement",
             "report_date": r_date,
             "company_name": company.name,
             "company_id": company.id,
+            "income": income_data,
+            "total_income": "${:,.3f}".format(total_income),
+            "cogs": cogs_data,
+            "total_cogs": "${:,.3f}".format(total_cogs),
+            "gross_profit_formatted": gross_profit_fmt,
+            "gross_profit": gross_profit, 
+            "operating_expenses": opex_data,
+            "total_operating_expenses": "${:,.3f}".format(total_opex),
+            "net_profit_formatted": net_profit_fmt,
+            "net_profit": net_profit 
         }
-
-        for header in headers:
-            first_digit = header.code[:1]
-            category = None
-            if first_digit == "4":
-                category = "revenue"
-            elif first_digit == "5":
-                category = "cogs"
-            elif first_digit == "6":
-                category = "expenses"
-            elif first_digit in ["7", "8", "9"]:
-                category = "other"
-
-            if not category:
-                continue
-
-            is_credit_nature = first_digit in ["4", "7", "9"]
-
-            header_total = 0
-            subheaders_data = []
-
-            for subheader in header.sub_header_ids:
-                subheader_total = 0
-                accounts_data = []
-
-                for account in subheader.account_ids:
-                    dr, cr = account.get_dr_cr_balance_usd(r_date, company_id)
-                    balance = dr - cr
-
-                    if abs(balance) < 0.001:
-                        continue
-
-                    display_balance = -balance if is_credit_nature else balance
-
-                    accounts_data.append(
-                        {
-                            "code": account.code,
-                            "name": account.name,
-                            "balance": "${:,.3f}".format(display_balance),
-                        }
-                    )
-                    subheader_total += balance
-
-                if accounts_data:
-                    display_subheader_total = (
-                        -subheader_total if is_credit_nature else subheader_total
-                    )
-                    subheaders_data.append(
-                        {
-                            "name": subheader.name,
-                            "accounts": accounts_data,
-                            "total": "${:,.3f}".format(display_subheader_total),
-                        }
-                    )
-                    header_total += subheader_total
-
-            if subheaders_data:
-                display_header_total = (
-                    -header_total if is_credit_nature else header_total
-                )
-                report_data[category]["headers"].append(
-                    {
-                        "name": header.name,
-                        "sub_headers": subheaders_data,
-                        "total": "${:,.3f}".format(display_header_total),
-                    }
-                )
-                report_data[category]["total"] += header_total
-
-        total_balance = (
-            report_data["revenue"]["total"]
-            + report_data["cogs"]["total"]
-            + report_data["expenses"]["total"]
-            + report_data["other"]["total"]
-        )
-        report_data["net_profit"] = -total_balance
-        report_data["net_profit_formatted"] = "${:,.3f}".format(-total_balance)
-
-        for cat in ["revenue", "cogs", "expenses", "other"]:
-            if cat in ["revenue", "other"]:
-                report_data[cat]["total_formatted"] = "${:,.3f}".format(
-                    -report_data[cat]["total"]
-                )
-            else:
-                report_data[cat]["total_formatted"] = "${:,.3f}".format(
-                    report_data[cat]["total"]
-                )
-
-        return report_data
 
     @api.model
     def get_account_statement_advanced_data(
@@ -694,6 +694,10 @@ class AccountHeader(models.Model):
         #    Income -> Total Income -> COGS -> Gross Profit -> OPEX -> Net Profit
         # ==========================================================
 
+        # ==========================================================
+        # 2) INCOME STATEMENT (Refined Logic)
+        # ==========================================================
+
         Header = self.env["idil.chart.account.header"]
         SubHeader = self.env["idil.chart.account.subheader"]
         Account = self.env["idil.chart.account"]
@@ -705,104 +709,98 @@ class AccountHeader(models.Model):
             return (dr or 0.0) - (cr or 0.0)
 
         def is_cogs(acc):
-            # If your system stores it as 'COGS' uppercase, add it here.
+            """
+            Strict Logic: Account is COGS only if Type is COGS.
+            Safety: Explicitly Exclude common OPEX names even if Type is COGS.
+            """
+            sh_name = (acc.subheader_id.name or "").lower()
+            # 1. Force Exclusion (Safety override)
+            if any(x in sh_name for x in ['rent', 'utility', 'utilities', 'salary', 'payroll', 'commission', 'admin', 'operating', 'expense']):
+                return False
+            
+            # 2. Strict Check
             return getattr(acc, "account_type", None) in ("cogs", "COGS")
 
-        def build_sections(prefix, mode="income", filter_func=None):
+        def build_sections(prefixes, mode="income", filter_fn=None):
             """
-            prefix: header code prefix '4' or '5'
-            mode:
-            income  => amount = -(dr-cr)
-            expense => amount = +(dr-cr)
-            Output is grouped by Header -> SubHeader (Type) with subtotals.
+            Flattens the report structure: Group by SubHeader (Type) directly.
+            prefixes: list of strings, e.g. ['4'] or ['5', '6', '7']
             """
-            out_headers = []
+            flat_types = []
             grand_total = 0.0
 
-            headers = Header.search([("code", "=like", f"{prefix}%")], order="code")
-            for h in headers:
-                h_block = {"code": h.code, "name": h.name, "types": [], "total": 0.0}
+            # 1. Match Headers by prefix
+            domain = ['|'] * (len(prefixes) - 1) + [('code', '=like', p + '%') for p in prefixes]
+            if len(prefixes) == 1: domain = [('code', '=like', prefixes[0] + '%')]
+            
+            headers = Header.search(domain, order="code")
 
+            for h in headers:
                 subs = SubHeader.search([("header_id", "=", h.id)], order="name")
                 for s in subs:
                     t_block = {"name": s.name, "lines": [], "subtotal": 0.0}
-
+                    
                     accs = Account.search(
                         [("subheader_id", "=", s.id), ("company_id", "=", company.id)],
                         order="code",
                     )
 
                     for acc in accs:
-                        if filter_func and not filter_func(acc):
+                        if filter_fn and not filter_fn(acc):
                             continue
 
                         signed = acc_signed_usd(acc)
                         amount = (-signed) if mode == "income" else signed
-
+                        
                         if abs(amount) > 0.001:
-                            t_block["lines"].append(
-                                {
-                                    "code": acc.code or "",
-                                    "name": acc.name or "",
-                                    "amount": "${:,.3f}".format(amount),
-                                    "amount_raw": amount,
-                                }
-                            )
+                            t_block["lines"].append({
+                                "code": acc.code or "",
+                                "name": acc.name or "",
+                                "amount": "${:,.3f}".format(amount),
+                                "amount_raw": amount
+                            })
                             t_block["subtotal"] += amount
 
                     if t_block["lines"]:
                         t_block["subtotal_fmt"] = "${:,.3f}".format(t_block["subtotal"])
-                        h_block["types"].append(t_block)
-                        h_block["total"] += t_block["subtotal"]
+                        flat_types.append(t_block)
+                        grand_total += t_block["subtotal"]
+            
+            return flat_types, grand_total
 
-                if h_block["types"]:
-                    h_block["total_fmt"] = "${:,.3f}".format(h_block["total"])
-                    out_headers.append(h_block)
-                    grand_total += h_block["total"]
+        # 1. Income (4xxx)
+        income_data, total_income = build_sections(["4"], mode="income")
 
-            return out_headers, grand_total
+        # 2. COGS (5-9xxx where is_cogs is True)
+        expense_prefixes = ["5", "6", "7", "8", "9"]
+        cogs_data, total_cogs = build_sections(expense_prefixes, mode="expense", filter_fn=is_cogs)
 
-        # 1) Income (4xxx)
-        income_headers, total_income = build_sections("4", mode="income")
-
-        # 2) COGS (5xxx where account_type == cogs)
-        cogs_headers, total_cogs = build_sections(
-            "5", mode="expense", filter_func=is_cogs
-        )
-
-        # 3) Gross Profit/Loss
+        # 3. Gross Profit
         gross_profit = total_income - total_cogs
+        gross_profit_fmt = "${:,.3f}".format(gross_profit)
 
-        # 4) Operating Expenses (5xxx excluding cogs)
-        opex_headers, total_opex = build_sections(
-            "5", mode="expense", filter_func=lambda a: not is_cogs(a)
-        )
+        # 4. Operating Expenses (5-9xxx where is_cogs is False)
+        opex_data, total_opex = build_sections(expense_prefixes, mode="expense", filter_fn=lambda a: not is_cogs(a))
 
-        # 5) Net Profit/Loss
+        # 5. Net Profit
         net_profit = gross_profit - total_opex
+        net_profit_fmt = "${:,.3f}".format(net_profit)
 
         report_data["income_statement"] = {
             "title": "Income Statement",
             "reference_date": is_report_date,
-            # ✅ Income first
-            "income": income_headers,
-            "total_income_raw": total_income,
+            "income": income_data,
             "total_income": "${:,.3f}".format(total_income),
-            # ✅ COGS second
-            "cogs": cogs_headers,
-            "total_cogs_raw": total_cogs,
+            "cogs": cogs_data,
             "total_cogs": "${:,.3f}".format(total_cogs),
-            # ✅ Gross Profit
+            "gross_profit_formatted": gross_profit_fmt,
             "gross_profit_raw": gross_profit,
-            "gross_profit": "${:,.3f}".format(gross_profit),
-            # ✅ Operating Expenses
-            "operating_expenses": opex_headers,
-            "total_operating_expenses_raw": total_opex,
+            "operating_expenses": opex_data,
             "total_operating_expenses": "${:,.3f}".format(total_opex),
-            # ✅ Net Profit/Loss
-            "net_profit_raw": net_profit,
-            "net_profit": "${:,.3f}".format(net_profit),
+            "net_profit": net_profit_fmt,
+            "net_profit_raw": net_profit
         }
+
 
         return report_data
 
