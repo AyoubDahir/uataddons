@@ -575,7 +575,6 @@ class AccountHeader(models.Model):
             if not line_currency or line_currency.id == usd_currency.id:
                 return amount
 
-            # rate priority: booking.rate then fallback conversion
             booking = line.transaction_booking_id
             tx_rate = (
                 booking.rate
@@ -584,7 +583,6 @@ class AccountHeader(models.Model):
             )
 
             # ASSUMPTION: tx_rate = (local per 1 USD) e.g. SL per USD
-            # local_amount / rate = USD
             return amount / tx_rate
 
         for line in lines:
@@ -600,17 +598,13 @@ class AccountHeader(models.Model):
             ):
                 continue
 
-            # Amount on CASH line: dr - cr
             raw_amount = (line.dr_amount or 0.0) - (line.cr_amount or 0.0)
             if abs(raw_amount) < 0.000001:
                 continue
 
             amount_usd = to_usd(raw_amount, line)
-
-            # Determine inflow/outflow by sign
             is_inflow = amount_usd > 0
 
-            # Find NON-cash booking lines and choose the main one (largest absolute movement)
             other_lines = booking.booking_lines.filtered(
                 lambda bl: bl.account_number
                 and bl.account_number.account_type not in ["cash", "bank_transfer"]
@@ -618,14 +612,12 @@ class AccountHeader(models.Model):
             if not other_lines:
                 continue
 
-            # pick main other line by abs(dr-cr)
             def other_line_strength(bl):
                 return abs((bl.dr_amount or 0.0) - (bl.cr_amount or 0.0))
 
             main_other = max(other_lines, key=other_line_strength)
             other_account = main_other.account_number
 
-            # Classify category
             cat = "operating"
             if other_account.FinancialReporting == "PL":
                 cat = "operating"
@@ -642,7 +634,6 @@ class AccountHeader(models.Model):
                 ):
                     cat = "financing"
 
-            # Accumulate
             label = other_account.name or "Unclassified"
             amt = abs(amount_usd)
 
@@ -691,7 +682,289 @@ class AccountHeader(models.Model):
             + report_data["financing"]["net_raw"]
         )
 
+        # ==========================================================
+        # ✅ ADD: Income Statement ordered block (no signature changes)
+        # ==========================================================
+
+        Header = self.env["idil.chart.account.header"]
+        SubHeader = self.env["idil.chart.account.subheader"]
+        Account = self.env["idil.chart.account"]
+
+        # Use end_date as Income Statement "as of"
+        is_report_date = end_date
+
+        def acc_signed_usd(acc):
+            dr, cr = acc.get_dr_cr_balance_usd(is_report_date, company.id)
+            return (dr or 0.0) - (cr or 0.0)
+
+        def build_pl_by_header(prefix, filter_func=None, mode="income"):
+            """
+            mode:
+            - income: amount = -(dr-cr)
+            - expense: amount = +(dr-cr)
+            """
+            out = []
+            total = 0.0
+
+            headers = Header.search([("code", "=like", f"{prefix}%")], order="code")
+            for h in headers:
+                h_dict = {
+                    "code": h.code,
+                    "name": h.name,
+                    "subheaders": [],
+                    "total": 0.0,
+                }
+
+                subs = SubHeader.search([("header_id", "=", h.id)], order="name")
+                for s in subs:
+                    s_dict = {"name": s.name, "accounts": [], "total": 0.0}
+
+                    accs = Account.search(
+                        [("subheader_id", "=", s.id), ("company_id", "=", company.id)],
+                        order="code",
+                    )
+
+                    for acc in accs:
+                        if filter_func and not filter_func(acc):
+                            continue
+
+                        signed = acc_signed_usd(acc)
+                        amount = (-signed) if mode == "income" else signed
+
+                        if abs(amount) > 0.001:
+                            s_dict["accounts"].append(
+                                {
+                                    "code": acc.code or "",
+                                    "name": acc.name or "",
+                                    "amount": amount,
+                                }
+                            )
+                            s_dict["total"] += amount
+
+                    if s_dict["accounts"]:
+                        h_dict["subheaders"].append(s_dict)
+                        h_dict["total"] += s_dict["total"]
+
+                if h_dict["subheaders"]:
+                    out.append(h_dict)
+                    total += h_dict["total"]
+
+            return out, total
+
+        # Income (4xxx)
+        income_sections, total_income = build_pl_by_header(
+            "4", filter_func=None, mode="income"
+        )
+
+        # COGS (5xxx where account_type == 'cogs')
+        def only_cogs(acc):
+            return getattr(acc, "account_type", None) == "cogs"
+
+        cogs_sections, total_cogs = build_pl_by_header(
+            "5", filter_func=only_cogs, mode="expense"
+        )
+
+        gross_profit = total_income - total_cogs
+
+        # Other expenses (5xxx except cogs)
+        def not_cogs(acc):
+            return getattr(acc, "account_type", None) != "cogs"
+
+        expense_sections, total_expenses = build_pl_by_header(
+            "5", filter_func=not_cogs, mode="expense"
+        )
+
+        net_profit = gross_profit - total_expenses
+
+        report_data["income_statement"] = {
+            "income_sections": income_sections,
+            "total_income": total_income,
+            "cogs_sections": cogs_sections,
+            "total_cogs": total_cogs,
+            "gross_profit": gross_profit,
+            "expense_sections": expense_sections,
+            "total_expenses": total_expenses,
+            "net_profit": net_profit,
+        }
+
         return report_data
+
+    # @api.model
+    # def get_cash_flow_advanced_data(self, company_id, start_date, end_date):
+    #     company = (
+    #         self.env["res.company"].browse(company_id)
+    #         if company_id
+    #         else self.env.company
+    #     )
+    #     usd_currency = self.env.ref("base.USD")
+
+    #     # 1) Cash / Bank accounts
+    #     cash_accounts = self.env["idil.chart.account"].search(
+    #         [
+    #             ("account_type", "in", ["cash", "bank_transfer"]),
+    #             ("company_id", "=", company.id),
+    #         ]
+    #     )
+    #     cash_account_ids = cash_accounts.ids
+
+    #     # 2) Booking lines for cash accounts (date range)
+    #     domain = [
+    #         ("account_number", "in", cash_account_ids),
+    #         ("transaction_date", ">=", start_date),
+    #         ("transaction_date", "<=", end_date),
+    #         ("company_id", "=", company.id),
+    #     ]
+    #     lines = self.env["idil.transaction_bookingline"].search(domain)
+
+    #     categories = {
+    #         "operating": {
+    #             "inflows": {},
+    #             "outflows": {},
+    #             "total_in": 0.0,
+    #             "total_out": 0.0,
+    #         },
+    #         "investing": {
+    #             "inflows": {},
+    #             "outflows": {},
+    #             "total_in": 0.0,
+    #             "total_out": 0.0,
+    #         },
+    #         "financing": {
+    #             "inflows": {},
+    #             "outflows": {},
+    #             "total_in": 0.0,
+    #             "total_out": 0.0,
+    #         },
+    #     }
+
+    #     def to_usd(amount, line):
+    #         """Convert line amount to USD if needed."""
+    #         if not amount:
+    #             return 0.0
+
+    #         line_currency = line.currency_id or (
+    #             line.account_number.currency_id if line.account_number else None
+    #         )
+    #         if not line_currency or line_currency.id == usd_currency.id:
+    #             return amount
+
+    #         # rate priority: booking.rate then fallback conversion
+    #         booking = line.transaction_booking_id
+    #         tx_rate = (
+    #             booking.rate
+    #             or self._get_conversion_rate(line_currency.id, line.transaction_date)
+    #             or 1.0
+    #         )
+
+    #         # ASSUMPTION: tx_rate = (local per 1 USD) e.g. SL per USD
+    #         # local_amount / rate = USD
+    #         return amount / tx_rate
+
+    #     for line in lines:
+    #         booking = line.transaction_booking_id
+    #         if not booking:
+    #             continue
+
+    #         # Skip pure cash-to-cash internal transfers
+    #         all_accounts = booking.booking_lines.mapped("account_number")
+    #         if all(
+    #             acc and acc.account_type in ["cash", "bank_transfer"]
+    #             for acc in all_accounts
+    #         ):
+    #             continue
+
+    #         # Amount on CASH line: dr - cr
+    #         raw_amount = (line.dr_amount or 0.0) - (line.cr_amount or 0.0)
+    #         if abs(raw_amount) < 0.000001:
+    #             continue
+
+    #         amount_usd = to_usd(raw_amount, line)
+
+    #         # Determine inflow/outflow by sign
+    #         is_inflow = amount_usd > 0
+
+    #         # Find NON-cash booking lines and choose the main one (largest absolute movement)
+    #         other_lines = booking.booking_lines.filtered(
+    #             lambda bl: bl.account_number
+    #             and bl.account_number.account_type not in ["cash", "bank_transfer"]
+    #         )
+    #         if not other_lines:
+    #             continue
+
+    #         # pick main other line by abs(dr-cr)
+    #         def other_line_strength(bl):
+    #             return abs((bl.dr_amount or 0.0) - (bl.cr_amount or 0.0))
+
+    #         main_other = max(other_lines, key=other_line_strength)
+    #         other_account = main_other.account_number
+
+    #         # Classify category
+    #         cat = "operating"
+    #         if other_account.FinancialReporting == "PL":
+    #             cat = "operating"
+    #         elif other_account.FinancialReporting == "BS":
+    #             code = other_account.code or ""
+    #             name = (other_account.name or "").lower()
+    #             if code.startswith(("15", "16")) or any(
+    #                 w in name for w in ["equipment", "machinery", "vehicle", "building"]
+    #             ):
+    #                 cat = "investing"
+    #             elif code.startswith("3") or any(
+    #                 w in name
+    #                 for w in ["equity", "capital", "loan", "drawing", "dividend"]
+    #             ):
+    #                 cat = "financing"
+
+    #         # Accumulate
+    #         label = other_account.name or "Unclassified"
+    #         amt = abs(amount_usd)
+
+    #         if is_inflow:
+    #             categories[cat]["inflows"][label] = (
+    #                 categories[cat]["inflows"].get(label, 0.0) + amt
+    #             )
+    #             categories[cat]["total_in"] += amt
+    #         else:
+    #             categories[cat]["outflows"][label] = (
+    #                 categories[cat]["outflows"].get(label, 0.0) + amt
+    #             )
+    #             categories[cat]["total_out"] += amt
+
+    #     def pack_cat(slug):
+    #         c = categories[slug]
+    #         return {
+    #             "inflows": [
+    #                 {"name": k, "amount": "${:,.3f}".format(v)}
+    #                 for k, v in c["inflows"].items()
+    #             ],
+    #             "outflows": [
+    #                 {"name": k, "amount": "${:,.3f}".format(v)}
+    #                 for k, v in c["outflows"].items()
+    #             ],
+    #             "total_in": "${:,.3f}".format(c["total_in"]),
+    #             "total_out": "${:,.3f}".format(c["total_out"]),
+    #             "net": "${:,.3f}".format(c["total_in"] - c["total_out"]),
+    #             "net_raw": c["total_in"] - c["total_out"],
+    #         }
+
+    #     report_data = {
+    #         "operating": pack_cat("operating"),
+    #         "investing": pack_cat("investing"),
+    #         "financing": pack_cat("financing"),
+    #         "company_name": company.name,
+    #         "company_id": company.id,
+    #         "start_date": start_date,
+    #         "end_date": end_date,
+    #         "report_date": fields.Date.today(),
+    #     }
+
+    #     report_data["net_cash_flow"] = "${:,.3f}".format(
+    #         report_data["operating"]["net_raw"]
+    #         + report_data["investing"]["net_raw"]
+    #         + report_data["financing"]["net_raw"]
+    #     )
+
+    #     return report_data
 
     # @api.model
     # def get_cash_flow_advanced_data(self, company_id, start_date, end_date):
