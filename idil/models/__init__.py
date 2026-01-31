@@ -98,6 +98,7 @@ from . import report_production_profitability
 from . import production_profitability_wizard
 
 from . import report_vendor
+from . import report_balance_sheet
 from . import bank_reconciliation
 from . import budget
 from . import recurring_journal_entry

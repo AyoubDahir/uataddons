@@ -1,199 +1,267 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <odoo>
 
-
-    <template id="report_bs_template">
+    <!-- 1. PDF Template (Beautiful Design) -->
+    <template id="report_balance_sheet_pdf_template">
         <t t-call="web.html_container">
-            <div class="page" style="font-family: 'Inter', 'Segoe UI', Arial, sans-serif; color: #334155; max-width: 1000px; margin: 0 auto; background: white; padding: 40px;">
+            <div class="page" style="font-family: 'Inter', 'Segoe UI', Arial, sans-serif; color: #334155; max-width: 1100px; margin: 0 auto; background: white; padding: 40px;">
                 <style>
                     .bs-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #e2e8f0; padding-bottom: 30px; margin-bottom: 40px; }
                     .company-info h1 { font-size: 32px; font-weight: 800; color: #1e293b; margin: 0 0 10px 0; letter-spacing: -1px; }
                     .report-meta { color: #64748b; font-size: 14px; }
                     .report-meta strong { color: #0f172a; }
-                    .logo-container img { max-height: 80px; width: auto; }
+                    .logo-container img { max-height: 100px; width: auto; }
                     
                     .section-divider { background: #f8fafc; padding: 12px 20px; font-size: 16px; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 1px; border-left: 4px solid #1e293b; margin: 30px 0 15px 0; }
-                    .bs-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 20px; }
-                    .header-name { padding: 12px 20px; font-size: 15px; font-weight: 700; color: #334155; border-bottom: 1px solid #e2e8f0; background: #fbfcfd; }
-                    .subheader-name { padding: 8px 20px 8px 30px; font-size: 13px; font-weight: 600; color: #475569; border-bottom: 1px solid #f1f5f9; }
-                    .account-row td { padding: 8px 20px 8px 50px; border-bottom: 1px solid #f8fafc; font-size: 12px; }
-                    .account-code { color: #94a3b8; width: 100px; }
-                    .account-balance { text-align: right; font-weight: 500; color: #0f172a; }
+                    .bs-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 20px; table-layout: fixed; }
+                    
+                    .account-row td { padding: 8px 10px; border-bottom: 1px solid #f8fafc; font-size: 11px; vertical-align: middle; }
+                    .col-code { color: #94a3b8; width: 100px; padding-left: 20px !important; }
+                    .col-name { width: auto; }
+                    .col-balance { text-align: right; width: 150px; font-weight: 600; color: #0f172a; }
+                    
+                    .subheader-name { padding: 8px 10px 8px 20px; font-size: 13px; font-weight: 600; color: #475569; border-bottom: 1px solid #f1f5f9; background: #fff; }
                     
                     .total-row { background: #f1f5f9; font-weight: 700; }
-                    .total-row td { padding: 12px 20px; border-top: 1px solid #e2e8f0; font-size: 14px; color: #1e293b; }
+                    .total-row td { padding: 10px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #1e293b; }
                     
                     .grand-total-section { margin-top: 40px; border-top: 3px double #e2e8f0; padding-top: 20px; }
-                    .grand-total-table { width: 100%; }
-                    .grand-total-table td { padding: 15px 20px; font-size: 18px; font-weight: 800; }
-                    .asset-color { color: #0369a1; }
-                    .liab-equity-color { color: #0f172a; }
-                    
-                    .balanced-banner { margin-top: 30px; padding: 15px; border-radius: 8px; text-align: center; font-weight: 700; }
-                    .balanced-true { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
-                    .balanced-false { background: #fff1f2; color: #991b1b; border: 1px solid #fecaca; }
+                    .grand-total-table { width: 100%; background: #1e293b; color: white; border-radius: 8px; }
+                    .grand-total-table td { padding: 20px; font-size: 16px; font-weight: 700; }
                 </style>
 
                 <!-- Report Header -->
                 <div class="bs-header">
                     <div class="company-info">
                         <h1>Balance Sheet</h1>
+                        <t t-set="company" t-value="env['res.company'].browse(company.id)"/>
                         <div class="report-meta">
-                            <div style="margin-bottom: 4px;">Company: <strong><t t-esc="res_company.name"/></strong></div>
-                            <div>Reference Date: <strong><t t-esc="report_date"/></strong></div>
+                            <div style="font-size: 18px; font-weight: 700; color: #1e293b; margin-bottom: 5px;"><t t-esc="company.name"/></div>
+                            <div t-if="company.phone">Phone: <t t-esc="company.phone"/></div>
+                            <div t-if="company.email">Email: <t t-esc="company.email"/></div>
+                            <div style="margin-top: 10px;">As of Date: <strong><t t-esc="report_date"/></strong></div>
                         </div>
                     </div>
                     <div class="logo-container">
-                        <img t-if="res_company.logo" t-att-src="'data:image/png;base64,%s' % res_company.logo.decode()" alt="Company Logo"/>
+                        <img t-if="company.logo" t-att-src="'data:image/png;base64,%s' % company.logo.decode()" alt="Company Logo"/>
                     </div>
                 </div>
 
-                <t t-set="rd" t-value="docs.get_bs_report_data(company_id, report_date)"/>
-
-                <!-- ASSETS SECTION -->
-                <div class="section-divider">Assets</div>
-                <t t-foreach="rd['assets']['headers']" t-as="header">
+                <!-- ASSETS -->
+                <t t-if="data['assets']">
+                    <div class="section-divider">Assets</div>
                     <table class="bs-table">
-                        <tr class="header-row"><td colspan="3" class="header-name"><t t-esc="header['header_name']"/></td></tr>
-                        <t t-foreach="header['sub_headers']" t-as="sh">
-                            <tr class="subheader-row"><td colspan="3" class="subheader-name"><t t-esc="sh['sub_header_name']"/></td></tr>
-                            <t t-foreach="sh['accounts']" t-as="acc">
-                                <tr class="account-row">
-                                    <td class="account-code"><t t-esc="acc['account_code']"/></td>
-                                    <td class="account-name"><t t-esc="acc['account_name']"/></td>
-                                    <td class="account-balance"><t t-esc="acc['balance']"/></td>
+                        <thead>
+                            <tr style="background: #f8fafc; font-size: 11px; text-transform: uppercase; color: #64748b;">
+                                <th class="col-code" style="text-align: left; padding: 10px;">Code</th>
+                                <th class="col-name" style="text-align: left; padding: 10px;">Account Name</th>
+                                <th class="col-balance" style="text-align: right; padding: 10px;">Amount</th>
+                            </tr>
+                        </thead>
+                        <t t-foreach="data['assets']" t-as="header">
+                            <tr class="subheader-row"><td colspan="3" class="subheader-name" style="color: #3b82f6;"><t t-esc="header['name']"/></td></tr>
+                            <t t-foreach="header['subheaders']" t-as="sub">
+                                <tr class="subheader-row"><td colspan="3" class="subheader-name" style="padding-left: 40px;"><t t-esc="sub['name']"/></td></tr>
+                                <t t-foreach="sub['accounts']" t-as="acc">
+                                    <tr class="account-row">
+                                        <td class="col-code"><t t-esc="acc['code']"/></td>
+                                        <td class="col-name"><t t-esc="acc['name']"/></td>
+                                        <td class="col-balance"><t t-esc="acc['balance']" t-options='{"widget": "monetary", "display_currency": usd_currency}'/></td>
+                                    </tr>
+                                </t>
+                                <tr class="total-row">
+                                    <td colspan="2" style="text-align: right; padding-right: 20px;">Subtotal <t t-esc="sub['name']"/></td>
+                                    <td style="text-align: right;"><t t-esc="sub['total']" t-options='{"widget": "monetary", "display_currency": usd_currency}'/></td>
                                 </tr>
                             </t>
-                            <tr class="total-row">
-                                <td colspan="2" style="text-align: right; padding-right: 40px; font-size: 12px; color: #64748b;">Subtotal <t t-esc="sh['sub_header_name']"/></td>
-                                <td style="text-align: right; width: 150px;"><t t-esc="sh['sub_header_total']"/></td>
-                            </tr>
                         </t>
-                    </table>
-                </t>
-                <table class="bs-table" style="margin-top: -10px;">
-                    <tr class="total-row" style="background: #e0f2fe; border-top: 2px solid #0369a1;">
-                        <td colspan="2" style="text-align: right; font-size: 15px; color: #0369a1;">TOTAL ASSETS</td>
-                        <td style="text-align: right; width: 150px; font-size: 16px; color: #0369a1;"><t t-esc="rd['total_assets_formatted']"/></td>
-                    </tr>
-                </table>
-
-                <!-- LIABILITIES SECTION -->
-                <div class="section-divider">Liabilities</div>
-                <t t-foreach="rd['liabilities']['headers']" t-as="header">
-                    <table class="bs-table">
-                        <tr class="header-row"><td colspan="3" class="header-name"><t t-esc="header['header_name']"/></td></tr>
-                        <t t-foreach="header['sub_headers']" t-as="sh">
-                            <tr class="subheader-row"><td colspan="3" class="subheader-name"><t t-esc="sh['sub_header_name']"/></td></tr>
-                            <t t-foreach="sh['accounts']" t-as="acc">
-                                <tr class="account-row">
-                                    <td class="account-code"><t t-esc="acc['account_code']"/></td>
-                                    <td class="account-name"><t t-esc="acc['account_name']"/></td>
-                                    <td class="account-balance"><t t-esc="acc['balance']"/></td>
-                                </tr>
-                            </t>
-                            <tr class="total-row">
-                                <td colspan="2" style="text-align: right; padding-right: 40px; font-size: 12px; color: #64748b;">Subtotal <t t-esc="sh['sub_header_name']"/></td>
-                                <td style="text-align: right; width: 150px;"><t t-esc="sh['sub_header_total']"/></td>
-                            </tr>
-                        </t>
+                        <tr class="total-row" style="background: #e2e8f0; border-top: 2px solid #94a3b8;">
+                            <td colspan="2" style="text-align: right; padding-right: 20px; font-size: 14px;">TOTAL ASSETS</td>
+                            <td style="text-align: right; font-size: 14px;"><t t-esc="data['total_assets']" t-options='{"widget": "monetary", "display_currency": usd_currency}'/></td>
+                        </tr>
                     </table>
                 </t>
 
-                <!-- EQUITY SECTION -->
-                <div class="section-divider">Equity</div>
-                <t t-foreach="rd['equity']['headers']" t-as="header">
+                <!-- LIABILITIES -->
+                <t t-if="data['liabilities']">
+                    <div class="section-divider">Liabilities</div>
                     <table class="bs-table">
-                        <tr class="header-row"><td colspan="3" class="header-name"><t t-esc="header['header_name']"/></td></tr>
-                        <t t-foreach="header['sub_headers']" t-as="sh">
-                            <tr class="subheader-row"><td colspan="3" class="subheader-name"><t t-esc="sh['sub_header_name']"/></td></tr>
-                            <t t-foreach="sh['accounts']" t-as="acc">
-                                <tr class="account-row">
-                                    <td class="account-code"><t t-esc="acc['account_code']"/></td>
-                                    <td class="account-name"><t t-esc="acc['account_name']"/></td>
-                                    <td class="account-balance"><t t-esc="acc['balance']"/></td>
+                        <thead>
+                            <tr style="background: #f8fafc; font-size: 11px; text-transform: uppercase; color: #64748b;">
+                                <th class="col-code" style="text-align: left; padding: 10px;">Code</th>
+                                <th class="col-name" style="text-align: left; padding: 10px;">Account Name</th>
+                                <th class="col-balance" style="text-align: right; padding: 10px;">Amount</th>
+                            </tr>
+                        </thead>
+                        <t t-foreach="data['liabilities']" t-as="header">
+                            <tr class="subheader-row"><td colspan="3" class="subheader-name" style="color: #ef4444;"><t t-esc="header['name']"/></td></tr>
+                            <t t-foreach="header['subheaders']" t-as="sub">
+                                <tr class="subheader-row"><td colspan="3" class="subheader-name" style="padding-left: 40px;"><t t-esc="sub['name']"/></td></tr>
+                                <t t-foreach="sub['accounts']" t-as="acc">
+                                    <tr class="account-row">
+                                        <td class="col-code"><t t-esc="acc['code']"/></td>
+                                        <td class="col-name"><t t-esc="acc['name']"/></td>
+                                        <td class="col-balance"><t t-esc="acc['balance']" t-options='{"widget": "monetary", "display_currency": usd_currency}'/></td>
+                                    </tr>
+                                </t>
+                                <tr class="total-row">
+                                    <td colspan="2" style="text-align: right; padding-right: 20px;">Subtotal <t t-esc="sub['name']"/></td>
+                                    <td style="text-align: right;"><t t-esc="sub['total']" t-options='{"widget": "monetary", "display_currency": usd_currency}'/></td>
                                 </tr>
                             </t>
-                            <tr class="total-row">
-                                <td colspan="2" style="text-align: right; padding-right: 40px; font-size: 12px; color: #64748b;">Subtotal <t t-esc="sh['sub_header_name']"/></td>
-                                <td style="text-align: right; width: 150px;"><t t-esc="sh['sub_header_total']"/></td>
-                            </tr>
                         </t>
                     </table>
                 </t>
 
-                <!-- Current Period Earnings (Calculated Net Profit) -->
-                <table class="bs-table">
-                    <tr class="subheader-row" style="background: #fdf2f8;"><td colspan="3" class="subheader-name" style="color: #9d174d;">Retained Earnings &amp; Current Profit</td></tr>
-                    <tr class="account-row">
-                        <td class="account-code" style="padding-left: 50px;">PL-CALC</td>
-                        <td class="account-name"><strong>Current Period Earnings (Net Profit/Loss)</strong></td>
-                        <td class="account-balance" style="text-align: right; padding-right: 40px;"><strong><t t-esc="rd['net_profit_formatted']"/></strong></td>
-                    </tr>
-                </table>
+                <!-- EQUITY -->
+                <t t-if="data['equity']">
+                    <div class="section-divider">Equity</div>
+                    <table class="bs-table">
+                         <thead>
+                            <tr style="background: #f8fafc; font-size: 11px; text-transform: uppercase; color: #64748b;">
+                                <th class="col-code" style="text-align: left; padding: 10px;">Code</th>
+                                <th class="col-name" style="text-align: left; padding: 10px;">Account Name</th>
+                                <th class="col-balance" style="text-align: right; padding: 10px;">Amount</th>
+                            </tr>
+                        </thead>
+                        <t t-foreach="data['equity']" t-as="header">
+                            <tr class="subheader-row"><td colspan="3" class="subheader-name" style="color: #10b981;"><t t-esc="header['name']"/></td></tr>
+                            <t t-foreach="header['subheaders']" t-as="sub">
+                                <tr class="subheader-row"><td colspan="3" class="subheader-name" style="padding-left: 40px;"><t t-esc="sub['name']"/></td></tr>
+                                <t t-foreach="sub['accounts']" t-as="acc">
+                                    <tr class="account-row">
+                                        <td class="col-code"><t t-esc="acc['code']"/></td>
+                                        <td class="col-name"><t t-esc="acc['name']"/></td>
+                                        <td class="col-balance"><t t-esc="acc['balance']" t-options='{"widget": "monetary", "display_currency": usd_currency}'/></td>
+                                    </tr>
+                                </t>
+                                <tr class="total-row">
+                                    <td colspan="2" style="text-align: right; padding-right: 20px;">Subtotal <t t-esc="sub['name']"/></td>
+                                    <td style="text-align: right;"><t t-esc="sub['total']" t-options='{"widget": "monetary", "display_currency": usd_currency}'/></td>
+                                </tr>
+                            </t>
+                        </t>
+                        <!-- Net Profit is part of Equity usually visually, but here we add it as a row -->
+                         <tr class="account-row" style="background: #ecfdf5;">
+                            <td class="col-code">PL</td>
+                            <td class="col-name" style="font-weight: 700; color: #065f46;">Net Profit / (Loss)</td>
+                            <td class="col-balance" style="color: #065f46;"><t t-esc="data['net_profit']" t-options='{"widget": "monetary", "display_currency": usd_currency}'/></td>
+                        </tr>
+                    </table>
+                </t>
 
-                <!-- TOTAL LIABILITIES & EQUITY -->
-                <table class="bs-table">
-                    <tr class="total-row" style="background: #1e293b; color: white;">
-                        <td colspan="2" style="text-align: right; font-size: 15px; color: white;">TOTAL LIABILITIES &amp; EQUITY</td>
-                        <td style="text-align: right; width: 150px; font-size: 16px; color: white;"><t t-esc="rd['total_liab_equity_formatted']"/></td>
-                    </tr>
-                </table>
-
-                <!-- Check if Balanced -->
-                <div t-attf-class="balanced-banner #{'balanced-true' if rd['is_balanced'] else 'balanced-false'}">
-                    <t t-if="rd['is_balanced']">
-                        <i class="fas fa-check-circle"></i> BALANCE SHEET IS BALANCED (Assets = Liabilities + Equity)
-                    </t>
-                    <t t-else="">
-                        <i class="fas fa-exclamation-triangle"></i> BALANCE SHEET IS OUT OF BALANCE BY <t t-esc="rd['difference']" t-options='{"widget": "float", "precision": 3}'/> <t t-esc="rd['currency_symbol']"/>
-                    </t>
+                <!-- GRAND TOTAL -->
+                <div class="grand-total-section">
+                    <table class="grand-total-table">
+                        <tr>
+                            <td>TOTAL LIABILITIES &amp; EQUITY</td>
+                            <td style="text-align: right;">
+                                <t t-esc="data['total_liab_equity']" t-options='{"widget": "monetary", "display_currency": usd_currency}'/>
+                            </td>
+                        </tr>
+                    </table>
                 </div>
 
-                <div class="footer-note" style="margin-top: 50px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 11px; color: #94a3b8;">
-                    This is an automated Statement of Financial Position generated according to global accounting standards.<br/>
-                    Generated for <strong><t t-esc="report_date"/></strong>.
+                <div style="margin-top: 40px; text-align: center; color: #94a3b8; font-size: 12px;">
+                    <t t-if="data['is_balanced']">
+                         <span style="color: #166534; font-weight: bold;">✔ Balance Sheet is Balanced</span>
+                    </t>
+                    <t t-else="">
+                         <span style="color: #991b1b; font-weight: bold;">⚠ Unbalanced</span>
+                    </t>
+                    <br/>
+                    Confidential Financial Report - <t t-esc="report_date"/>
                 </div>
             </div>
         </t>
     </template>
 
-
-    <record id="action_report_bs" model="ir.actions.report">
-        <field name="name">Balance Sheet Report</field>
-        <field name="model">idil.chart.account.header</field>
-        <field name="report_type">qweb-html</field>
-        <field name="report_name">idil.report_bs_template</field>
-        <field name="report_file">idil.report_bs_template</field>
-        <field name="binding_model_id" ref="model_idil_chart_account_header"/>
+    <!-- 2. PDF Report Action -->
+    <record id="action_report_balance_sheet_pdf" model="ir.actions.report">
+        <field name="name">Balance Sheet (PDF)</field>
+        <field name="model">idil.balance.sheet.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">idil.report_balance_sheet_pdf_template</field>
+        <field name="report_file">idil.report_balance_sheet_pdf_template</field>
+        <field name="print_report_name">'Balance Sheet - %s' % (object.company_id.name)</field>
+        <field name="binding_model_id" ref="model_idil_balance_sheet_wizard"/>
     </record>
 
+    <!-- 2.1 HTML Report Action -->
+    <record id="action_report_balance_sheet_html" model="ir.actions.report">
+        <field name="name">Balance Sheet (HTML)</field>
+        <field name="model">idil.balance.sheet.wizard</field>
+        <field name="report_type">qweb-html</field>
+        <field name="report_name">idil.report_balance_sheet_pdf_template</field>
+        <field name="report_file">idil.report_balance_sheet_pdf_template</field>
+        <field name="print_report_name">'Balance Sheet - %s' % (object.company_id.name)</field>
+        <field name="binding_model_id" ref="model_idil_balance_sheet_wizard"/>
+    </record>
 
-
-    <record id="view_report_currency_wizard_form" model="ir.ui.view">
-        <field name="name">report.currency.wizard.form</field>
-        <field name="model">report.currency.wizard</field>
+    <!-- 3. Wizard Results View (Tree) -->
+    <record id="view_balance_sheet_wizard_results" model="ir.ui.view">
+        <field name="name">balance.sheet.wizard.results</field>
+        <field name="model">idil.balance.sheet.wizard</field>
         <field name="arch" type="xml">
-            <form string="Select Company">
+            <form string="Balance Sheet Results">
+                <header>
+                    <button string="Print PDF Report" type="object" name="action_print_pdf" class="btn-primary"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            Balance Sheet
+                        </h1>
+                        <h3>
+                            <field name="company_id" readonly="1" options="{'no_open': True}"/> - <field name="report_date" readonly="1"/>
+                        </h3>
+                    </div>
+                    <notebook>
+                        <page string="Report">
+                            <field name="line_ids" readonly="1">
+                                <tree string="Balance Sheet" create="false" edit="false" delete="false" decoration-bf="is_total==True" decoration-info="is_header==True">
+                                    <field name="sequence" invisible="1"/>
+                                    <field name="is_total" invisible="1"/>
+                                    <field name="is_header" invisible="1"/>
+                                    <field name="account_code"/>
+                                    <field name="account_name"/>
+                                    <field name="balance" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                                    <field name="currency_id" invisible="1"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- 4. Wizard Start Form -->
+    <record id="view_balance_sheet_wizard_form" model="ir.ui.view">
+        <field name="name">balance.sheet.wizard.form</field>
+        <field name="model">idil.balance.sheet.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Balance Sheet - Select Date">
                 <group>
                     <field name="company_id"/>
-                    <field name="report_date" widget="date"/> <!-- Add this field for selecting the report date -->
+                    <field name="report_date"/>
                 </group>
                 <footer>
-                    <button string="Generate Report" type="object" name="generate_report" class="btn-primary"/>
+                    <button string="Generate Balance Sheet" type="object" name="action_print_html" class="btn-primary"/>
+                    <button string="View Data Lines" type="object" name="action_view_balance_sheet" class="btn-secondary"/>
                     <button string="Cancel" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>
         </field>
     </record>
 
-    <record id="action_report_currency_wizard" model="ir.actions.act_window">
-        <field name="name">Company Selection</field>
-        <field name="type">ir.actions.act_window</field>
-        <field name="res_model">report.currency.wizard</field>
+    <!-- 5. Wizard Action -->
+    <record id="action_open_balance_sheet_wizard" model="ir.actions.act_window">
+        <field name="name">Balance Sheet</field>
+        <field name="res_model">idil.balance.sheet.wizard</field>
         <field name="view_mode">form</field>
+        <field name="view_id" ref="view_balance_sheet_wizard_form"/>
         <field name="target">new</field>
-        <field name="view_id" ref="view_report_currency_wizard_form"/>
     </record>
 
 </odoo>

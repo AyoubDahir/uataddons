@@ -525,7 +525,7 @@
     <menuitem id="menu_balance_sheet_report"
               name="📑 Balance Sheet -- By Currency"
               parent="menu_by_currency"
-              action="action_report_currency_wizard"
+              action="action_open_balance_sheet_wizard"
               sequence="3"/>
 
     <menuitem id="OtherReports"
