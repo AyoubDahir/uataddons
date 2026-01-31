@@ -500,6 +500,12 @@
               sequence="-2"
               action="action_open_income_statement_wizard"/>
 
+    <menuitem id="menu_company_income_statement_advanced"
+              name="📊 Advanced Income Statement"
+              parent="menu_by_company"
+              sequence="-1"
+              action="action_report_income_statement_advanced_wizard"/>
+
     <menuitem id="menu_company_balance_sheet_report"
               name="📑 Balance Sheet -- By Company"
               parent="menu_by_company"
