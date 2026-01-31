@@ -179,17 +179,22 @@ class VendorOpeningBalance(models.Model):
                         source_clearing_account = self.env["idil.chart.account"].search(
                             [
                                 ("name", "=", "Exchange Clearing Account"),
-                                ("currency_id", "=", vendor_currency.id),
+                                (
+                                    "currency_id",
+                                    "=",
+                                    opening_balance_account.currency_id.id,
+                                ),
                             ],
                             limit=1,
                         )
+
                         target_clearing_account = self.env["idil.chart.account"].search(
                             [
                                 ("name", "=", "Exchange Clearing Account"),
                                 (
                                     "currency_id",
                                     "=",
-                                    opening_balance_account.currency_id.id,
+                                    vendor_currency.id,
                                 ),
                             ],
                             limit=1,
@@ -232,9 +237,9 @@ class VendorOpeningBalance(models.Model):
                                 "account_number": source_clearing_account.id,
                                 "transaction_type": "cr",
                                 "dr_amount": 0.0,
-                                "cr_amount": line.amount,
+                                "cr_amount": cost_amount_usd,
                                 "transaction_date": record.date,
-                                "description": f"Opening Balance Clearing ({vendor_currency.name}) for {line.vendor_id.name}",
+                                "description": f"Opening Balance Clearing Source Account ({vendor_currency.name}) for {line.vendor_id.name}",
                             }
                         )
                         # Debit target clearing account (USD)
@@ -244,7 +249,7 @@ class VendorOpeningBalance(models.Model):
                                 "vendor_opening_balance_id": line.id,
                                 "account_number": target_clearing_account.id,
                                 "transaction_type": "dr",
-                                "dr_amount": cost_amount_usd,
+                                "dr_amount": line.amount,
                                 "cr_amount": 0.0,
                                 "transaction_date": record.date,
                                 "description": f"Opening Balance Clearing (USD) for {line.vendor_id.name}",
@@ -264,6 +269,7 @@ class VendorOpeningBalance(models.Model):
                             "description": f"Opening Balance for {line.vendor_id.name}",
                         }
                     )
+
                     # Vendor Payable (in vendor's currency)
                     self.env["idil.transaction_bookingline"].create(
                         {
@@ -430,6 +436,7 @@ class VendorOpeningBalance(models.Model):
 
                         # (Re)Create booking lines
                         if vendor_currency.name != "USD":
+                            # Credit source clearing account (local)
                             self.env["idil.transaction_bookingline"].create(
                                 {
                                     "transaction_booking_id": booking.id,
@@ -437,18 +444,19 @@ class VendorOpeningBalance(models.Model):
                                     "account_number": source_clearing_account.id,
                                     "transaction_type": "cr",
                                     "dr_amount": 0.0,
-                                    "cr_amount": line.amount,
+                                    "cr_amount": cost_amount_usd,
                                     "transaction_date": record.date,
-                                    "description": f"Opening Balance Clearing ({vendor_currency.name}) for {line.vendor_id.name}",
+                                    "description": f"Opening Balance Clearing Source Account ({vendor_currency.name}) for {line.vendor_id.name}",
                                 }
                             )
+                            # Debit target clearing account (USD)
                             self.env["idil.transaction_bookingline"].create(
                                 {
                                     "transaction_booking_id": booking.id,
                                     "vendor_opening_balance_id": line.id,
                                     "account_number": target_clearing_account.id,
                                     "transaction_type": "dr",
-                                    "dr_amount": cost_amount_usd,
+                                    "dr_amount": line.amount,
                                     "cr_amount": 0.0,
                                     "transaction_date": record.date,
                                     "description": f"Opening Balance Clearing (USD) for {line.vendor_id.name}",
