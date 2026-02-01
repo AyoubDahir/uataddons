@@ -81,7 +81,6 @@
         "views/Sales_reciept.xml",
         "views/pos_menu_view.xml",
         "views/pos_session_view.xml",
-        "views/pos_payment_method_views.xml",
         "views/idil_employee_views.xml",
         "views/Idil_employee_Salary.xml",
         "views/idil_employee_salary_advance.xml",
