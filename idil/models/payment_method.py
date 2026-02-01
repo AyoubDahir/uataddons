@@ -30,7 +30,6 @@ class IdilPaymentMethod(models.Model):
         string="Default Account",
         required=True,
         tracking=True,
-        domain="[('company_id','=',company_id), ('account_type','in',('cash','bank_transfer'))]",
     )
 
     active = fields.Boolean(default=True)
