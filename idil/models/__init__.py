@@ -61,6 +61,7 @@ from . import sales_receipt_bulk_payment
 from . import vendor_opening_balance
 from . import idil_employee_sales
 from . import customerplaceorder
+from . import staffplaceorder
 
 from . import product_opening_balance
 from . import executive_business_summary_wizard
