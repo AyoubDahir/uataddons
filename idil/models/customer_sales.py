@@ -57,6 +57,12 @@ class CustomerSaleOrder(models.Model):
         readonly=True,
     )
 
+    payment_method_id = fields.Many2one(
+        "idil.payment.method",
+        string="Payment Method",
+        tracking=True,
+    )
+
     # One2many field for multiple payment methods
     payment_lines = fields.One2many(
         "idil.customer.sale.payment",
