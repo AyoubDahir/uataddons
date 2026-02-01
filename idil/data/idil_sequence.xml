@@ -118,6 +118,13 @@
             <field name="padding">5</field>
             <field name="implementation">standard</field>
         </record>
+        <record id="seq_staff_place_order" model="ir.sequence">
+            <field name="name">Staff Place Order</field>
+            <field name="code">idil.staff.place.order.sequence</field>
+            <field name="prefix">S-ORD-</field>
+            <field name="padding">5</field>
+            <field name="implementation">standard</field>
+        </record>
 
         <record id="seq_idil_currency_exchange" model="ir.sequence">
             <field name="name">Currency Exchange Reference</field>

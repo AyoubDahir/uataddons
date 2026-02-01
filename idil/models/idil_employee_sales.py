@@ -27,6 +27,12 @@ class IdilStaffSales(models.Model):
     employee_id = fields.Many2one(
         "idil.employee", string="Staff", required=True, tracking=True
     )
+    staff_order_id = fields.Many2one(
+        "idil.staff.place.order",
+        string="Staff Draft Order",
+        domain="[('employee_id', '=', employee_id), ('state', '=', 'draft')]",
+        tracking=True,
+    )
     sales_date = fields.Datetime(string="Order Date", default=fields.Datetime.now)
 
     line_ids = fields.One2many("idil.staff.sales.line", "sales_id", string="Products")
@@ -112,6 +118,32 @@ class IdilStaffSales(models.Model):
                 self.env["ir.sequence"].next_by_code("idil.staff.sales") or "New"
             )
         return super().create(vals)
+
+    @api.onchange('employee_id')
+    def _onchange_employee_id_clear_order(self):
+        self.staff_order_id = False
+
+    def action_fill_from_order(self):
+        self.ensure_one()
+        if not self.staff_order_id:
+            raise ValidationError("Please select a staff draft order first.")
+
+        # Clear existing lines
+        self.line_ids.unlink()
+
+        # Create new lines from staff order
+        new_lines = []
+        for line in self.staff_order_id.order_lines:
+            new_lines.append((0, 0, {
+                'product_id': line.product_id.id,
+                'quantity': line.quantity,
+                'price_unit': line.product_id.sale_price,
+            }))
+
+        if new_lines:
+            self.write({'line_ids': new_lines})
+        else:
+            raise ValidationError("The selected draft order has no lines.")
 
     def action_approve(self):
         for rec in self:
@@ -299,6 +331,8 @@ class IdilStaffSales(models.Model):
 
                     # ✅ Only mark as confirmed if all operations succeed
                     rec.write({"state": "confirmed"})
+                    if rec.staff_order_id:
+                        rec.staff_order_id.write({"state": "confirmed"})
 
             except Exception as e:
                 _logger.error(f"Approval failed for {rec.name}: {str(e)}")

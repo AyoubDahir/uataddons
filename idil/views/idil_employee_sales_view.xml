@@ -35,6 +35,8 @@
                     <group>
                         <field name="name"/>
                         <field name="employee_id"/>
+                        <field name="staff_order_id" options="{'no_create': True, 'no_open': True}" invisible="state != 'draft'"/>
+                        <button name="action_fill_from_order" type="object" string="Fill from Order" class="btn-secondary" invisible="state != 'draft' or not staff_order_id"/>
                         <field name="sales_date"/>
                         <field name="currency_id" readonly="1"/>
                         <field name="rate" readonly="1"/>
