@@ -347,6 +347,12 @@
                                 parent="menu_sales"
                                 sequence="3"/>
 
+                                <menuitem id="menu_staff_place_order"
+                                        name="📜 Staff Place Orders"
+                                        parent="menu_employee_sales_root"
+                                        action="action_staff_place_order"
+                                        sequence="0"/>
+
                                 <menuitem id="menu_staff_sales"
                                         name="👷 Staff Sales"
                                         parent="menu_employee_sales_root"
