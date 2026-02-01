@@ -87,6 +87,13 @@ class SalesCommission(models.Model):
         readonly=True,
     )
 
+    state = fields.Selection(
+        [("normal", "Normal"), ("cancelled_return", "Cancelled (Returned)")],
+        default="normal",
+        tracking=True,
+        readonly=True,
+    )
+
     due_date = fields.Date(
         string="Due Date",
         compute="_compute_due_date",
