@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tree View -->
+    <record id="view_staff_place_order_tree" model="ir.ui.view">
+        <field name="name">idil.staff.place.order.tree</field>
+        <field name="model">idil.staff.place.order</field>
+        <field name="arch" type="xml">
+            <tree decoration-info="state == 'draft'" decoration-success="state == 'confirmed'">
+                <field name="name"/>
+                <field name="employee_id"/>
+                <field name="order_date"/>
+                <field name="total_quantity" sum="Total Qty"/>
+                <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'confirmed'"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_staff_place_order_form" model="ir.ui.view">
+        <field name="name">idil.staff.place.order.form</field>
+        <field name="model">idil.staff.place.order</field>
+        <field name="arch" type="xml">
+            <form string="Staff Place Order">
+                <header>
+                    <button name="action_view_barcode" string="Preview Barcode" type="object" class="btn-info" icon="fa-eye"/>
+                    <button name="%(action_report_production_barcode_staff)d" string="Print Barcode Labels" type="action" class="btn-primary" icon="fa-barcode"/>
+                    <button name="action_cancel_order" string="Cancel Order" type="object" invisible="state != 'draft'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,cancel"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="employee_id" options="{'no_create': True, 'no_open': True}" readonly="state != 'draft'"/>
+                        </group>
+                        <group>
+                            <field name="order_date" readonly="state != 'draft'"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Order Lines">
+                            <field name="order_lines" readonly="state != 'draft'">
+                                <tree editable="bottom">
+                                    <field name="product_id" options="{'no_create': True}"/>
+                                    <field name="quantity"/>
+                                </tree>
+                            </field>
+                            <group class="oe_subtotal_footer oe_right">
+                                <field name="total_quantity"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_staff_place_order_search" model="ir.ui.view">
+        <field name="name">idil.staff.place.order.search</field>
+        <field name="model">idil.staff.place.order</field>
+        <field name="arch" type="xml">
+            <search string="Search Staff Orders">
+                <field name="name"/>
+                <field name="employee_id"/>
+                <filter string="Draft" name="draft" domain="[('state', '=', 'draft')]"/>
+                <filter string="Confirmed" name="confirmed" domain="[('state', '=', 'confirmed')]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Staff Member" name="group_by_employee" context="{'group_by': 'employee_id'}"/>
+                    <filter string="Order Date" name="group_by_date" context="{'group_by': 'order_date'}"/>
+                    <filter string="Status" name="group_by_state" context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_staff_place_order" model="ir.actions.act_window">
+        <field name="name">Staff Place Order</field>
+        <field name="res_model">idil.staff.place.order</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_staff_place_order_search"/>
+        <field name="context">{'search_default_draft': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Place a new kitchen request for a staff member.
+            </p>
+        </field>
+    </record>
+</odoo>
