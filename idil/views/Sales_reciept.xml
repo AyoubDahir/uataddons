@@ -1,84 +1,280 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-  
-    <data>
-        <!-- Form View for Sales Receipt -->
-        <record id="view_form_sales_receipt" model="ir.ui.view">
-            <field name="name">sales.receipt.form</field>
-            <field name="model">idil.sales.receipt</field>
-            <field name="arch" type="xml">
-             
-                <form string="Sales Receipt" class="o_form_custom" >
-                    <header>
-                        <button string="Process Receipt" type="object" class="oe_highlight oe_button"
-                                name="action_process_receipt"/>
-                    </header>
-                    <sheet>
-                        <group>
-                            <group string="Sales Details" col="2">
-                                <field name="sales_order_id" readonly="1"/>
-                                <field name="salesperson_id" readonly="1"/>
-                                <field name="cusotmer_sale_order_id" readonly="1"/>
-                                <field name="customer_id" readonly="1"/>
-                                <field name="receipt_date"/>
-                                <field name="payment_account_currency_id"/>
-                                <field name="payment_account"/>
-                            </group>
-                           
-                            <group string="Payment Details" col="2">
-                            
-                                <field name="currency_id" readonly="1"/>
-                                <field name="rate" readonly="1"/>
-                                <field name="due_amount" readonly="1"/>
-                                <field name="payment_status" readonly="1"/>
-                                <field name="paid_amount" readonly="1"/>
-                                <field name="remaining_amount" readonly="1"/>
-                                <field name="amount_paying"/>
-                            </group>
-                        </group>
-                          <!-- Associated Payments -->
-                        <separator string="Associated Payments"/>
-                        <field name="payment_ids">
-                            <tree editable="bottom">
-                                <field name="payment_date" readonly="1"/>
-                                <field name="paid_amount" readonly="1" sum="total"/>
-                                <field name="payment_account" readonly="1"/>
-                            </tree>
-                        </field>
-                    </sheet>
-                </form>
-            </field>
-        </record>
+  <data>
 
+    <!-- ===================================================== -->
+    <!-- 💳 Sales Receipt | Form (Card UI) -->
+    <!-- ===================================================== -->
+    <record id="view_form_sales_receipt" model="ir.ui.view">
+      <field name="name">sales.receipt.form</field>
+      <field name="model">idil.sales.receipt</field>
+      <field name="arch" type="xml">
+        <form string="Sales Receipt" class="o_form_full o_form_nosheet">
 
-        <!-- Tree View for Sales Receipt -->
-        <record id="view_tree_sales_receipt" model="ir.ui.view">
-            <field name="name">sales.receipt.tree</field>
-            <field name="model">idil.sales.receipt</field>
-            <field name="arch" type="xml">
-                <tree string="Sales Receipt" create="false">
-                    <field name="sales_order_id"/>
-                    <field name="salesperson_id"/>
-                    <field name="cusotmer_sale_order_id"/>
-                    <field name="customer_id" />
-                    <field name="receipt_date"/>
-                    <field name="due_amount" sum="total"/>
-                    <field name="payment_status"/>
-                    <field name="paid_amount" sum="total"/>
-                    <field name="remaining_amount" sum="total"/>
-                    <field name="amount_paying" sum="total"/>
-                </tree>
-            </field>
-        </record>
+          <header>
+            <button string="✅ Process Receipt"
+                    type="object"
+                    class="oe_highlight"
+                    name="action_process_receipt"/>
+            <span class="ms-2 badge rounded-pill bg-light border text-muted px-3 py-2">
+              <i class="fa fa-credit-card me-1"/>
+              Status:
+              <field name="payment_status" widget="badge" readonly="1" class="ms-1"/>
+            </span>
+          </header>
 
-        <!-- Action for Sales Receipt -->
-        <record id="action_sales_receipt" model="ir.actions.act_window">
-            <field name="name">Sales Receipts</field>
-            <field name="res_model">idil.sales.receipt</field>
-            <field name="view_mode">tree,form</field>
-            
-        </record>
+          <sheet>
 
+            <!-- Title -->
+            <div class="oe_title">
+              <h1 class="mb-1">
+                <i class="fa fa-receipt me-2 text-primary" role="img" aria-label="Receipt"/>
+                Sales Receipt
+                <span class="ms-2 badge rounded-pill bg-light border text-muted px-3 py-2">
+                  <i class="fa fa-hashtag me-1"/>
+                  <field name="id" nolabel="1" readonly="1"/>
+                </span>
+              </h1>
+              <div class="text-muted">
+                <i class="fa fa-info-circle me-1"/>
+                Review due/paid amounts, select payment account, then click <b>Process Receipt</b>.
+              </div>
+            </div>
 
-    </data>
+            <!-- Cards Row -->
+            <div class="row g-3 mt-3">
+
+              <!-- Card 1: Sales Details -->
+              <div class="col-12 col-lg-6">
+                <div class="border rounded-4 p-3 shadow-sm bg-white h-100">
+                  <div class="fw-bold mb-2 d-flex align-items-center gap-2 flex-wrap">
+                    <i class="fa fa-file-text-o text-muted"/>
+                    <span>Sales Details</span>
+                  </div>
+
+                  <div class="d-grid gap-2">
+
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                      <span class="text-muted" style="width:24px; text-align:center;">
+                        <i class="fa fa-shopping-bag"/>
+                      </span>
+                      <span class="o_form_label mb-0" style="min-width:160px;">Sales Order</span>
+                      <div class="flex-grow-1" style="min-width:260px;">
+                        <field name="sales_order_id" nolabel="1" readonly="1"/>
+                      </div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                      <span class="text-muted" style="width:24px; text-align:center;">
+                        <i class="fa fa-user"/>
+                      </span>
+                      <span class="o_form_label mb-0" style="min-width:160px;">Salesperson</span>
+                      <div class="flex-grow-1" style="min-width:260px;">
+                        <field name="salesperson_id" nolabel="1" readonly="1"/>
+                      </div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                      <span class="text-muted" style="width:24px; text-align:center;">
+                        <i class="fa fa-id-card-o"/>
+                      </span>
+                      <span class="o_form_label mb-0" style="min-width:160px;">Customer</span>
+                      <div class="flex-grow-1" style="min-width:260px;">
+                        <field name="customer_id" nolabel="1" readonly="1"/>
+                      </div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                      <span class="text-muted" style="width:24px; text-align:center;">
+                        <i class="fa fa-cart-arrow-down"/>
+                      </span>
+                      <span class="o_form_label mb-0" style="min-width:160px;">Customer Sale Order</span>
+                      <div class="flex-grow-1" style="min-width:260px;">
+                        <field name="cusotmer_sale_order_id" nolabel="1" readonly="1"/>
+                      </div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                      <span class="text-muted" style="width:24px; text-align:center;">
+                        <i class="fa fa-calendar"/>
+                      </span>
+                      <span class="o_form_label mb-0" style="min-width:160px;">Receipt Date</span>
+                      <div class="flex-grow-1" style="min-width:260px;">
+                        <field name="receipt_date" nolabel="1"/>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  <div class="alert alert-info mt-3 mb-0" role="alert">
+                    <i class="fa fa-lightbulb-o me-1"/>
+                    Tip: Sales order and customer fields are readonly; only payment details are editable.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card 2: Payment Details -->
+              <div class="col-12 col-lg-6">
+                <div class="border rounded-4 p-3 shadow-sm bg-white h-100">
+                  <div class="fw-bold mb-2 d-flex align-items-center gap-2 flex-wrap">
+                    <i class="fa fa-money text-muted"/>
+                    <span>Payment Details</span>
+                  </div>
+
+                  <div class="d-grid gap-2">
+
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                      <span class="text-muted" style="width:24px; text-align:center;">
+                        <i class="fa fa-exchange"/>
+                      </span>
+                      <span class="o_form_label mb-0" style="min-width:160px;">Currency</span>
+                      <div class="flex-grow-1" style="min-width:220px;">
+                        <field name="currency_id" nolabel="1" readonly="1"/>
+                      </div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                      <span class="text-muted" style="width:24px; text-align:center;">
+                        <i class="fa fa-line-chart"/>
+                      </span>
+                      <span class="o_form_label mb-0" style="min-width:160px;">Rate</span>
+                      <div class="flex-grow-1" style="min-width:220px;">
+                        <field name="rate" nolabel="1" readonly="1"/>
+                      </div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                      <span class="text-muted" style="width:24px; text-align:center;">
+                        <i class="fa fa-flag"/>
+                      </span>
+                      <span class="o_form_label mb-0" style="min-width:160px;">Payment Currency</span>
+                      <div class="flex-grow-1" style="min-width:220px;">
+                        <field name="payment_account_currency_id" nolabel="1"/>
+                      </div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                      <span class="text-muted" style="width:24px; text-align:center;">
+                        <i class="fa fa-bank"/>
+                      </span>
+                      <span class="o_form_label mb-0" style="min-width:160px;">Payment Account</span>
+                      <div class="flex-grow-1" style="min-width:220px;">
+                        <field name="payment_account" nolabel="1"/>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  <div class="row g-3 mt-3">
+                    <div class="col-12 col-md-4">
+                      <div class="border rounded-4 p-3 bg-white">
+                        <div class="text-muted">
+                          <i class="fa fa-file-text-o me-1"/> Due
+                        </div>
+                        <div class="fs-5 fw-bold">
+                          <field name="due_amount" nolabel="1" readonly="1"/>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                      <div class="border rounded-4 p-3 bg-white">
+                        <div class="text-muted">
+                          <i class="fa fa-check-circle me-1"/> Paid
+                        </div>
+                        <div class="fs-5 fw-bold">
+                          <field name="paid_amount" nolabel="1" readonly="1"/>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                      <div class="border rounded-4 p-3 bg-white">
+                        <div class="text-muted">
+                          <i class="fa fa-balance-scale me-1"/> Remaining
+                        </div>
+                        <div class="fs-5 fw-bold">
+                          <field name="remaining_amount" nolabel="1" readonly="1"/>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mt-3">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                      <span class="badge rounded-pill bg-light border text-muted px-3 py-2">
+                        <i class="fa fa-pencil me-1"/>
+                        Amount Paying
+                      </span>
+                      <div style="min-width:240px;">
+                        <field name="amount_paying" nolabel="1"/>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Payments Table -->
+            <div class="mt-3">
+              <div class="border rounded-4 p-3 shadow-sm bg-white">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                  <div class="fw-bold d-flex align-items-center gap-2">
+                    <i class="fa fa-list-ul text-muted"/>
+                    <span>Associated Payments</span>
+                  </div>
+                  <span class="badge rounded-pill bg-light border text-muted px-3 py-2">
+                    <i class="fa fa-info-circle me-1"/>
+                    Payments are recorded after processing.
+                  </span>
+                </div>
+
+                <field name="payment_ids" nolabel="1">
+                  <tree editable="bottom">
+                    <field name="payment_date" string="📅 Date" readonly="1"/>
+                    <field name="paid_amount" string="💰 Amount" readonly="1" sum="Total"/>
+                    <field name="payment_account" string="🏦 Account" readonly="1"/>
+                  </tree>
+                </field>
+
+              </div>
+            </div>
+
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- ===================================================== -->
+    <!-- 💳 Sales Receipt | Tree -->
+    <!-- ===================================================== -->
+    <record id="view_tree_sales_receipt" model="ir.ui.view">
+      <field name="name">sales.receipt.tree</field>
+      <field name="model">idil.sales.receipt</field>
+      <field name="arch" type="xml">
+        <tree string="💳 Sales Receipts" create="false" default_order="id desc">
+          <field name="sales_order_id" string="🧾 Order"/>
+          <field name="salesperson_id" string="👤 Salesperson"/>
+          <field name="cusotmer_sale_order_id" string="🛒 Customer SO"/>
+          <field name="customer_id" string="👥 Customer"/>
+          <field name="receipt_date" string="📅 Date"/>
+          <field name="due_amount" string="💰 Due" sum="Total"/>
+          <field name="payment_status" string="🏷️ Status" widget="badge"/>
+          <field name="paid_amount" string="✅ Paid" sum="Paid"/>
+          <field name="remaining_amount" string="🧾 Remaining" sum="Remaining"/>
+          <field name="amount_paying" string="✍️ Paying" sum="Paying"/>
+        </tree>
+      </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_sales_receipt" model="ir.actions.act_window">
+      <field name="name">Sales Receipts</field>
+      <field name="res_model">idil.sales.receipt</field>
+      <field name="view_mode">tree,form</field>
+    </record>
+
+  </data>
 </odoo>

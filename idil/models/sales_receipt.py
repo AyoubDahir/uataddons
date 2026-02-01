@@ -1,10 +1,11 @@
 from venv import logger
 from odoo import models, fields, api
 from odoo.exceptions import UserError, ValidationError
+from odoo.tools.float_utils import float_compare
 
 
 class SalesReceipt(models.Model):
-    _name = "idil.sales.receipt"
+    _name = "idil.sales.receipt" 
     _description = "Sales Receipt"
     _order = "id desc"
 
@@ -33,35 +34,36 @@ class SalesReceipt(models.Model):
     receipt_date = fields.Datetime(
         string="Receipt Date", default=fields.Datetime.now, required=True
     )
-    due_amount = fields.Float(string="Due Amount", required=True)
-    # payment_status = fields.Selection(
-    #     [("pending", "Pending"), ("paid", "Paid")], default="pending", required=True
-    # )
-    # Change these 3 fields to be computed & stored
+    due_amount = fields.Float(string="Receipt Amount", required=True)
+
     paid_amount = fields.Float(
         string="Paid Amount",
         compute="_compute_payment_totals",
         store=True,
     )
     remaining_amount = fields.Float(
-        string="Due Amount",
+        string="Due Amount ",
         compute="_compute_payment_totals",
         store=True,
     )
     payment_status = fields.Selection(
-        [("pending", "Pending"), ("paid", "Paid")],
+        [("pending", "Pending"), ("paid", "Paid"), ("partial", "Partial")],
         compute="_compute_payment_totals",
         store=True,
         required=True,
         string="Payment Status",
         default="pending",
     )
-
-    # paid_amount = fields.Float(string="Paid Amount", default=0.0, store=True)
-    # remaining_amount = fields.Float(string="Due Amount", store=True)
     amount_paying = fields.Float(string="Amount Paying", store=True)
+
     payment_ids = fields.One2many(
         "idil.sales.payment", "sales_receipt_id", string="Payments"
+    )
+
+    customer_payment_leg_ids = fields.One2many(
+        "idil.customer.sale.payment",
+        "sales_receipt_id",
+        string="Customer Payment Legs",
     )
     payment_account_currency_id = fields.Many2one(
         "res.currency",
@@ -105,21 +107,52 @@ class SalesReceipt(models.Model):
         tracking=True,
     )
 
-    @api.depends("due_amount", "payment_ids.paid_amount")
+    # @api.depends("due_amount", "payment_ids.paid_amount")
+    # def _compute_payment_totals(self):
+    #     """
+    #     Always derive totals from child payments:
+    #       paid_amount      = sum(payment.paid_amount)
+    #       remaining_amount = due_amount - paid_amount
+    #       payment_status   = 'paid' if remaining_amount <= 0 else 'pending'
+    #     """
+    #     for rec in self:
+    #         total_paid = sum((p.paid_amount or 0.0) for p in rec.payment_ids)
+    #         rec.paid_amount = total_paid
+    #         rec.remaining_amount = (rec.due_amount or 0.0) - total_paid
+    #         rec.payment_status = (
+    #             "paid" if (rec.remaining_amount or 0.0) <= 0.0 else "pending"
+    #         )
+
+    @api.depends(
+        "due_amount", "payment_ids.paid_amount", "customer_payment_leg_ids.amount"
+    )
     def _compute_payment_totals(self):
         """
-        Always derive totals from child payments:
-          paid_amount      = sum(payment.paid_amount)
-          remaining_amount = due_amount - paid_amount
-          payment_status   = 'paid' if remaining_amount <= 0 else 'pending'
+        - Sales team receipts: use idil.sales.payment (payment_ids)
+        - Customer receipts: use idil.customer.sale.payment (customer_payment_leg_ids)
         """
         for rec in self:
-            total_paid = sum((p.paid_amount or 0.0) for p in rec.payment_ids)
+            due = rec.due_amount or 0.0
+
+            # ✅ Decide source by linkage
+            if rec.cusotmer_sale_order_id:
+                # Customer A/R receipt → customer payment legs
+                total_paid = sum(
+                    (l.amount or 0.0) for l in rec.customer_payment_leg_ids
+                )
+            else:
+                # Sales team receipt → sales payments
+                total_paid = sum((p.paid_amount or 0.0) for p in rec.payment_ids)
+
             rec.paid_amount = total_paid
-            rec.remaining_amount = (rec.due_amount or 0.0) - total_paid
-            rec.payment_status = (
-                "paid" if (rec.remaining_amount or 0.0) <= 0.0 else "pending"
-            )
+            rec.remaining_amount = max(due - total_paid, 0.0)
+
+            if float_compare(total_paid, 0.0, precision_digits=5) <= 0:
+                rec.payment_status = "pending"
+            elif float_compare(rec.remaining_amount, 0.0, precision_digits=5) <= 0:
+                rec.payment_status = "paid"
+            else:
+                rec.payment_status = "partial"
 
     @api.depends("currency_id", "receipt_date", "company_id")
     def _compute_exchange_rate(self):
@@ -478,6 +511,9 @@ class IdilSalesPayment(models.Model):
         ondelete="cascade",
     )
 
+    is_credit_allocation = fields.Boolean(string="Credit Allocation", default=False)
+    allocation_ref = fields.Char(string="Allocation Ref")
+
     def unlink(self):
         try:
             with self.env.cr.savepoint():
@@ -506,8 +542,13 @@ class IdilSalesPayment(models.Model):
                     )  # Store payment_amounts grouped by bulk_payment_id
                     for method in bulk_payment_methods:
                         if method.bulk_receipt_payment_id:
-                            if method.bulk_receipt_payment_id not in related_bulk_payments:
-                                related_bulk_payments[method.bulk_receipt_payment_id] = 0
+                            if (
+                                method.bulk_receipt_payment_id
+                                not in related_bulk_payments
+                            ):
+                                related_bulk_payments[
+                                    method.bulk_receipt_payment_id
+                                ] = 0
                             related_bulk_payments[
                                 method.bulk_receipt_payment_id
                             ] += method.payment_amount
