@@ -64,6 +64,7 @@ from . import customerplaceorder
 from . import staffplaceorder
 
 from . import product_opening_balance
+from . import order_barcode_preview
 from . import executive_business_summary_wizard
 from . import product_purchase_return
 from . import system_clearing

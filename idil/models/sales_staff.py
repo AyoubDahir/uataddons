@@ -63,29 +63,38 @@ class SalesPersonnel(models.Model):
         "Example: Set to 1 for payment on the 1st of each month",
     )
 
+    commission_balance = fields.Float(
+        string="Commission Credit Balance",
+        digits=(16, 5),
+        default=0.0,
+        tracking=True,
+        help="Credit created when paid commission becomes invalid due to return. Automatically used to settle next commissions.",
+    )
+
     @api.constrains("commission_payment_day", "commission_payment_schedule")
     def _check_payment_day(self):
         """Validate payment day is between 1 and 31"""
         for record in self:
             if record.commission_payment_schedule == "monthly":
                 if not (1 <= record.commission_payment_day <= 31):
-                    raise ValidationError(
-                        "Payment day must be between 1 and 31"
-                    )
+                    raise ValidationError("Payment day must be between 1 and 31")
 
     commission_payable_account_id = fields.Many2one(
         "idil.chart.account",
         string="Commission Payable Account",
         domain="[('account_type', '=', 'payable')]",
         help="Liability account to track deferred commissions. "
-             "Required when commission payment schedule is 'monthly'.",
+        "Required when commission payment schedule is 'monthly'.",
     )
 
     @api.constrains("commission_payment_schedule", "commission_payable_account_id")
     def _check_commission_payable_account(self):
         """Ensure Commission Payable account is set for monthly schedules"""
         for record in self:
-            if record.commission_payment_schedule == "monthly" and not record.commission_payable_account_id:
+            if (
+                record.commission_payment_schedule == "monthly"
+                and not record.commission_payable_account_id
+            ):
                 raise ValidationError(
                     "Commission Payable Account is required when commission payment schedule is 'monthly'."
                 )
@@ -291,9 +300,12 @@ class SalespersonTransaction(models.Model):
     )
 
     transaction_type = fields.Selection(
-        [("in", "In"), ("out", "Out")], string="Transaction Type", required=True
+        [("in", "In"), ("out", "Out"), ("other", "Other")],
+        string="Transaction Type",
+        required=True,
     )
     amount = fields.Float(string="Amount")
+
     description = fields.Text(string="Description")
     running_balance = fields.Float(
         string="Running Balance", compute="_compute_running_balance", store=True
@@ -336,7 +348,7 @@ class SalespersonTransaction(models.Model):
             for trans in transactions:
                 if trans.transaction_type == "in":
                     balance += trans.amount
-                else:  # 'out'
+                elif trans.transaction_type == "out":  # 'out'
                     balance -= trans.amount
                 # Update the running balance for this transaction
                 trans.running_balance = balance

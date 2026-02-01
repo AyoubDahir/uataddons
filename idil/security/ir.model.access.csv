@@ -193,6 +193,7 @@ idil.access_idil_currency_exchange_user,access_idil_currency_exchange_user,idil.
 idil.access_idil_sale_return_user,access_idil_sale_return_user,idil.model_idil_sale_return,base.group_user,1,1,1,1
 idil.access_idil_sale_return_line_user,access_idil_sale_return_line_user,idil.model_idil_sale_return_line,base.group_user,1,1,1,1
 idil.access_idil_view_all_sales,access_idil_view_all_sales,idil.model_idil_view_all_sales,,1,1,1,1
+idil.access_idil_order_barcode_preview,access_idil_order_barcode_preview,idil.model_idil_order_barcode_preview,base.group_user,1,1,1,1
 idil.access_idil_kitchen_report_wizard,access_idil_kitchen_report_wizard,idil.model_idil_kitchen_report_wizard,base.group_user,1,1,1,1
 idil.access_idil_material_request,access_idil_material_request,idil.model_idil_material_request,base.group_user,1,1,1,1
 idil.access_idil_material_request_line,access_idil_material_request_line,idil.model_idil_material_request_line,base.group_user,1,1,1,1

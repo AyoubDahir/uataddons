@@ -23,6 +23,35 @@ class SalespersonOrder(models.Model):
     total_quantity = fields.Float(
         string="Total Quantity", compute="_compute_total_quantity", store=True
     )
+    barcode = fields.Char(string="Barcode", compute="_compute_barcode", store=True)
+    qr_data = fields.Text(string="QR Data", compute="_compute_qr_data")
+
+    @api.depends('name')
+    def _compute_qr_data(self):
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        for rec in self:
+            rec.qr_data = f"{base_url}/order/info/{rec.name}"
+
+    @api.depends('name')
+    def _compute_barcode(self):
+        for rec in self:
+            rec.barcode = rec.name
+
+    def action_view_barcode(self):
+        self.ensure_one()
+        return {
+            'name': 'Order Barcode Preview',
+            'type': 'ir.actions.act_window',
+            'res_model': 'idil.order.barcode.preview',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_name': self.name,
+                'default_owner_name': self.salesperson_id.name,
+                'default_order_date': self.order_date,
+                'default_qr_data': self.qr_data,
+            }
+        }
 
     @api.depends("order_lines.quantity")
     def _compute_total_quantity(self):

@@ -65,6 +65,8 @@
 
                 <!-- Header: Status pill -->
                 <header>
+                    <button name="action_view_barcode" string="Preview Barcode" type="object" class="btn-info" icon="fa-eye"/>
+                    <button name="%(action_report_production_barcode_salesperson)d" string="Print Barcode Labels" type="action" class="btn-primary" icon="fa-barcode"/>
                     <span class="ms-2 badge rounded-pill bg-light border text-muted px-3 py-2">
                         <i class="fa fa-flag me-1"/>
                         Status:

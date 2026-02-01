@@ -1,0 +1,377 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="order_info_mobile_template" name="Order Mobile View">
+        &lt;!DOCTYPE html&gt;
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+                <title>Order Details - <t t-esc="order.name"/></title>
+                <!-- Modern Fonts -->
+                <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+                <style>
+                    :root {
+                        --primary: #0f172a;
+                        --primary-light: #1e293b;
+                        --accent: #3b82f6;
+                        --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+                        --success: #10b981;
+                        --bg: #f8fafc;
+                        --card: #ffffff;
+                        --text-main: #1e293b;
+                        --text-muted: #64748b;
+                        --border: #e2e8f0;
+                    }
+                    body {
+                        margin: 0;
+                        padding: 0;
+                        font-family: 'Plus Jakarta Sans', sans-serif;
+                        background-color: var(--bg);
+                        color: var(--text-main);
+                        line-height: 1.5;
+                        -webkit-font-smoothing: antialiased;
+                    }
+                    .app-container {
+                        max-width: 500px;
+                        margin: 0 auto;
+                        min-height: 100vh;
+                        background: var(--bg);
+                        position: relative;
+                    }
+                    /* Premium Header */
+                    .header-portal {
+                        background: var(--primary);
+                        color: white;
+                        padding: 30px 24px 80px;
+                        position: relative;
+                        overflow: hidden;
+                    }
+                    .header-portal::before {
+                        content: '';
+                        position: absolute;
+                        top: -50px;
+                        right: -50px;
+                        width: 150px;
+                        height: 150px;
+                        background: var(--accent);
+                        filter: blur(80px);
+                        opacity: 0.2;
+                    }
+                    .top-nav {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 24px;
+                        position: relative;
+                        z-index: 2;
+                    }
+                    .company-branding {
+                        display: flex;
+                        align-items: center;
+                        gap: 12px;
+                    }
+                    .logo-box {
+                        width: 45px;
+                        height: 45px;
+                        background: white;
+                        border-radius: 12px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                    }
+                    .logo-box img {
+                        max-width: 80%;
+                        max-height: 80%;
+                    }
+                    .company-name {
+                        font-weight: 700;
+                        font-size: 18px;
+                        letter-spacing: -0.5px;
+                    }
+                    .status-pill {
+                        background: rgba(16, 185, 129, 0.15);
+                        color: var(--success);
+                        border: 1px solid rgba(16, 185, 129, 0.2);
+                        padding: 6px 14px;
+                        border-radius: 100px;
+                        font-size: 12px;
+                        font-weight: 700;
+                        text-transform: uppercase;
+                    }
+                    .order-identity h1 {
+                        margin: 0;
+                        font-size: 32px;
+                        font-weight: 800;
+                        letter-spacing: -1px;
+                        margin-bottom: 4px;
+                    }
+                    .order-date {
+                        font-size: 14px;
+                        color: var(--text-muted);
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                    }
+
+                    /* Content Cards */
+                    .portal-content {
+                        margin-top: -50px;
+                        padding: 0 20px 40px;
+                        position: relative;
+                        z-index: 3;
+                    }
+                    .card-premium {
+                        background: var(--card);
+                        border-radius: 24px;
+                        padding: 24px;
+                        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.05);
+                        margin-bottom: 24px;
+                        border: 1px solid var(--border);
+                    }
+                    .owner-label {
+                        font-size: 11px;
+                        font-weight: 700;
+                        color: var(--text-muted);
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                        margin-bottom: 8px;
+                    }
+                    .owner-display {
+                        display: flex;
+                        align-items: center;
+                        gap: 15px;
+                    }
+                    .owner-avatar {
+                        width: 50px;
+                        height: 50px;
+                        background: #f1f5f9;
+                        border-radius: 100%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 20px;
+                        color: var(--primary);
+                    }
+                    .owner-info h2 {
+                        margin: 0;
+                        font-size: 20px;
+                        font-weight: 700;
+                    }
+                    .owner-info .role {
+                        font-size: 13px;
+                        color: var(--text-muted);
+                    }
+
+                    /* Items Table */
+                    .items-section-header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 16px;
+                        padding: 0 4px;
+                    }
+                    .items-section-header h3 {
+                        margin: 0;
+                        font-size: 18px;
+                        font-weight: 700;
+                    }
+                    .item-count {
+                        font-size: 13px;
+                        font-weight: 600;
+                        color: var(--accent);
+                        background: rgba(59, 130, 246, 0.1);
+                        padding: 4px 12px;
+                        border-radius: 8px;
+                    }
+                    .item-card-lite {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding: 16px 0;
+                        border-bottom: 1px solid #f1f5f9;
+                    }
+                    .item-card-lite:last-child {
+                        border-bottom: none;
+                    }
+                    .p-details h4 {
+                        margin: 0;
+                        font-size: 15px;
+                        font-weight: 600;
+                        color: var(--primary);
+                        margin-bottom: 2px;
+                    }
+                    .p-meta {
+                        font-size: 13px;
+                        color: var(--text-muted);
+                    }
+                    .p-price-total {
+                        text-align: right;
+                    }
+                    .p-price-val {
+                        font-weight: 700;
+                        font-size: 16px;
+                        color: var(--primary);
+                    }
+
+                    /* Totals Tray */
+                    .totals-tray {
+                        margin-top: 20px;
+                        padding-top: 20px;
+                        border-top: 2px solid #f1f5f9;
+                    }
+                    .total-row {
+                        display: flex;
+                        justify-content: space-between;
+                        margin-bottom: 10px;
+                    }
+                    .total-row.grand {
+                        margin-top: 15px;
+                        padding: 15px;
+                        background: #f8fafc;
+                        border-radius: 12px;
+                        border: 1px solid var(--border);
+                    }
+                    .label-sm { font-size: 14px; color: var(--text-muted); }
+                    .val-sm { font-size: 14px; font-weight: 600; }
+                    .label-lg { font-size: 18px; font-weight: 700; color: var(--primary); }
+                    .val-lg { font-size: 22px; font-weight: 800; color: var(--accent); }
+
+                    /* Footer */
+                    .portal-footer {
+                        text-align: center;
+                        padding: 20px;
+                    }
+                    .footer-logo {
+                        font-weight: 800;
+                        font-size: 14px;
+                        color: var(--text-muted);
+                        margin-bottom: 8px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 8px;
+                    }
+                    .help-txt {
+                        font-size: 12px;
+                        color: #94a3b8;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="app-container">
+                    <!-- Header with Branding -->
+                    <div class="header-portal">
+                        <div class="top-nav">
+                            <div class="company-branding">
+                                <div class="logo-box">
+                                     <img t-if="request.env.company.logo" t-att-src="'/web/image/res.company/%s/logo' % request.env.company.id" alt="Logo"/>
+                                     <i t-else="" class="fas fa-building text-primary"></i>
+                                </div>
+                                <div class="company-name"><t t-esc="request.env.company.name"/></div>
+                            </div>
+                            <div class="status-pill">Active</div>
+                        </div>
+                        <div class="order-identity">
+                            <h1><t t-esc="order.name"/></h1>
+                            <div class="order-date">
+                                <i class="far fa-calendar-alt"></i>
+                                Issued: <t t-esc="order.order_date" t-options='{"widget": "datetime"}'/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Portal Content -->
+                    <div class="portal-content">
+                        <!-- Owner Card -->
+                        <div class="card-premium">
+                            <div class="owner-label">Verified Record For</div>
+                            <div class="owner-display">
+                                <div class="owner-avatar">
+                                    <i class="fas fa-user-tie"></i>
+                                </div>
+                                <div class="owner-info">
+                                    <h2><t t-esc="owner_name"/></h2>
+                                    <div class="role">Authorized <t t-esc="order._description"/> Member</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Items Card -->
+                        <div class="card-premium">
+                            <div class="items-section-header">
+                                <h3>Order Summary</h3>
+                                <div class="item-count"><t t-esc="len(order.order_lines)"/> Lines</div>
+                            </div>
+
+                            <div class="items-list">
+                                <t t-set="grand_total" t-value="0"/>
+                                <t t-set="total_qty" t-value="0"/>
+                                <t t-foreach="order.order_lines" t-as="line">
+                                    <t t-set="line_total" t-value="line.quantity * line.product_id.sale_price"/>
+                                    <t t-set="grand_total" t-value="grand_total + line_total"/>
+                                    <t t-set="total_qty" t-value="total_qty + line.quantity"/>
+                                    
+                                    <div class="item-card-lite">
+                                        <div class="p-details">
+                                            <h4><t t-esc="line.product_id.name"/></h4>
+                                            <div class="p-meta">
+                                                <t t-esc="line.quantity"/> Units &amp; times; <t t-esc="line.product_id.sale_price"/>
+                                            </div>
+                                        </div>
+                                        <div class="p-price-total">
+                                            <div class="p-price-val"><t t-esc="line_total" t-options='{"widget": "monetary", "display_currency": line.product_id.currency_id}'/></div>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+
+                            <!-- Totals Tray -->
+                            <div class="totals-tray">
+                                <div class="total-row">
+                                    <div class="label-sm">Total Quantity</div>
+                                    <div class="val-sm"><t t-esc="total_qty"/> Units</div>
+                                </div>
+                                <div class="total-row">
+                                    <div class="label-sm">Net Tax (0%)</div>
+                                    <div class="val-sm">0.00</div>
+                                </div>
+                                <div class="total-row grand">
+                                    <div class="label-lg">Grand Total</div>
+                                    <div class="val-lg">
+                                        <t t-esc="grand_total" t-options='{"widget": "monetary", "display_currency": order.order_lines[0].product_id.currency_id if order.order_lines else request.env.company.currency_id}'/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Info Grid -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 24px;">
+                             <div class="card-premium" style="margin-bottom: 0; padding: 15px; text-align: center;">
+                                <i class="fas fa-barcode" style="font-size: 24px; color: var(--accent); margin-bottom: 8px;"></i>
+                                <div style="font-size: 12px; font-weight: 700; color: var(--text-muted);">REF# <t t-esc="order.name"/></div>
+                             </div>
+                             <div class="card-premium" style="margin-bottom: 0; padding: 15px; text-align: center;">
+                                <i class="fas fa-shield-alt" style="font-size: 24px; color: var(--success); margin-bottom: 8px;"></i>
+                                <div style="font-size: 12px; font-weight: 700; color: var(--text-muted);">SECURE SCAN</div>
+                             </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="portal-footer">
+                            <div class="footer-logo">
+                                <i class="fas fa-cube text-accent"></i>
+                                <span><t t-esc="request.env.company.name"/> PORTAL</span>
+                            </div>
+                            <div class="help-txt">
+                                For any inquiries, please contact our support desk.<br/>
+                                This is an automated production record.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </body>
+        </html>
+    </template>
+</odoo>

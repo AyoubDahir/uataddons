@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_order_barcode_preview_form" model="ir.ui.view">
+        <field name="name">idil.order.barcode.preview.form</field>
+        <field name="model">idil.order.barcode.preview</field>
+        <field name="arch" type="xml">
+            <form string="Production Label Preview">
+                <sheet>
+                    <field name="preview_html" widget="html" readonly="1"/>
+                </sheet>
+                <footer>
+                    <button string="Close" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

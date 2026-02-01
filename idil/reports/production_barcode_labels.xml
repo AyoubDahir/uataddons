@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Report Action for Salesperson Order -->
+    <record id="action_report_production_barcode_salesperson" model="ir.actions.report">
+        <field name="name">Production Barcode Labels</field>
+        <field name="model">idil.salesperson.place.order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">idil.report_production_barcode_template</field>
+        <field name="report_file">idil.report_production_barcode_template</field>
+        <field name="print_report_name">'Barcode - %s' % (object.name)</field>
+        <field name="binding_model_id" ref="model_idil_salesperson_place_order"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <!-- Report Action for Customer Order -->
+    <record id="action_report_production_barcode_customer" model="ir.actions.report">
+        <field name="name">Production Barcode Labels</field>
+        <field name="model">idil.customer.place.order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">idil.report_production_barcode_template</field>
+        <field name="report_file">idil.report_production_barcode_template</field>
+        <field name="print_report_name">'Barcode - %s' % (object.name)</field>
+        <field name="binding_model_id" ref="model_idil_customer_place_order"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <!-- Report Action for Staff Order -->
+    <record id="action_report_production_barcode_staff" model="ir.actions.report">
+        <field name="name">Production Barcode Labels</field>
+        <field name="model">idil.staff.place.order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">idil.report_production_barcode_template</field>
+        <field name="report_file">idil.report_production_barcode_template</field>
+        <field name="print_report_name">'Barcode - %s' % (object.name)</field>
+        <field name="binding_model_id" ref="model_idil_staff_place_order"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <!-- QWeb Template -->
+    <template id="report_production_barcode_template">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="web.basic_layout">
+                    <style>
+                        .master-container {
+                            width: 100%;
+                            border: 2px solid #1a237e;
+                            border-radius: 15px;
+                            padding: 0;
+                            margin: 20px 0;
+                            font-family: 'Helvetica', Arial, sans-serif;
+                            overflow: hidden;
+                        }
+                        .header-bar {
+                            background-color: #1a237e;
+                            color: white;
+                            padding: 15px 20px;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                        }
+                        .body-content {
+                            padding: 20px;
+                        }
+                        .label-text {
+                            font-size: 10px;
+                            font-weight: bold;
+                            color: #7f8c8d;
+                            text-transform: uppercase;
+                            margin-bottom: 3px;
+                        }
+                        .value-text {
+                            font-size: 20px;
+                            font-weight: 800;
+                            color: #1a237e;
+                            margin-bottom: 15px;
+                        }
+                        .table-main {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin: 15px 0;
+                        }
+                        .table-main th {
+                            background-color: #f8f9fa;
+                            border-bottom: 2px solid #1a237e;
+                            padding: 10px;
+                            text-align: left;
+                            font-size: 11px;
+                        }
+                        .table-main td {
+                            padding: 10px;
+                            border-bottom: 1px solid #eee;
+                            font-size: 14px;
+                        }
+                        .code-footer {
+                            border-top: 1px dashed #ccc;
+                            padding: 20px;
+                            background-color: #fafafa;
+                        }
+                        .code-box {
+                            display: inline-block;
+                            vertical-align: top;
+                            text-align: center;
+                        }
+                        .barcode-area {
+                            width: 65%;
+                        }
+                        .qr-area {
+                            width: 30%;
+                            float: right;
+                        }
+                    </style>
+                    <div class="page">
+                        <div class="master-container">
+                            <!-- Header -->
+                            <div class="header-bar">
+                                <h1 style="margin:0; font-size: 26px;"><t t-esc="doc.name"/></h1>
+                                <div style="text-align:right; font-size: 12px; opacity: 0.9;">
+                                    DATE: <t t-esc="doc.order_date" t-options='{"widget": "datetime"}'/>
+                                </div>
+                            </div>
+
+                            <div class="body-content">
+                                <t t-set="owner_name" t-value="''"/>
+                                <t t-if="doc._name == 'idil.salesperson.place.order'">
+                                    <t t-set="owner_name" t-value="doc.salesperson_id.name"/>
+                                </t>
+                                <t t-if="doc._name == 'idil.customer.place.order'">
+                                    <t t-set="owner_name" t-value="doc.customer_id.name"/>
+                                </t>
+                                <t t-if="doc._name == 'idil.staff.place.order'">
+                                    <t t-set="owner_name" t-value="doc.employee_id.name"/>
+                                </t>
+
+                                <div class="label-text">Order Owner</div>
+                                <div class="value-text"><t t-esc="owner_name"/></div>
+
+                                <table class="table-main">
+                                    <thead>
+                                        <tr>
+                                            <th>Product</th>
+                                            <th style="text-align:center;">Qty</th>
+                                            <th style="text-align:right;">Price</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="doc.order_lines" t-as="l">
+                                            <tr>
+                                                <td><b><t t-esc="l.product_id.name"/></b></td>
+                                                <td style="text-align:center;"><t t-esc="l.quantity"/></td>
+                                                <td style="text-align:right;"><t t-esc="l.product_id.sale_price" t-options='{"widget": "monetary", "display_currency": l.product_id.currency_id}'/></td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="code-footer">
+                                <div class="code-box barcode-area">
+                                    <div class="label-text" style="color:#1a237e">Barcode - Search Reference</div>
+                                    <!-- Use <img> tag with direct controller call. Try 'type' instead of symbology -->
+                                    <img t-att-src="'/report/barcode/?barcode_type=Code128&amp;value=%s&amp;width=600&amp;height=100' % (doc.name)" style="width:350px; height:60px; display:block; margin: 0 auto;"/>
+                                    <div style="font-weight:bold; margin-top:5px;"><t t-esc="doc.name"/></div>
+                                </div>
+
+                                <div class="code-box qr-area">
+                                    <div class="label-text" style="color:#1a237e">QR - Mobile Details</div>
+                                    <img t-att-src="'/report/barcode/?barcode_type=QR&amp;value=%s&amp;width=200&amp;height=200' % (doc.qr_data)" style="width:85px; height:85px;"/>
+                                </div>
+                                <div style="clear:both;"/>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>
