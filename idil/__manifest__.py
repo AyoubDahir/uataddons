@@ -131,6 +131,7 @@
         "views/product_opening_balance_views.xml",
         "views/product_purchase_return.xml",
         "views/customer_place_order.xml",
+        "views/staffplaceorder.xml",
         "views/system_clearing_wizard_view.xml",
         "views/recurring_journal_entry.xml",
         "data/recurring_journal_sequence.xml",
