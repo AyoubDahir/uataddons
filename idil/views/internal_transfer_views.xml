@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-
-    <!-- ========================= -->
-    <!-- Tree View -->
-    <!-- ========================= -->
+ 
     <record id="view_internal_transfer_tree" model="ir.ui.view">
         <field name="name">idil.internal.transfer.tree</field>
         <field name="model">idil.internal.transfer</field>
@@ -20,101 +17,175 @@
         </field>
     </record>
 
-    <!-- ========================= -->
-    <!-- Form View -->
-    <!-- ========================= -->
+   
     <record id="view_internal_transfer_form" model="ir.ui.view">
         <field name="name">idil.internal.transfer.form</field>
         <field name="model">idil.internal.transfer</field>
         <field name="arch" type="xml">
-            <form string="Internal Transfer">
+            <form string="📦 Internal Transfer" class="o_form_nosheet">
+
                 <header>
-
-                    <!-- Buttons (keep your workflow style) -->
-                    <button name="action_submit" type="object"
-                            string="📤 Submit" class="btn-primary"/>
-
-                    <button name="action_approve" type="object"
-                            string="✅ Approve" class="btn-primary"/>
-
-                    <button name="action_reject" type="object"
-                            string="🛑 Reject" class="btn-danger"/>
-
-                    <button name="action_reset_to_draft" type="object"
-                            string="↩️ Reset to Draft" class="btn-secondary"/>
-
-                    <button name="action_cancel"
-                            string="Cancel"
+                    <button name="action_submit"
                             type="object"
-                            class="btn-secondary"/>
+                            string="📤 Submit"
+                            class="btn-primary"/>
 
+                    <button name="action_approve"
+                            type="object"
+                            string="✅ Approve"
+                            class="btn-primary"/>
+
+                    <button string="✖ Cancel"
+                            special="cancel"
+                            class="btn-secondary"/>
                 </header>
 
                 <sheet>
-
-                    <!-- Title -->
+ 
                     <div class="oe_title">
-                        <h1>
-                            <field name="name" readonly="1"/>
+                        <h1 class="mb-1">
+                            <i class="fa fa-exchange me-2 text-primary" role="img" aria-label="Transfer"/>
+                            Internal Transfer
                         </h1>
+
+                        <div class="text-muted">
+                            <i class="fa fa-info-circle me-1"/>
+                            Move items between warehouses and locations with full stock validation and movement tracking.
+                        </div>
+
+                        <div class="mt-2">
+                            <div class="badge rounded-pill bg-light border text-muted px-3 py-2">
+                                <i class="fa fa-hashtag me-1"/>
+                                <field name="name" readonly="1" nolabel="1"/>
+                            </div>
+
+                            <span class="ms-2 badge rounded-pill bg-light border text-muted px-3 py-2">
+                                <i class="fa fa-calendar me-1"/>
+                                <field name="transfer_date" nolabel="1"/>
+                            </span>
+
+                            <span class="ms-2 badge rounded-pill bg-light border text-muted px-3 py-2">
+                                <i class="fa fa-link me-1"/>
+                                <field name="move_ref" readonly="1" nolabel="1"/>
+                            </span>
+                        </div>
                     </div>
+ 
+                    <div class="row g-3 mt-3">
 
-                    <!-- Main Info -->
-                    <group>
-                        <group>
-                            <field name="transfer_date"/>
-                        </group>
-                        <group>
-                            <field name="move_ref" readonly="1"/>
-                        </group>
-                    </group>
+                        <!-- From -->
+                        <div class="col-12 col-lg-6">
+                            <div class="border rounded-4 p-3 shadow-sm bg-white">
+                                <div class="fw-bold mb-2">
+                                    <i class="fa fa-sign-out me-2 text-muted"/>
+                                    From
+                                </div>
 
-                    <!-- ========================= -->
-                    <!-- Transfer Details -->
-                    <!-- ========================= -->
-                    <group string="Material Transfer Details">
-                        <group>
-                            <field name="source_warehouse_id"/>
-                            <field name="destination_warehouse_id"/>
-                        </group>
+                                <div class="d-grid gap-2">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fa fa-building-o me-2 text-muted"/>
+                                        <field name="source_warehouse_id" nolabel="1" class="w-100"/>
+                                    </div>
 
-                        <group>
-                            <field name="source_location_id"/>
-                            <field name="destination_location_id"/>
-                        </group>
-                    </group>
+                                    <div class="d-flex align-items-center">
+                                        <i class="fa fa-map-marker me-2 text-muted"/>
+                                        <field name="source_location_id" nolabel="1" class="w-100"/>
+                                    </div>
+                                </div>
 
-                    <!-- ========================= -->
-                    <!-- Product Lines -->
-                    <!-- ========================= -->
-                    <notebook>
-                        <page string="Products">
-                            <field name="line_ids" nolabel="1">
-                                <tree editable="bottom">
-                                    <field name="item_id"/>
-                                    <field name="qty"/>
+                                <div class="alert alert-light mt-3 mb-0" role="alert">
+                                    <i class="fa fa-shield me-1"/>
+                                    Stock availability is validated from this location.
+                                </div>
+                            </div>
+                        </div>
 
-                                    <!-- Availability -->
-                                    <field name="available_qty" readonly="1"/>
-                                    <field name="stock_indicator"
-                                           widget="badge"
-                                           decoration-success="stock_indicator == 'green'"
-                                           decoration-danger="stock_indicator == 'red'"/>
-                                </tree>
-                            </field>
+                        <!-- To -->
+                        <div class="col-12 col-lg-6">
+                            <div class="border rounded-4 p-3 shadow-sm bg-white">
+                                <div class="fw-bold mb-2">
+                                    <i class="fa fa-sign-in me-2 text-muted"/>
+                                    To
+                                </div>
+
+                                <div class="d-grid gap-2">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fa fa-building me-2 text-muted"/>
+                                        <field name="destination_warehouse_id" nolabel="1" class="w-100"/>
+                                    </div>
+
+                                    <div class="d-flex align-items-center">
+                                        <i class="fa fa-map-pin me-2 text-muted"/>
+                                        <field name="destination_location_id" nolabel="1" class="w-100"/>
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-info mt-3 mb-0" role="alert">
+                                    <i class="fa fa-lightbulb-o me-1"/>
+                                    Tip: choose correct destination location for accurate traceability.
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+ 
+                    <notebook class="mt-3">
+
+                        <!-- Products -->
+                        <page string="📦 Products" name="page_products">
+                            <div class="border rounded-4 p-3 shadow-sm bg-white">
+                                <div class="fw-bold mb-2">
+                                    <i class="fa fa-cubes me-2 text-muted"/>
+                                    Transfer Lines
+                                </div>
+
+                                <field name="line_ids" nolabel="1">
+                                    <tree editable="bottom">
+                                        <field name="item_id"/>
+                                        <field name="qty"/>
+                                        <field name="available_qty" readonly="1"/>
+                                    </tree>
+                                </field>
+
+                                <div class="text-muted mt-2">
+                                    <i class="fa fa-check-circle-o me-1"/>
+                                    When approved, system creates two movements per line (OUT from source, IN to destination).
+                                </div>
+                            </div>
                         </page>
 
                         <!-- Traceability -->
-                        <page string="Traceability">
-                            <group>
-                                <field name="move_ref" readonly="1"/>
-                            </group>
+                        <page string="🧾 Traceability" name="page_trace">
+                            <div class="border rounded-4 p-3 shadow-sm bg-white">
+                                <div class="fw-bold mb-2">
+                                    <i class="fa fa-chain me-2 text-muted"/>
+                                    Movement Reference
+                                </div>
+
+                                <div class="d-flex align-items-center">
+                                    <i class="fa fa-link me-2 text-muted"/>
+                                    <field name="move_ref" readonly="1" nolabel="1" class="w-100"/>
+                                </div>
+
+                                <div class="alert alert-light mt-3 mb-0" role="alert">
+                                    <i class="fa fa-info-circle me-1"/>
+                                    This reference links all generated item movements for audit purposes.
+                                </div>
+                            </div>
                         </page>
 
                         <!-- Notes -->
-                        <page string="Notes">
-                            <field name="notes" placeholder="Internal notes..."/>
+                        <page string="📝 Notes" name="page_notes">
+                            <div class="border rounded-4 p-3 shadow-sm bg-white">
+                                <div class="fw-bold mb-2">
+                                    <i class="fa fa-sticky-note-o me-2 text-muted"/>
+                                    Notes
+                                </div>
+
+                                <field name="notes" nolabel="1" placeholder="Internal notes..."/>
+                            </div>
                         </page>
+
                     </notebook>
 
                 </sheet>
@@ -130,9 +201,7 @@
         </field>
     </record>
 
-    <!-- ========================= -->
-    <!-- Action -->
-    <!-- ========================= -->
+ 
     <record id="action_internal_transfer" model="ir.actions.act_window">
         <field name="name">Internal Transfers</field>
         <field name="res_model">idil.internal.transfer</field>

@@ -1,0 +1,576 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- Report Action -->
+    <record id="report_sale_invoice_pdf" model="ir.actions.report">
+        <field name="name">Sales Invoice</field>
+        <field name="model">idil.sale.order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">idil.sale_invoice_report_template</field>
+        <field name="report_file">idil.sale_invoice_report_template</field>
+        <field name="print_report_name">'INV - %s' % (object.name or '')</field>
+    </record>
+
+    
+
+    <!-- Template -->
+    <template id="sale_invoice_report_template">
+        <t t-call="web.basic_layout">
+            <t t-foreach="docs" t-as="o">
+                <t t-set="company" t-value="o.company_id or o.env.company"/>
+
+                <main class="page">
+
+                    <!-- =======================
+                         STYLE (wkhtmltopdf safe)
+                         ======================= -->
+                    <style type="text/css">
+                        .inv-wrap { font-family: Arial, sans-serif; color:#222; }
+                        .inv-title { font-size:42px; font-weight:800; color:#19a9b3; margin:0; padding:0; }
+                        .inv-subtitle { font-size:12px; color:#666; margin-top:2px; }
+                        .inv-line { border-top:3px solid #19a9b3; margin:14px 0 18px 0; }
+                        .inv-section-title { font-size:13px; font-weight:800; margin:0 0 6px 0; color:#111; }
+                        .inv-muted { color:#666; font-size:12px; line-height:1.35; }
+                        .inv-text { font-size:12.5px; line-height:1.45; }
+                        .inv-box { background:#f6f8fa; border-radius:8px; padding:12px; }
+                        .inv-kv td { padding:2px 0; font-size:12.5px; }
+                        .inv-k { color:#666; width:45%; }
+                        .inv-v { text-align:right; font-weight:700; color:#111; }
+                        .inv-items { width:100%; border-collapse:collapse; margin-top:14px; }
+                        .inv-items thead th {
+                            font-size:12px; color:#333; text-align:left;
+                            border-top:2px solid #19a9b3;
+                            border-bottom:1px solid #ddd;
+                            padding:8px 8px;
+                            background:#fcfcfc;
+                        }
+                        .inv-items tbody td {
+                            font-size:12.5px;
+                            padding:8px 8px;
+                            border-bottom:1px solid #eee;
+                            vertical-align:top;
+                        }
+                        .inv-right { text-align:right; }
+                        .inv-center { text-align:center; }
+                        .inv-totals { width:100%; border-collapse:collapse; }
+                        .inv-totals td { padding:5px 0; font-size:12.5px; }
+                        .inv-total-label { color:#666; }
+                        .inv-total-val { text-align:right; font-weight:700; }
+                        .inv-grand { color:#19a9b3; font-weight:900; font-size:14px; }
+                        .inv-footer-line { border-top:2px solid #19a9b3; margin-top:18px; }
+                        .inv-sign td { padding-top:26px; font-size:12.5px; }
+                        .inv-sign .line { border-top:1px solid #111; width:75%; margin-top:30px; }
+                    </style>
+
+                    <div class="inv-wrap">
+
+                        <!-- =======================
+                             HEADER (Title + Logo)
+                             ======================= -->
+                        <table style="width:100%; border-collapse:collapse;">
+                            <tr>
+                                <td style="width:75%; vertical-align:top;">
+                                    <div class="inv-title">Sales Invoice</div>
+                                    <div class="inv-subtitle">Official Sales Document</div>
+                                </td>
+
+                                <td style="width:25%; text-align:right; vertical-align:top;">
+                                    <t t-if="company and company.logo">
+                                        <div style="display:inline-block; width:88px; height:88px; border-radius:44px; border:3px solid #19a9b3; overflow:hidden;">
+                                            <img t-att-src="image_data_uri(company.logo)"
+                                                 style="width:88px; height:88px; object-fit:cover;"
+                                                 alt="Company Logo"/>
+                                        </div>
+                                    </t>
+                                    <t t-else="">
+                                        <div style="display:inline-block; width:88px; height:88px; border-radius:44px; border:3px solid #19a9b3;"></div>
+                                    </t>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <div class="inv-line"></div>
+
+                        <!-- =======================
+                             TOP INFO (Company + Invoice Box)
+                             ======================= -->
+                        <table style="width:100%; border-collapse:collapse;">
+                            <tr>
+                                <!-- Company (left) -->
+                                <td style="width:55%; vertical-align:top; padding-right:18px;">
+                                    <div class="inv-section-title">
+                                        <span t-esc="(company and company.name) or ''"/>
+                                    </div>
+
+                                    <div class="inv-muted">
+                                        <t t-if="company and company.street"><div t-esc="company.street"/></t>
+                                        <t t-if="company and company.street2"><div t-esc="company.street2"/></t>
+
+                                        <t t-if="company and (company.city or company.state_id or company.zip)">
+                                            <div>
+                                                <span t-esc="company.city or ''"/>
+                                                <t t-if="company.state_id">, <span t-esc="company.state_id.name"/></t>
+                                                <t t-if="company.zip"> <span t-esc="company.zip"/></t>
+                                            </div>
+                                        </t>
+
+                                        <t t-if="company and company.country_id"><div t-esc="company.country_id.name"/></t>
+
+                                        <t t-if="company and company.phone">
+                                            <div><span style="font-style:italic;">Phone:</span> <span t-esc="company.phone"/></div>
+                                        </t>
+                                        <t t-if="company and company.email">
+                                            <div><span style="font-style:italic;">Email:</span> <span t-esc="company.email"/></div>
+                                        </t>
+                                        <t t-if="company and company.website">
+                                            <div><span style="font-style:italic;">Web:</span> <span t-esc="company.website"/></div>
+                                        </t>
+                                    </div>
+                                </td>
+
+                                <!-- Invoice details box (right) -->
+                                <td style="width:45%; vertical-align:top;">
+                                    <div class="inv-box">
+                                        <table class="inv-kv" style="width:100%; border-collapse:collapse;">
+                                            <tr>
+                                                <td class="inv-k">Invoice No:</td>
+                                                <td class="inv-v"><span t-esc="o.name or ''"/></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="inv-k">Status:</td>
+                                                <td class="inv-v"><span t-esc="o.state or ''"/></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="inv-k">Date:</td>
+                                                <td class="inv-v"><span t-esc="o.order_date or ''"/></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="inv-k">Salesperson:</td>
+                                                <td class="inv-v"><span t-esc="(o.sales_person_id and o.sales_person_id.name) or ''"/></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="inv-k">Exchange Rate:</td>
+                                                <td class="inv-v"><span t-esc="o.rate or 0.0"/></td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- =======================
+                             Bill To + Notes (clean)
+                             ======================= -->
+                        <table style="width:100%; border-collapse:collapse; margin-top:18px;">
+                            <tr>
+                                <!-- Bill To (Salesperson as customer entity in your model) -->
+                                <td style="width:50%; vertical-align:top; padding-right:18px;">
+                                    <div class="inv-section-title">Bill To</div>
+                                    <div class="inv-text">
+                                        <div style="font-weight:700;" t-esc="(o.sales_person_id and o.sales_person_id.name) or ''"/>
+                                        <t t-if="o.sales_person_id and o.sales_person_id.phone">
+                                            <div><span style="font-style:italic;">Phone:</span> <span t-esc="o.sales_person_id.phone"/></div>
+                                        </t>
+                                        <t t-if="o.sales_person_id and o.sales_person_id.email">
+                                            <div><span style="font-style:italic;">Email:</span> <span t-esc="o.sales_person_id.email"/></div>
+                                        </t>
+                                        <t t-if="o.sales_person_id and o.sales_person_id.address">
+                                            <div><span style="font-style:italic;">Address:</span> <span t-esc="o.sales_person_id.address"/></div>
+                                        </t>
+                                    </div>
+                                </td>
+
+                                <!-- Notes -->
+                                <td style="width:50%; vertical-align:top;">
+                                    <div class="inv-section-title">Terms of sale and other comments</div>
+                                    <div class="inv-muted">
+                                        <t t-if="o.message_ids and len(o.message_ids) &gt; 0">
+                                            This invoice is generated from Sales Order postings.
+                                        </t>
+                                        <t t-else="">
+                                            Add any additional instructions or terms here.
+                                        </t>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- =======================
+                             ITEMS TABLE
+                             ======================= -->
+                        <table class="inv-items">
+                            <thead>
+                                <tr>
+                                    <th style="width:10%;">#</th>
+                                    <th>Description</th>
+                                    <th style="width:10%;" class="inv-center">Qty</th>
+                                    <th style="width:14%;" class="inv-right">Unit Price</th>
+                                    <th style="width:14%;" class="inv-right">Discount</th>
+                                    <th style="width:14%;" class="inv-right">Commission</th>
+                                    <th style="width:14%;" class="inv-right">Subtotal (FY)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-set="idx" t-value="0"/>
+                                <t t-foreach="o.order_lines" t-as="l">
+                                    <t t-set="idx" t-value="idx + 1"/>
+                                    <tr>
+                                        <td><span t-esc="idx"/></td>
+                                        <td>
+                                            <div style="font-weight:700;" t-esc="(l.product_id and l.product_id.display_name) or ''"/>
+                                        </td>
+                                        <td class="inv-center"><span t-esc="l.quantity or 0"/></td>
+                                        <td class="inv-right"><span t-esc="('%.5f' % (l.price_unit or 0.0))"/></td>
+                                        <td class="inv-right"><span t-esc="('%.2f' % (l.discount_amount or 0.0))"/></td>
+                                        <td class="inv-right"><span t-esc="('%.2f' % (l.commission_amount or 0.0))"/></td>
+                                        <td class="inv-right"><span t-esc="('%.2f' % (l.subtotal_fy or 0.0))"/></td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+
+                        <!-- =======================
+                             TOTALS (right)
+                             ======================= -->
+                        <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+                            <tr>
+                                <td style="width:65%;"></td>
+                                <td style="width:35%; vertical-align:top;">
+                                    <table class="inv-totals">
+                                        <tr>
+                                            <td class="inv-total-label">Total (FY)</td>
+                                            <td class="inv-total-val"><span t-esc="('%.2f' % (o.order_total or 0.0))"/></td>
+                                        </tr>
+
+                                        <tr>
+                                            <td class="inv-total-label">Total (USD)</td>
+                                            <td class="inv-total-val"><span t-esc="('%.2f' % (o.total_due_usd or 0.0))"/></td>
+                                        </tr>
+
+                                        <tr>
+                                            <td colspan="2"><div class="inv-footer-line"></div></td>
+                                        </tr>
+
+                                        <tr>
+                                            <td class="inv-grand">Grand Total</td>
+                                            <td class="inv-total-val inv-grand"><span t-esc="('%.2f' % (o.order_total or 0.0))"/></td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- =======================
+                             SIGNATURES
+                             ======================= -->
+                        <table class="inv-sign" style="width:100%; border-collapse:collapse;">
+                            <tr>
+                                <td style="width:50%;">
+                                    <div style="font-weight:800;">Prepared By</div>
+                                    <div class="line">
+                                        <span style="font-style:italic;"></span>
+                                        <span t-esc="(o.create_uid and o.create_uid.name) or ''"/>
+                                    </div>
+                                    <div>
+                                        <span style="font-style:italic; color:#666;">Date:</span>
+                                        <span t-esc="o.create_date or ''"/>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- bottom teal bar like sample -->
+                        <div style="height:12px; background:#19a9b3; margin-top:16px;"></div>
+
+                    </div>
+                </main>
+
+                <div class="pagebreak"></div>
+            </t>
+        </t>
+    </template>
+
+
+
+
+
+    <record id="report_sale_invoice_two_copy_pdf" model="ir.actions.report">
+        <field name="name">Sales Invoice Two Copy</field>
+        <field name="model">idil.sale.order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">idil.sale_invoice_report_template_two_copy</field>
+        <field name="report_file">idil.sale_invoice_report_template_two_copy</field>
+        <field name="print_report_name">'INV - %s' % (object.name or '')</field>
+    </record>
+
+
+
+
+
+
+
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <template id="sale_invoice_report_template_two_copy">
+    <!-- ✅ NO external header space -->
+    <t t-call="web.basic_layout">
+      <t t-foreach="docs" t-as="o">
+        <t t-set="company" t-value="o.company_id or o.env.company"/>
+
+        <!-- ✅ Odoo PDF requires <main> -->
+        <main class="page">
+
+          <style type="text/css">
+            /* ===== FORCE EXACT ONE A4 ===== */
+            @page { size: A4; margin: 5mm; }
+            html, body { margin: 0; padding: 0; }
+            main.page { margin: 0 !important; padding: 0 !important; }
+
+            /* Whole page wrapper */
+            .a4 { width: 100%; }
+
+            /* Each copy gets half of printable height */
+            /* A4 height 297mm - margins 10mm = 287mm printable.
+               minus cut line gap ~3mm => 284mm.
+               half => 142mm each. */
+            .copy {
+              height: 142mm;
+              box-sizing: border-box;
+              padding: 4mm;
+              overflow: hidden; /* prevents spilling to page 2 */
+            }
+
+            .cut-line {
+              border-top: 2px dashed #19a9b3;
+              margin: 1mm 0;
+            }
+
+            .copy-label {
+              font-size: 10px;
+              color: #666;
+              text-align: right;
+              margin-bottom: 1mm;
+            }
+
+            /* ===== Compact Invoice Style ===== */
+            .inv-wrap { font-family: Arial, sans-serif; color:#222; }
+            .inv-title { font-size:28px; font-weight:800; color:#19a9b3; margin:0; }
+            .inv-sub { font-size:10px; color:#666; margin-top:1px; }
+            .inv-line { border-top:2px solid #19a9b3; margin:6px 0 8px; }
+
+            .inv-section { font-size:11px; font-weight:800; margin:0 0 3px 0; }
+            .muted { color:#666; font-size:10px; line-height:1.2; }
+            .txt { font-size:10.5px; line-height:1.25; }
+
+            .box { background:#f6f8fa; border-radius:6px; padding:7px; }
+            .kv td { padding:2px 0; font-size:10.5px; }
+            .k { color:#666; width:45%; }
+            .v { text-align:right; font-weight:700; color:#111; }
+
+            table.items { width:100%; border-collapse:collapse; margin-top:6px; }
+            table.items thead th {
+              font-size:10px;
+              border-top:2px solid #19a9b3;
+              border-bottom:1px solid #ddd;
+              padding:5px;
+              background:#fcfcfc;
+              text-align:left;
+            }
+            table.items tbody td {
+              font-size:10.5px;
+              padding:5px;
+              border-bottom:1px solid #eee;
+              vertical-align:top;
+            }
+
+            .r { text-align:right; }
+            .c { text-align:center; }
+
+            .tot td { padding:2px 0; font-size:10.5px; }
+            .grand { color:#19a9b3; font-weight:900; font-size:11px; }
+
+            .logo-circle {
+              display:inline-block;
+              width:62px; height:62px;
+              border-radius:31px;
+              border:3px solid #19a9b3;
+              overflow:hidden;
+              background:#fff;
+            }
+            .logo-circle img {
+              width:62px; height:62px;
+              object-fit:cover;
+            }
+
+            .bar { height:8px; background:#19a9b3; margin-top:6px; }
+          </style>
+
+          <div class="a4">
+
+            <!-- ===== COPY 1 ===== -->
+            <div class="copy">
+              <div class="copy-label">Copy: Sales Team</div>
+              <t t-call="idil.sale_invoice_inner_a5"/>
+            </div>
+
+            <div class="cut-line"></div>
+
+            <!-- ===== COPY 2 ===== -->
+            <div class="copy">
+              <div class="copy-label">Copy: Office</div>
+              <t t-call="idil.sale_invoice_inner_a5"/>
+            </div>
+
+          </div>
+        </main>
+
+      </t>
+    </t>
+  </template>
+
+  <!-- ========================= -->
+  <!-- INNER A5 INVOICE (reused) -->
+  <!-- ========================= -->
+  <template id="sale_invoice_inner_a5">
+    <div class="inv-wrap">
+
+      <!-- Header -->
+      <table style="width:100%; border-collapse:collapse;">
+        <tr>
+          <td style="width:75%; vertical-align:top;">
+            <div class="inv-title">Sales Invoice</div>
+            <div class="inv-sub">Official Sales Document</div>
+          </td>
+          <td style="width:25%; text-align:right; vertical-align:top;">
+            <t t-if="company and company.logo">
+              <div class="logo-circle">
+                <img t-att-src="image_data_uri(company.logo)" alt="Logo"/>
+              </div>
+            </t>
+            <t t-else=""><div class="logo-circle"></div></t>
+          </td>
+        </tr>
+      </table>
+
+      <div class="inv-line"></div>
+
+      <!-- Company + Box -->
+      <table style="width:100%; border-collapse:collapse;">
+        <tr>
+          <td style="width:55%; vertical-align:top; padding-right:8px;">
+            <div class="inv-section"><span t-esc="(company and company.name) or ''"/></div>
+            <div class="muted">
+              <t t-if="company and company.city"><div t-esc="company.city"/></t>
+              <t t-if="company and company.country_id"><div t-esc="company.country_id.name"/></t>
+              <t t-if="company and company.phone"><div>Phone: <span t-esc="company.phone"/></div></t>
+              <t t-if="company and company.email"><div>Email: <span t-esc="company.email"/></div></t>
+            </div>
+
+            <div style="margin-top:5px;">
+              <div class="inv-section">Bill To</div>
+              <div class="txt" style="font-weight:700;" t-esc="(o.sales_person_id and o.sales_person_id.name) or ''"/>
+              <div class="muted" t-esc="(o.sales_person_id and o.sales_person_id.phone) or ''"/>
+              <t t-if="o.sales_person_id and o.sales_person_id.address">
+                <div class="muted">Address: <span t-esc="o.sales_person_id.address"/></div>
+              </t>
+            </div>
+          </td>
+
+          <td style="width:45%; vertical-align:top;">
+            <div class="box">
+              <table class="kv" style="width:100%; border-collapse:collapse;">
+                <tr><td class="k">Invoice No:</td><td class="v"><span t-esc="o.name or ''"/></td></tr>
+                <tr><td class="k">Status:</td><td class="v"><span t-esc="o.state or ''"/></td></tr>
+                <tr><td class="k">Date:</td><td class="v"><span t-esc="o.order_date or ''"/></td></tr>
+                <tr><td class="k">Salesperson:</td><td class="v"><span t-esc="(o.sales_person_id and o.sales_person_id.name) or ''"/></td></tr>
+                <tr><td class="k">Rate:</td><td class="v"><span t-esc="o.rate or 0.0"/></td></tr>
+              </table>
+            </div>
+
+            <div style="margin-top:6px;">
+              <div class="inv-section">Terms of sale and other comments</div>
+              <div class="muted">This invoice is generated from Sales Order postings.</div>
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Items -->
+      <table class="items">
+        <thead>
+          <tr>
+            <th style="width:6%;">#</th>
+            <th>Description</th>
+            <th style="width:10%;" class="c">Qty</th>
+            <th style="width:14%;" class="r">Unit Price</th>
+            <th style="width:12%;" class="r">Discount</th>
+            <th style="width:12%;" class="r">Commission</th>
+            <th style="width:14%;" class="r">Subtotal (FY)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <t t-set="idx" t-value="0"/>
+          <t t-foreach="o.order_lines" t-as="l">
+            <t t-set="idx" t-value="idx + 1"/>
+            <tr>
+              <td><span t-esc="idx"/></td>
+              <td><span t-esc="(l.product_id and l.product_id.display_name) or ''"/></td>
+              <td class="c"><span t-esc="l.quantity or 0"/></td>
+              <td class="r"><span t-esc="('%.5f' % (l.price_unit or 0.0))"/></td>
+              <td class="r"><span t-esc="('%.2f' % (l.discount_amount or 0.0))"/></td>
+              <td class="r"><span t-esc="('%.2f' % (l.commission_amount or 0.0))"/></td>
+              <td class="r"><span t-esc="('%.2f' % (l.subtotal_fy or 0.0))"/></td>
+            </tr>
+          </t>
+        </tbody>
+      </table>
+
+      <!-- Totals -->
+      <table style="width:100%; border-collapse:collapse; margin-top:5px;">
+        <tr>
+          <td style="width:65%;"></td>
+          <td style="width:35%;">
+            <table class="tot" style="width:100%; border-collapse:collapse;">
+              <tr><td class="k">Total (FY)</td><td class="v"><span t-esc="('%.2f' % (o.order_total or 0.0))"/></td></tr>
+              <tr><td class="k">Total (USD)</td><td class="v"><span t-esc="('%.2f' % (o.total_due_usd or 0.0))"/></td></tr>
+              <tr><td colspan="2" style="border-top:2px solid #19a9b3;"></td></tr>
+              <tr><td class="grand">Grand Total</td><td class="v grand"><span t-esc="('%.2f' % (o.order_total or 0.0))"/></td></tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Prepared by -->
+      <div style="margin-top:6px;">
+        <div class="inv-section">Prepared By</div>
+        <div class="muted">
+          <span t-esc="(o.create_uid and o.create_uid.name) or ''"/>
+          <br/>
+          Date: <span t-esc="o.create_date or ''"/>
+        </div>
+      </div>
+
+      <div class="bar"></div>
+    </div>
+  </template>
+
+
+
+
+</odoo>

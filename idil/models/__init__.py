@@ -71,6 +71,7 @@ from . import system_clearing
 from . import report_customer_sales
 from . import material_request
 from . import purchase_receipt
+from . import payment_method
 from . import purchase_received
 from . import purchase_receive_wizard
 from . import warehouse_location

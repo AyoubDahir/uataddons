@@ -114,10 +114,10 @@
                 <div class="bs-header">
                     <div class="company-info" style="flex:1;">
                         <h1>
-                            <t t-if="rd.get('vendors')">Vendor Performance list</t>
-                            <t t-if="rd.get('lines')">Vendor Statement</t>
-                            <t t-if="rd.get('total_vendors')">Executive Summary</t>
-                            <t t-if="rd.get('items')">Procurement Itemization</t>
+                            <t t-if="rd.get('vendors')">Vendor Performance Ledger</t>
+                            <t t-if="rd.get('lines')">Partner Account Statement</t>
+                            <t t-if="rd.get('total_vendors')">Trade Executive Summary</t>
+                            <t t-if="rd.get('items')">Detailed Procurement Log</t>
                         </h1>
                         <div class="report-meta">
                             <div style="font-size: 18px; font-weight: 800; color: #1e293b; margin-bottom: 5px;"><t t-esc="company.name"/></div>

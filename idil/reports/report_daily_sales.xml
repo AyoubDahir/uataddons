@@ -4,164 +4,334 @@
     <template id="report_daily_sales_template">
         <t t-call="web.html_container">
             <t t-call="web.external_layout">
-                <div class="page" style="font-family: 'Segoe UI', Arial, sans-serif;">
-                    <!-- Report Header -->
-                    <div style="background-color: #1a237e; color: white; padding: 20px; margin-bottom: 25px; border-bottom: 4px solid #3949ab;">
-                        <h1 style="font-size: 24px; font-weight: bold; margin: 0 0 8px 0; color: white;">Daily Sales Report</h1>
-                        <div style="font-size: 16px; color: white; margin-bottom: 5px;"><t t-esc="company.name"/></div>
-                        <div style="font-size: 12px; color: #c5cae9;">
-                            Period: <strong style="color: white;"><t t-esc="start_date"/></strong> to <strong style="color: white;"><t t-esc="end_date"/></strong>
-                        </div>
-                    </div>
-
-                    <!-- Filter Summary -->
-                    <div style="background-color: #f5f5f5; padding: 12px 15px; margin-bottom: 20px; border-radius: 4px; font-size: 11px;">
-                        <strong>Filters:</strong>
-                        Salesperson: <span style="color: #1a237e;"><t t-esc="salesperson_name"/></span>
-                    </div>
+                <div class="page" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333;">
+                    
+                    <!-- Styles for PDF -->
+                    <style>
+                        .report-header {
+                            color: #2c3e50;
+                            border-bottom: 2px solid #34495e;
+                            padding-bottom: 10px;
+                            margin-bottom: 20px;
+                        }
+                        .report-title {
+                            font-size: 28px; 
+                            font-weight: 700; 
+                            color: #2c3e50;
+                            text-transform: uppercase;
+                            letter-spacing: 1px;
+                        }
+                        .report-subtitle {
+                            font-size: 14px;
+                            color: #7f8c8d;
+                            margin-top: 5px;
+                        }
+                        .kpi-container {
+                            width: 100%;
+                            margin-bottom: 30px;
+                        }
+                        .kpi-card {
+                            background-color: #ffffff;
+                            border: 1px solid #e0e0e0;
+                            border-radius: 12px;
+                            padding: 15px;
+                            text-align: center;
+                            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+                        }
+                        .kpi-label {
+                            font-size: 11px;
+                            color: #7f8c8d;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                            font-weight: 700;
+                            margin-bottom: 5px;
+                        }
+                        .kpi-value {
+                            font-size: 22px;
+                            font-weight: bold;
+                            color: #2c3e50;
+                        }
+                        .kpi-pct {
+                            font-size: 12px;
+                            font-weight: bold;
+                            padding: 2px 8px;
+                            border-radius: 10px;
+                            display: inline-block;
+                            margin-top: 5px;
+                        }
+                        .section-title {
+                            font-size: 16px;
+                            font-weight: 700;
+                            color: #2c3e50;
+                            margin-top: 35px;
+                            margin-bottom: 15px;
+                            padding: 8px 15px;
+                            background-color: #f8f9fa;
+                            border-left: 5px solid #3498db;
+                            text-transform: uppercase;
+                        }
+                        .modern-table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin-bottom: 20px;
+                            font-size: 11px;
+                        }
+                        .modern-table th {
+                            background-color: #ffffff;
+                            color: #7f8c8d;
+                            font-weight: 600;
+                            text-transform: uppercase;
+                            padding: 10px;
+                            border-bottom: 2px solid #f1f1f1;
+                            text-align: left;
+                        }
+                        .modern-table td {
+                            padding: 10px;
+                            border-bottom: 1px solid #f1f1f1;
+                            color: #34495e;
+                        }
+                        .modern-table tr:hover {
+                            background-color: #f9f9f9;
+                        }
+                        .text-right { text-align: right; }
+                        .text-center { text-align: center; }
+                        .text-green { color: #27ae60; }
+                        .text-blue { color: #2980b9; }
+                        .text-orange { color: #e67e22; }
+                        .text-purple { color: #8e44ad; }
+                        .font-bold { font-weight: bold; }
+                        .badge-pill {
+                            padding: 2px 10px;
+                            border-radius: 12px;
+                            font-size: 10px;
+                            font-weight: bold;
+                        }
+                    </style>
 
                     <t t-set="show_usd" t-value="currency_display in ['usd', 'both']"/>
                     <t t-set="show_shilling" t-value="currency_display in ['shilling', 'both']"/>
 
-                    <!-- Daily Summary Section -->
-                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 11px;">
+                    <!-- Header Section -->
+                    <div class="report-header">
+                        <div class="row">
+                            <div class="col-8">
+                                <div class="report-title">Sales Performance Report</div>
+                                <div class="report-subtitle">
+                                    <span t-field="company.name"/> | 
+                                    Analysis Period: <span t-esc="start_date"/> to <span t-esc="end_date"/>
+                                </div>
+                            </div>
+                            <div class="col-4 text-right">
+                                <div style="font-size: 12px; color: #7f8c8d;">
+                                    Report Date: <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%Y-%m-%d %H:%M')"/>
+                                </div>
+                                <div style="font-size: 12px; font-weight: bold; color: #2c3e50; margin-top: 5px;">
+                                    Target: <t t-esc="salesperson_name"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Source KPI Cards -->
+                    <table class="kpi-container">
+                        <tr>
+                            <!-- Salesperson Orders Card -->
+                            <td style="width: 33%; padding-right: 15px;">
+                                <div class="kpi-card" style="border-top: 4px solid #3498db;">
+                                    <div class="kpi-label">Salesperson Orders</div>
+                                    <div class="kpi-value text-blue">
+                                        <t t-if="show_usd">$<t t-esc="'{:,.2f}'.format(sp_total_usd)"/></t>
+                                        <t t-elif="show_shilling"><t t-esc="'{:,.2f}'.format(sp_total_sh)"/></t>
+                                    </div>
+                                    <div class="kpi-pct" style="background-color: #ebf5fb; color: #3498db;">
+                                        Contribution: <t t-esc="'{:.1f}%'.format(sp_pct)"/>
+                                    </div>
+                                </div>
+                            </td>
+                            <!-- Customer Sales Card -->
+                            <td style="width: 33%; padding-right: 15px;">
+                                <div class="kpi-card" style="border-top: 4px solid #27ae60;">
+                                    <div class="kpi-label">Customer Sales</div>
+                                    <div class="kpi-value text-green">
+                                        <t t-if="show_usd">$<t t-esc="'{:,.2f}'.format(cust_total_usd)"/></t>
+                                        <t t-elif="show_shilling"><t t-esc="'{:,.2f}'.format(cust_total_sh)"/></t>
+                                    </div>
+                                    <div class="kpi-pct" style="background-color: #eafaf1; color: #27ae60;">
+                                        Contribution: <t t-esc="'{:.1f}%'.format(cust_pct)"/>
+                                    </div>
+                                </div>
+                            </td>
+                            <!-- Staff Sales Card -->
+                            <td style="width: 33%;">
+                                <div class="kpi-card" style="border-top: 4px solid #8e44ad;">
+                                    <div class="kpi-label">Staff Sales</div>
+                                    <div class="kpi-value text-purple">
+                                        <t t-if="show_usd">$<t t-esc="'{:,.2f}'.format(staff_total_usd)"/></t>
+                                        <t t-elif="show_shilling"><t t-esc="'{:,.2f}'.format(staff_total_sh)"/></t>
+                                    </div>
+                                    <div class="kpi-pct" style="background-color: #f5eef8; color: #8e44ad;">
+                                        Contribution: <t t-esc="'{:.1f}%'.format(staff_pct)"/>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <!-- Salesperson Sales Details -->
+                    <t t-if="detailed_source_data.get('salesperson_sales')">
+                        <div class="section-title">Salesperson Orders Breakdown</div>
+                        <table class="modern-table">
+                            <thead>
+                                <tr>
+                                    <th>Salesperson</th>
+                                    <th>Product Name</th>
+                                    <th class="text-right">Qty</th>
+                                    <th class="text-right">Unit Price</th>
+                                    <th t-if="show_usd" class="text-right">Total (USD)</th>
+                                    <th t-if="show_shilling" class="text-right">Total (KES)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="detailed_source_data['salesperson_sales']" t-as="item">
+                                    <td class="font-bold"><t t-esc="item['source_name']"/></td>
+                                    <td><t t-esc="item['product_name']"/></td>
+                                    <td class="text-right"><t t-esc="'{:,.2f}'.format(item['qty'])"/></td>
+                                    <td class="text-right"><span t-esc="'{:,.2f}'.format(item['unit_price'])"/></td>
+                                    <td t-if="show_usd" class="text-right text-green font-bold">$<t t-esc="'{:,.2f}'.format(item['total_usd'])"/></td>
+                                    <td t-if="show_shilling" class="text-right text-blue"><t t-esc="'{:,.2f}'.format(item['total_shillings'])"/></td>
+                                </tr>
+                                <tr style="background-color: #f8f9fa; font-weight: bold;">
+                                    <td colspan="4" class="text-right">SALESPERSON TOTAL</td>
+                                    <td t-if="show_usd" class="text-right text-green">$<t t-esc="'{:,.2f}'.format(sp_total_usd)"/></td>
+                                    <td t-if="show_shilling" class="text-right text-blue"><t t-esc="'{:,.2f}'.format(sp_total_sh)"/></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </t>
+
+                    <!-- Customer Sales Details -->
+                    <t t-if="detailed_source_data.get('customer_sales')">
+                        <div class="section-title" style="border-left-color: #27ae60;">Customer Sales Breakdown</div>
+                        <table class="modern-table">
+                            <thead>
+                                <tr>
+                                    <th>Customer</th>
+                                    <th>Product Name</th>
+                                    <th class="text-right">Qty</th>
+                                    <th class="text-right">Unit Price</th>
+                                    <th t-if="show_usd" class="text-right">Total (USD)</th>
+                                    <th t-if="show_shilling" class="text-right">Total (KES)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="detailed_source_data['customer_sales']" t-as="item">
+                                    <td class="font-bold"><t t-esc="item['source_name']"/></td>
+                                    <td><t t-esc="item['product_name']"/></td>
+                                    <td class="text-right"><t t-esc="'{:,.2f}'.format(item['qty'])"/></td>
+                                    <td class="text-right"><span t-esc="'{:,.2f}'.format(item['unit_price'])"/></td>
+                                    <td t-if="show_usd" class="text-right text-green font-bold">$<t t-esc="'{:,.2f}'.format(item['total_usd'])"/></td>
+                                    <td t-if="show_shilling" class="text-right text-blue"><t t-esc="'{:,.2f}'.format(item['total_shillings'])"/></td>
+                                </tr>
+                                <tr style="background-color: #f8f9fa; font-weight: bold;">
+                                    <td colspan="4" class="text-right">CUSTOMER TOTAL</td>
+                                    <td t-if="show_usd" class="text-right text-green">$<t t-esc="'{:,.2f}'.format(cust_total_usd)"/></td>
+                                    <td t-if="show_shilling" class="text-right text-blue"><t t-esc="'{:,.2f}'.format(cust_total_sh)"/></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </t>
+
+                    <!-- Staff Sales Details -->
+                    <t t-if="detailed_source_data.get('staff_sales')">
+                        <div class="section-title" style="border-left-color: #8e44ad;">Staff Sales Breakdown</div>
+                        <table class="modern-table">
+                            <thead>
+                                <tr>
+                                    <th>Staff Member</th>
+                                    <th>Product Name</th>
+                                    <th class="text-right">Qty</th>
+                                    <th class="text-right">Unit Price</th>
+                                    <th t-if="show_usd" class="text-right">Total (USD)</th>
+                                    <th t-if="show_shilling" class="text-right">Total (KES)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="detailed_source_data['staff_sales']" t-as="item">
+                                    <td class="font-bold"><t t-esc="item['source_name']"/></td>
+                                    <td><t t-esc="item['product_name']"/></td>
+                                    <td class="text-right"><t t-esc="'{:,.2f}'.format(item['qty'])"/></td>
+                                    <td class="text-right"><span t-esc="'{:,.2f}'.format(item['unit_price'])"/></td>
+                                    <td t-if="show_usd" class="text-right text-green font-bold">$<t t-esc="'{:,.2f}'.format(item['total_usd'])"/></td>
+                                    <td t-if="show_shilling" class="text-right text-blue"><t t-esc="'{:,.2f}'.format(item['total_shillings'])"/></td>
+                                </tr>
+                                <tr style="background-color: #f8f9fa; font-weight: bold;">
+                                    <td colspan="4" class="text-right">STAFF TOTAL</td>
+                                    <td t-if="show_usd" class="text-right text-green">$<t t-esc="'{:,.2f}'.format(staff_total_usd)"/></td>
+                                    <td t-if="show_shilling" class="text-right text-blue"><t t-esc="'{:,.2f}'.format(staff_total_sh)"/></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </t>
+
+                    <!-- Payment Breakdown -->
+                    <div class="section-title" style="border-left-color: #f39c12;">Payments Overview</div>
+                    <table class="modern-table">
                         <thead>
-                            <tr style="background-color: #f5f5f5;">
-                                <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: left; font-weight: bold; color: #333;">Date</th>
-                                <th style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: right; font-weight: bold; color: #333;">Orders</th>
-                                <th t-if="show_usd" style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: right; font-weight: bold; color: #333;">Revenue (USD)</th>
-                                <th t-if="show_shilling" style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: right; font-weight: bold; color: #333;">Revenue (Shillings)</th>
-                                <th t-if="show_usd" style="border-bottom: 2px solid #1a237e; padding: 12px 10px; text-align: right; font-weight: bold; color: #333;">Avg Order (USD)</th>
+                            <tr>
+                                <th>Date</th>
+                                <th>Method</th>
+                                <th class="text-right">Transactions</th>
+                                <th t-if="show_usd" class="text-right">Amount (USD)</th>
+                                <th t-if="show_shilling" class="text-right">Amount (KES)</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr style="background-color: #e8eaf6;">
-                                <td t-att-colspan="3 + (1 if show_usd else 0) + (1 if show_shilling else 0)" style="padding: 12px 10px; font-weight: bold; font-size: 12px; color: #1a237e; border-bottom: 2px solid #c5cae9;">
-                                    ► DAILY SUMMARY
-                                </td>
+                            <tr t-foreach="payment_methods" t-as="payment">
+                                <td><t t-esc="payment['sale_date']"/></td>
+                                <td><span class="badge-pill" style="background-color: #fef9e7; color: #f39c12;"><t t-esc="payment['payment_method']"/></span></td>
+                                <td class="text-right"><t t-esc="payment['transaction_count']"/></td>
+                                <td t-if="show_usd" class="text-right font-bold text-green">$<t t-esc="'{:,.2f}'.format(payment['amount_usd'] or 0)"/></td>
+                                <td t-if="show_shilling" class="text-right font-bold text-blue"><t t-esc="'{:,.2f}'.format(payment['amount_shillings'] or 0)"/></td>
                             </tr>
-                            <tr t-foreach="daily_summary" t-as="day">
-                                <td style="padding: 8px 10px; color: #424242; border-bottom: 1px solid #eeeeee; font-weight: 500;"><t t-esc="day['sale_date']"/></td>
-                                <td style="padding: 8px 10px; text-align: right; color: #5c6bc0; border-bottom: 1px solid #eeeeee; font-weight: 500;"><t t-esc="day['order_count']"/></td>
-                                <td t-if="show_usd" style="padding: 8px 10px; text-align: right; color: #2e7d32; border-bottom: 1px solid #eeeeee; font-weight: 500;">
-                                    $<t t-esc="'{:,.2f}'.format(day['revenue_usd'] or 0)"/>
-                                </td>
-                                <td t-if="show_shilling" style="padding: 8px 10px; text-align: right; color: #424242; border-bottom: 1px solid #eeeeee;">
-                                    <t t-esc="'{:,.2f}'.format(day['revenue_shillings'] or 0)"/>
-                                </td>
-                                <td t-if="show_usd" style="padding: 8px 10px; text-align: right; color: #5c6bc0; border-bottom: 1px solid #eeeeee;">
-                                    $<t t-esc="'{:,.2f}'.format(day['avg_order_usd'] or 0)"/>
-                                </td>
+                            <tr style="background-color: #f8f9fa; font-weight: bold;">
+                                <td colspan="2" class="text-right">TOTAL PAYMENTS</td>
+                                <td class="text-right"><t t-esc="sum(p['transaction_count'] for p in payment_methods)"/></td>
+                                <td t-if="show_usd" class="text-right text-green">$<t t-esc="'{:,.2f}'.format(sum(p['amount_usd'] or 0 for p in payment_methods))"/></td>
+                                <td t-if="show_shilling" class="text-right text-blue"><t t-esc="'{:,.2f}'.format(sum(p['amount_shillings'] or 0 for p in payment_methods))"/></td>
                             </tr>
                         </tbody>
                     </table>
 
-                    <!-- Detailed Breakdown (if detailed mode) -->
-                    <t t-if="report_type == 'detailed'">
-                        <!-- Group data by date -->
-                        <t t-foreach="daily_summary" t-as="day">
-                            <div style="margin-top: 25px;">
-                                <!-- Products Breakdown -->
-                                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px;">
-                                    <thead>
-                                        <tr style="background-color: #e8eaf6;">
-                                            <td colspan="4" style="padding: 12px 10px; font-weight: bold; font-size: 12px; color: #1a237e; border-bottom: 2px solid #c5cae9;">
-                                                ► <t t-esc="day['sale_date']"/> - PRODUCTS SOLD
-                                            </td>
-                                        </tr>
-                                        <tr style="background-color: #f5f5f5;">
-                                            <th style="border-bottom: 2px solid #1a237e; padding: 10px; text-align: left; font-weight: bold; color: #333;">Product</th>
-                                            <th style="border-bottom: 2px solid #1a237e; padding: 10px; text-align: right; font-weight: bold; color: #333;">Quantity</th>
-                                            <th t-if="show_usd" style="border-bottom: 2px solid #1a237e; padding: 10px; text-align: right; font-weight: bold; color: #333;">Revenue (USD)</th>
-                                            <th t-if="show_shilling" style="border-bottom: 2px solid #1a237e; padding: 10px; text-align: right; font-weight: bold; color: #333;">Revenue (Shillings)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr t-foreach="[p for p in products_breakdown if p['sale_date'] == day['sale_date']]" t-as="product">
-                                            <td style="padding: 8px 10px; color: #424242; border-bottom: 1px solid #eeeeee;"><t t-esc="product['product_name']"/></td>
-                                            <td style="padding: 8px 10px; text-align: right; color: #5c6bc0; border-bottom: 1px solid #eeeeee;"><t t-esc="'{:,.2f}'.format(product['qty_sold'])"/></td>
-                                            <td t-if="show_usd" style="padding: 8px 10px; text-align: right; color: #2e7d32; border-bottom: 1px solid #eeeeee;">
-                                                $<t t-esc="'{:,.2f}'.format(product['revenue_usd'] or 0)"/>
-                                            </td>
-                                            <td t-if="show_shilling" style="padding: 8px 10px; text-align: right; color: #424242; border-bottom: 1px solid #eeeeee;">
-                                                <t t-esc="'{:,.2f}'.format(product['revenue_shillings'] or 0)"/>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-
-                                <!-- Salesperson Performance (if applicable) -->
-                                <t t-if="not salesperson_id">
-                                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px;">
-                                        <thead>
-                                            <tr style="background-color: #fff3e0;">
-                                                <td colspan="4" style="padding: 12px 10px; font-weight: bold; font-size: 12px; color: #ef6c00; border-bottom: 2px solid #ffcc80;">
-                                                    ► <t t-esc="day['sale_date']"/> - SALESPERSON PERFORMANCE
-                                                </td>
-                                            </tr>
-                                            <tr style="background-color: #f5f5f5;">
-                                                <th style="border-bottom: 2px solid #1a237e; padding: 10px; text-align: left; font-weight: bold; color: #333;">Salesperson</th>
-                                                <th style="border-bottom: 2px solid #1a237e; padding: 10px; text-align: right; font-weight: bold; color: #333;">Orders</th>
-                                                <th t-if="show_usd" style="border-bottom: 2px solid #1a237e; padding: 10px; text-align: right; font-weight: bold; color: #333;">Revenue (USD)</th>
-                                                <th t-if="show_shilling" style="border-bottom: 2px solid #1a237e; padding: 10px; text-align: right; font-weight: bold; color: #333;">Revenue (Shillings)</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr t-foreach="[sp for sp in salesperson_performance if sp['sale_date'] == day['sale_date']]" t-as="sp">
-                                                <td style="padding: 8px 10px; color: #424242; border-bottom: 1px solid #eeeeee; font-weight: 500;"><t t-esc="sp['salesperson']"/></td>
-                                                <td style="padding: 8px 10px; text-align: right; color: #5c6bc0; border-bottom: 1px solid #eeeeee;"><t t-esc="sp['orders']"/></td>
-                                                <td t-if="show_usd" style="padding: 8px 10px; text-align: right; color: #2e7d32; border-bottom: 1px solid #eeeeee;">
-                                                    $<t t-esc="'{:,.2f}'.format(sp['revenue_usd'] or 0)"/>
-                                                </td>
-                                                <td t-if="show_shilling" style="padding: 8px 10px; text-align: right; color: #424242; border-bottom: 1px solid #eeeeee;">
-                                                    <t t-esc="'{:,.2f}'.format(sp['revenue_shillings'] or 0)"/>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </t>
-                            </div>
-                        </t>
-                    </t>
-
-                    <!-- Grand Totals -->
-                    <table style="width: 100%; border-collapse: collapse; margin-top: 25px; font-size: 11px;">
-                        <tbody>
-                            <tr style="background-color: #1a237e;">
-                                <td style="padding: 15px 10px; font-weight: bold; font-size: 13px; color: white; width: 50%;">
-                                    TOTAL ORDERS
+                    <!-- Grand Summary -->
+                    <div style="margin-top: 50px; background-color: #2c3e50; color: white; padding: 20px; border-radius: 12px;">
+                        <table style="width: 100%;">
+                            <tr>
+                                <td style="width: 50%;">
+                                    <div style="font-size: 14px; text-transform: uppercase; font-weight: bold; opacity: 0.8;">Grand Total Revenue</div>
+                                    <div style="font-size: 32px; font-weight: bold; margin-top: 5px;">
+                                        <t t-if="show_usd">$<t t-esc="'{:,.2f}'.format(total_revenue_usd)"/></t>
+                                        <t t-if="show_usd and show_shilling"> / </t>
+                                        <t t-if="show_shilling"><t t-esc="'{:,.2f}'.format(total_revenue_shillings)"/> KES</t>
+                                    </div>
                                 </td>
-                                <td style="padding: 15px 10px; text-align: right; font-weight: bold; font-size: 14px; color: white;">
-                                    <t t-esc="sum(d['order_count'] for d in daily_summary)"/>
+                                <td style="width: 50%; text-align: right; vertical-align: middle;">
+                                    <div style="font-size: 14px; opacity: 0.8;">Total Closed Orders</div>
+                                    <div style="font-size: 24px; font-weight: bold;"><t t-esc="total_orders"/> Orders</div>
                                 </td>
                             </tr>
-                            <tr t-if="show_usd" style="background-color: #3949ab;">
-                                <td style="padding: 12px 10px; font-weight: bold; color: white;">
-                                    TOTAL REVENUE (USD)
-                                </td>
-                                <td style="padding: 12px 10px; text-align: right; font-weight: bold; font-size: 14px; color: white;">
-                                    $<t t-esc="'{:,.2f}'.format(sum(d['revenue_usd'] or 0 for d in daily_summary))"/>
-                                </td>
-                            </tr>
-                            <tr t-if="show_shilling" style="background-color: #5c6bc0;">
-                                <td style="padding: 12px 10px; font-weight: bold; color: white;">
-                                    TOTAL REVENUE (Shillings)
-                                </td>
-                                <td style="padding: 12px 10px; text-align: right; font-weight: bold; font-size: 14px; color: white;">
-                                    <t t-esc="'{:,.2f}'.format(sum(d['revenue_shillings'] or 0 for d in daily_summary))"/>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <!-- Footer Note -->
-                    <div style="text-align: right; font-size: 10px; color: #757575; margin-top: 15px; font-style: italic;">
-                        All amounts are expressed in United States Dollars (USD)
+                        </table>
                     </div>
+
+                    <!-- Footer Info -->
+                    <div style="margin-top: 40px; border-top: 1px solid #e0e0e0; padding-top: 10px; font-size: 10px; color: #95a5a6; text-align: center;">
+                        <span t-field="company.name"/> - Confidential Sales Data | Page <span class="page"/>
+                    </div>
+
                 </div>
             </t>
         </t>
     </template>
+
 
     <!-- Report Action -->
     <record id="action_report_daily_sales" model="ir.actions.report">
@@ -173,5 +343,6 @@
         <field name="print_report_name">'Daily_Sales_Report_%s_%s' % (object.start_date, object.end_date)</field>
         <field name="binding_model_id" ref="model_idil_daily_sales_report_wizard"/>
         <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="base.paperformat_euro"/>
     </record>
 </odoo>

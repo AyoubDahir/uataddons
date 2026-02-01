@@ -1,79 +1,229 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Form View -->
+
+    <!-- FORM VIEW -->
     <record id="view_sales_commission_bulk_payment_form" model="ir.ui.view">
         <field name="name">idil.sales.commission.bulk.payment.form</field>
         <field name="model">idil.sales.commission.bulk.payment</field>
         <field name="arch" type="xml">
-            <form string="Sales Commission Bulk Payment" create="true" edit="true">
+            <form string="💼 Bulk Commission Payment" class="o_form_full o_form_nosheet">
+
                 <header>
+                    <button name="action_confirm_payment"
+                            type="object"
+                            string="✅ Confirm Payment"
+                            class="btn-primary"
+                            invisible="state != 'draft'"/>
+
                     <field name="state" widget="statusbar" statusbar_visible="draft,confirmed"/>
-                    <button name="action_confirm_payment" type="object" string="Confirm Payment" class="btn-primary" invisible="state != 'draft'"/>
                 </header>
+
                 <sheet>
+
+                    <!-- Title -->
                     <div class="oe_title">
-                        <h1>
-                            <field name="name"/>
+                        <h1 class="mb-1">
+                            Bulk Commission Payment
+                            <span class="ms-2 badge rounded-pill bg-light border text-muted px-3 py-2">
+                                <i class="fa fa-hashtag me-1"/>
+                                <field name="name" readonly="1" nolabel="1"/>
+                            </span>
                         </h1>
+
+                        <div class="text-muted mt-1">
+                            <i class="fa fa-info-circle me-1"/>
+                            Split the payment across multiple cash/bank accounts, then confirm to pay multiple commissions at once.
+                        </div>
                     </div>
-                    <group>
-                        <group>
-                            <field name="sales_person_id" readonly="state != 'draft'"/>
-                            <field name="date" readonly="state != 'draft'"/>
-                        </group>
-                        <group>
-                            <field name="due_commission_amount" readonly="1"/>
-                            <field name="due_commission_count" readonly="1"/>
-                        </group>
-                        <group>
-                            <field name="amount_to_pay" readonly="state != 'draft'"/>
-                            <field name="cash_account_id" options="{'no_create': True}" readonly="state != 'draft'"/>
-                        </group>
-                    </group>
-                    <separator string="Commission Lines"/>
-                    <field name="line_ids" readonly="1">
-                       <tree create="false" edit="false" delete="false">
-                            <field name="sale_order_id"/>
-                            <field name="commission_id" column_invisible="1"/>
-                            <field name="commission_date"/>
-                            <field name="commission_amount" sum="Total Amount"/>
-                            <field name="commission_paid" sum="Total Paid"/>
-                            <field name="commission_remaining" sum="Total Remaining"/>
-                            <field name="paid_amount" sum="Total Paid Now"/>
-                            <field name="commission_status" widget="badge" 
-                                   decoration-success="commission_status == 'paid'"
-                                   decoration-warning="commission_status == 'partial_paid'"
-                                   decoration-info="commission_status == 'pending'"/>
-                        </tree>
-                    </field>
+
+                    <!-- Top Cards -->
+                    <div class="row g-3 mt-3">
+
+                        <!-- LEFT CARD: Salesperson + Due -->
+                        <div class="col-12 col-lg-7">
+                            <div class="border rounded-4 p-4 shadow-sm bg-white h-100">
+                                <div class="fw-bold mb-3 d-flex align-items-center gap-2">
+                                    <i class="fa fa-user text-muted"/>
+                                    <span>Salesperson &amp; Due Summary</span>
+                                </div>
+
+                                <group col="1">
+                                    <field name="sales_person_id" options="{'no_create': True}" readonly="state != 'draft'"/>
+                                    <field name="date" readonly="state != 'draft'"/>
+                                </group>
+
+                                <div class="mt-3">
+                                    <span class="badge rounded-pill bg-light border px-3 py-2 me-2">
+                                        🧾 Due Amount:
+                                        <field name="due_commission_amount" nolabel="1" readonly="1" class="ms-1"/>
+                                    </span>
+
+                                    <span class="badge rounded-pill bg-light border px-3 py-2">
+                                        📌 Due Count:
+                                        <field name="due_commission_count" nolabel="1" readonly="1" class="ms-1"/>
+                                    </span>
+                                </div>
+
+                                <div class="alert alert-info mt-3 mb-0">
+                                    <i class="fa fa-lightbulb-o me-1"/>
+                                    Tip: Set <b>Amount To Pay</b>, then split it in Payment Methods. Total breakdown must match.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- RIGHT CARD: Payment Summary -->
+                        <div class="col-12 col-lg-5">
+                            <div class="border rounded-4 p-4 shadow-sm bg-white h-100">
+                                <div class="fw-bold mb-3 d-flex align-items-center gap-2">
+                                    <i class="fa fa-money text-muted"/>
+                                    <span>Payment Summary</span>
+                                </div>
+
+                                <group col="1">
+                                    <field name="amount_to_pay" readonly="state != 'draft'"/>
+                                    <field name="total_methods_amount" readonly="1"/>
+                                    <field name="state" readonly="1"/>
+                                </group>
+
+                                <div class="alert alert-secondary mt-3 mb-0">
+                                    <i class="fa fa-shield me-1"/>
+                                    Confirm is allowed only when breakdown totals match and balances are sufficient.
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- ✅ Payment Methods as separate CARD (ABOVE lines, not in notebook) -->
+                    <div class="row g-3 mt-3">
+                        <div class="col-12">
+                            <div class="border rounded-4 p-4 shadow-sm bg-white">
+
+                                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                    <div class="fw-bold d-flex align-items-center gap-2">
+                                        <i class="fa fa-credit-card text-muted"/>
+                                        <span>Payment Methods</span>
+                                    </div>
+
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <span class="badge rounded-pill bg-light border px-3 py-2">
+                                            🎯 Amount To Pay:
+                                            <field name="amount_to_pay" nolabel="1" readonly="1" class="ms-1"/>
+                                        </span>
+                                        <span class="badge rounded-pill bg-light border px-3 py-2">
+                                            ✅ Breakdown Total:
+                                            <field name="total_methods_amount" nolabel="1" readonly="1" class="ms-1"/>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <field name="payment_method_ids" nolabel="1" readonly="state != 'draft'">
+                                    <tree editable="bottom" create="1" delete="1">
+                                        <field name="payment_method"/>
+                                        <field name="account_id" options="{'no_create': True}"/>
+                                        <field name="amount" sum="Total Breakdown"/>
+                                    </tree>
+                                </field>
+
+                                <group class="mt-3">
+                                    <group/>
+                                    <group class="oe_right">
+                                        <field name="total_methods_amount" readonly="1"/>
+                                    </group>
+                                </group>
+
+                                <div class="text-muted mt-2">
+                                    Total Payment Breakdown must equal Amount To Pay.
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mt-3" invisible="state != 'confirmed'">
+                        <div class="col-12">
+                            <field name="journal_summary_html" nolabel="1" readonly="1"/>
+                        </div>
+                    </div>
+
+
+                    <!-- Notebook (ONLY Commission Lines now) -->
+                    <notebook class="mt-4">
+
+                        <!-- Commission Lines -->
+                        <page string="📋 Commission Lines">
+                            <div class="border rounded-4 p-4 shadow-sm bg-white">
+
+                                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                    <div class="fw-bold d-flex align-items-center gap-2">
+                                        <i class="fa fa-list-ul text-muted"/>
+                                        <span>Commissions included in this bulk payment</span>
+                                    </div>
+                                    <div class="text-muted">
+                                        <i class="fa fa-lock me-1"/>
+                                        Lines are auto-generated (read-only).
+                                    </div>
+                                </div>
+
+                                <field name="line_ids" nolabel="1" readonly="1">
+                                    <tree create="false" edit="false" delete="false">
+                                        <field name="sale_order_id"/>
+                                        <field name="commission_id" column_invisible="1"/>
+                                        <field name="commission_date"/>
+                                        <field name="commission_amount" sum="Total Commission"/>
+                                        <field name="commission_paid" sum="Total Paid"/>
+                                        <field name="commission_remaining" sum="Total Remaining"/>
+                                        <field name="paid_amount" sum="Total Paid Now"/>
+                                        <field name="commission_status" widget="badge"
+                                               decoration-success="commission_status == 'paid'"
+                                               decoration-warning="commission_status == 'partial_paid'"
+                                               decoration-info="commission_status == 'pending'"/>
+                                    </tree>
+                                </field>
+
+                            </div>
+                        </page>
+
+                    </notebook>
+
                 </sheet>
+
                 <div class="oe_chatter">
                     <field name="message_follower_ids"/>
                     <field name="activity_ids"/>
                     <field name="message_ids"/>
                 </div>
+
             </form>
         </field>
     </record>
 
-    <!-- Tree View -->
+
+    <!-- TREE VIEW -->
     <record id="view_sales_commission_bulk_payment_tree" model="ir.ui.view">
-        <field name="name">idil.sales.commission.bulk.payment.tree</field>
+        <field name="name">idil.sales.
+        commission.bulk.payment.tree</field>
         <field name="model">idil.sales.commission.bulk.payment</field>
         <field name="arch" type="xml">
-            <tree string="Sales Commission Bulk Payments">
+            <tree string="Bulk Commission Payments">
                 <field name="name"/>
                 <field name="sales_person_id"/>
                 <field name="amount_to_pay"/>
+                <field name="total_methods_amount"/>
+                <field name="booking_ids"/>
+                <field name="booking_count"/>
+                
+                
                 <field name="date"/>
-                <field name="state" widget="badge" 
+                <field name="state" widget="badge"
                        decoration-success="state == 'confirmed'"
                        decoration-info="state == 'draft'"/>
             </tree>
         </field>
     </record>
-    
-    <!-- Action -->
+
+
+    <!-- ACTION -->
     <record id="action_sales_commission_bulk_payment" model="ir.actions.act_window">
         <field name="name">Bulk Commission Payments</field>
         <field name="res_model">idil.sales.commission.bulk.payment</field>
@@ -83,17 +233,9 @@
                 Create bulk commission payments for salespersons.
             </p>
             <p>
-                This feature allows you to pay multiple monthly commissions for a salesperson in a single transaction.
+                Set the amount, split across accounts, and confirm to process multiple commissions.
             </p>
         </field>
     </record>
-
-    <!-- Menu Item -->
-    <menuitem id="menu_sales_commission_bulk_payment" 
-              name="Bulk Payment" 
-              parent="idil.menu_sales_commission_root" 
-              action="action_sales_commission_bulk_payment" 
-              groups="base.group_user"
-              sequence="30"/>
 
 </odoo>

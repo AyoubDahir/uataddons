@@ -45,6 +45,7 @@ class ReceiptBulkPayment(models.Model):
         "bulk_receipt_payment_id",
         string="Payment Methods",
     )
+
     payment_methods_total = fields.Float(
         string="Payment Methods Total", compute="_compute_payment_methods_total"
     )
@@ -509,7 +510,9 @@ class ReceiptBulkPayment(models.Model):
                                     ),
                                     "customer_id": receipt.customer_id.id,
                                     "bulk_receipt_payment_id": self.id,
-                                    "payment_method": "cash",
+                                    "payment_method_ids": [
+                                        (4, method.id)
+                                    ],  # ✅ correct Many2one
                                     "sales_payment_id": payment.id,
                                     "sales_receipt_id": receipt.id,
                                     "account_id": payment_account.id,
@@ -666,12 +669,28 @@ class ReceiptBulkPaymentMethod(models.Model):
     bulk_receipt_payment_id = fields.Many2one(
         "idil.receipt.bulk.payment", string="Bulk Payment"
     )
+
+    payment_method_id = fields.Many2one(
+        "idil.payment.method",
+        string="Payment Method",
+        required=True,
+        domain="[('company_id','=',company_id), ('active','=',True)]",
+    )
+
     payment_account_id = fields.Many2one(
         "idil.chart.account",
         string="Payment Account",
-        required=True,
-        domain=[("account_type", "in", ["cash", "bank_transfer", "sales_expense"])],
+        related="payment_method_id.account_id",
+        store=True,
+        readonly=True,
     )
+
+    # payment_account_id = fields.Many2one(
+    #     "idil.chart.account",
+    #     string="Payment Account",
+    #     required=True,
+    #     domain=[("account_type", "in", ["cash", "bank_transfer", "sales_expense"])],
+    # )
 
     account_currency_id = fields.Many2one(
         related="payment_account_id.currency_id",

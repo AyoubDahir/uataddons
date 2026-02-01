@@ -417,6 +417,13 @@
                                 action="action_recurring_journal_entry"
                                 sequence="4"/>
 
+                        <menuitem id="menu_idil_payment_method"
+                                name="Payment Methods"
+                                parent="menu_journal_entry_main"
+                                action="action_idil_payment_method"
+                                sequence="5"/>
+
+
                 <menuitem id="menu_currency_exchange_root"
                         name="💱 Currency Exchange Operations"
                         parent="menu_idil_accounting"

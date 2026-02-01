@@ -1,96 +1,380 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-    <!-- Action for Sales Return -->
+
+    <!-- ===================================================== -->
+    <!-- 🚀 Action: Sales Return                                -->
+    <!-- ===================================================== -->
     <record id="action_sales_return" model="ir.actions.act_window">
         <field name="name">Sales Return</field>
         <field name="res_model">idil.sale.return</field>
         <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Create your first Sales Return</p>
+            <p>Workflow: Select Salesperson → Select Sale Order → Enter returned quantities → Confirm.</p>
+        </field>
     </record>
 
-
-    <!-- Tree View for Sales Return -->
+    <!-- ===================================================== -->
+    <!-- 🌳 Tree: Sales Return (Icons via emoji strings)         -->
+    <!-- NOTE: HTML <i class="fa.."> does NOT work in tree header -->
+    <!-- ===================================================== -->
     <record id="view_sales_return_tree" model="ir.ui.view">
         <field name="name">idil.sale.return.tree</field>
         <field name="model">idil.sale.return</field>
         <field name="arch" type="xml">
-            <tree>
-                <field name="name" />
-                <field name="salesperson_id"/>
-                <field name="sale_order_id"/>
-                <field name="total_returned_qty" sum="total" readonly="1"/>
-                <field name="total_subtotal" sum="total" readonly="1"/>
-                <field name="total_commission_amount" sum="total" readonly="1"/>
-                <field name="total_discount_amount" sum="total" readonly="1"/>
-    
-                <field name="return_date"/>
-                <field name="state"/>
+            <tree string="Sales Returns"
+                  decoration-success="state == 'confirmed'"
+                  decoration-danger="state == 'cancelled'"
+                  decoration-muted="state == 'draft'">
+                <field name="name" string="🏷️ Ref"/>
+                <field name="salesperson_id" string="🧑‍💼 Salesperson"/>
+                <field name="sale_order_id" string="🛒 Sale Order"/>
+                <field name="return_date" string="📅 Return Date"/>
+                <field name="state" string="✅ Status"/>
+
+                <field name="total_returned_qty" string="📦 Total Qty" sum="Total" readonly="1"/>
+                <field name="total_subtotal" string="💰 Total Amount" sum="Total" readonly="1"/>
+                <field name="total_discount_amount" string="🏷️ Discount" sum="Total" readonly="1"/>
+                <field name="total_commission_amount" string="🎯 Commission" sum="Total" readonly="1"/>
             </tree>
         </field>
     </record>
 
-    <!-- Form View for Sales Return -->
+    <!-- ===================================================== -->
+    <!-- 🧾 Form: Sales Return (Better spacing + tips + icons)   -->
+    <!-- ===================================================== -->
     <record id="view_sales_return_form" model="ir.ui.view">
         <field name="name">idil.sale.return.form</field>
         <field name="model">idil.sale.return</field>
         <field name="arch" type="xml">
-            <form string="Sales Return">
+            <form string="↩️ Sales Return" class="o_form_full o_form_nosheet">
+
                 <header>
+                    <button name="action_confirm"
+                            type="object"
+                            string="✅ Confirm Return"
+                            class="btn-primary oe_highlight"/>
+
                     <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,cancelled"/>
-                    <button name="action_confirm" type="object" string="Confirm" class="oe_highlight"/>
                 </header>
+
                 <sheet>
-                    <group>
-                        <group>
-                             <field name="name" />
-                            <field name="salesperson_id" required="1"/>
-                            <field name="sale_order_id" required="1"
-                                   domain="[('sales_person_id', '=', salesperson_id)]"/>
 
-                            <field name="currency_id"/>
-                            <field name="rate"/>    
-                            <field name="return_date" required="1"/>
-                        </group>
-                    </group>
-                    <notebook>
-                        <page string="Return Lines">
-                            <field name="return_lines" context="{'default_return_id': id}">
-                                <tree editable="bottom" create="0">
-                                    <field name="product_id" required="1"/>
-                                    <field name="quantity"  sum="total"  string="Original Quantity" readonly="1" force_save="1"/>
-                                    <field name="previously_returned_qty"   sum="total"  readonly="1"/>
-                                    <field name="available_return_qty"  sum="total"  readonly="1"/>
-                                    <field name="returned_quantity" sum="total" required="1"/>
-                                    <field name="price_unit" required="1"/>
-                                    <field name="subtotal" sum="total" readonly="1"/>
-                                </tree>
-                            </field>
+                    <!-- Title -->
+                    <div class="oe_title">
+                        <h1 class="mb-1">
+                            Sales Return
+                            <span class="ms-2 badge rounded-pill bg-light border text-muted px-3 py-2">
+                                <i class="fa fa-hashtag me-1"/>
+                                <field name="name" readonly="1" nolabel="1"/>
+                            </span>
+                        </h1>
+
+                        <div class="alert alert-info mt-3 mb-0">
+                            <i class="fa fa-info-circle me-2"/>
+                            <b>Tip:</b> Select the <b>Sale Order</b> first to load original quantities and available return limits.
+                        </div>
+                    </div>
+
+                    <!-- Cards Row -->
+                    <div class="row g-3 mt-3">
+
+                        <!-- LEFT CARD -->
+                        <div class="col-12 col-lg-7">
+                            <div class="border rounded-4 p-4 shadow-sm bg-white h-100">
+
+                                <div class="fw-bold mb-3 d-flex align-items-center gap-2">
+                                    <i class="fa fa-user text-muted"/>
+                                    <span>Return Information</span>
+                                </div>
+
+                                <div class="row g-3">
+
+                                    <!-- Salesperson -->
+                                    <div class="col-12 col-md-6">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label for="salesperson_id" class="o_form_label fw-semibold m-0">
+                                                <i class="fa fa-user-circle text-muted me-1"/>
+                                                Salesperson
+                                            </label>
+                                            <div class="text-end" style="min-width: 55%;">
+                                                <field name="salesperson_id" required="1" options="{'no_create': True}"/>
+                                            </div>
+                                        </div>
+                                        <div class="text-muted small mt-1">
+                                            <i class="fa fa-lightbulb-o me-1"/>
+                                            Choose the salesperson who made the original sale.
+                                        </div>
+                                    </div>
+
+                                    <!-- Sale Order -->
+                                    <div class="col-12 col-md-6">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label for="sale_order_id" class="o_form_label fw-semibold m-0">
+                                                <i class="fa fa-shopping-cart text-muted me-1"/>
+                                                Sale Order
+                                            </label>
+                                            <div class="text-end" style="min-width: 55%;">
+                                                <field name="sale_order_id"
+                                                       required="1"
+                                                       domain="[('sales_person_id', '=', salesperson_id)]"
+                                                       options="{'no_create': True}"/>
+                                            </div>
+                                        </div>
+                                        <div class="text-muted small mt-1">
+                                            <i class="fa fa-filter me-1"/>
+                                            Orders are filtered automatically by selected salesperson.
+                                        </div>
+                                    </div>
+
+                                    <!-- Currency -->
+                                    <div class="col-12 col-md-6">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label for="currency_id" class="o_form_label fw-semibold m-0">
+                                                <i class="fa fa-usd text-muted me-1"/>
+                                                Currency
+                                            </label>
+                                            <div class="text-end" style="min-width: 55%;">
+                                                <field name="currency_id" groups="base.group_multi_currency"/>
+                                            </div>
+                                        </div>
+                                        <div class="text-muted small mt-1">
+                                            <i class="fa fa-info-circle me-1"/>
+                                            Currency used for values in this return.
+                                        </div>
+                                    </div>
+
+                                    <!-- Rate -->
+                                    <div class="col-12 col-md-6">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label for="rate" class="o_form_label fw-semibold m-0">
+                                                <i class="fa fa-exchange text-muted me-1"/>
+                                                Exchange Rate
+                                            </label>
+                                            <div class="text-end" style="min-width: 55%;">
+                                                <field name="rate" groups="base.group_multi_currency"/>
+                                            </div>
+                                        </div>
+                                        <div class="text-muted small mt-1">
+                                            <i class="fa fa-random me-1"/>
+                                            Used for USD/SL reporting columns.
+                                        </div>
+                                    </div>
+
+                                    <!-- Return Date -->
+                                    <div class="col-12 col-md-6">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label for="return_date" class="o_form_label fw-semibold m-0">
+                                                <i class="fa fa-calendar text-muted me-1"/>
+                                                Return Date
+                                            </label>
+                                            <div class="text-end" style="min-width: 55%;">
+                                                <field name="return_date" required="1"/>
+                                            </div>
+                                        </div>
+                                        <div class="text-muted small mt-1">
+                                            <i class="fa fa-clock-o me-1"/>
+                                            Use the actual date items were returned.
+                                        </div>
+                                    </div>
+
+                                    <!-- Status -->
+                                    <div class="col-12 col-md-6">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label for="state" class="o_form_label fw-semibold m-0">
+                                                <i class="fa fa-flag text-muted me-1"/>
+                                                Status
+                                            </label>
+                                            <div class="text-end" style="min-width: 55%;">
+                                                <field name="state" readonly="1"/>
+                                            </div>
+                                        </div>
+                                        <div class="text-muted small mt-1">
+                                            <i class="fa fa-shield me-1"/>
+                                            Confirmed returns are audit-safe.
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                <div class="alert alert-secondary mt-3 mb-0">
+                                    <i class="fa fa-check-circle me-2"/>
+                                    <b>Info:</b> Totals update automatically based on return lines.
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- RIGHT CARD: QUICK TOTALS (fix spacing) -->
+                        <div class="col-12 col-lg-5">
+                            <div class="border rounded-4 p-4 shadow-sm bg-white h-100">
+
+                                <div class="fw-bold mb-3 d-flex align-items-center gap-2">
+                                    <i class="fa fa-calculator text-muted"/>
+                                    <span>Quick Totals</span>
+                                </div>
+
+                                <!-- Each row = label left + value right -->
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                                    <div class="fw-semibold text-muted">
+                                        <i class="fa fa-cubes me-1"/>
+                                        Total Returned Quantity
+                                    </div>
+                                    <div class="fw-bold">
+                                        <field name="total_returned_qty" nolabel="1" readonly="1"/>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                                    <div class="fw-semibold text-muted">
+                                        <i class="fa fa-money me-1"/>
+                                        Total Amount
+                                    </div>
+                                    <div class="fw-bold">
+                                        <field name="total_subtotal" nolabel="1" readonly="1"/>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                                    <div class="fw-semibold text-muted">
+                                        <i class="fa fa-tag me-1"/>
+                                        Total Discount Amount
+                                    </div>
+                                    <div class="fw-bold">
+                                        <field name="total_discount_amount" nolabel="1" readonly="1"/>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center py-2">
+                                    <div class="fw-semibold text-muted">
+                                        <i class="fa fa-bullseye me-1"/>
+                                        Total Commission Amount
+                                    </div>
+                                    <div class="fw-bold">
+                                        <field name="total_commission_amount" nolabel="1" readonly="1"/>
+                                    </div>
+                                </div>
+
+                                <div class="text-muted small mt-3">
+                                    <i class="fa fa-info-circle me-1"/>
+                                    Review totals before confirming the return.
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Journal Summary -->
+                    <div class="row g-3 mt-3">
+                        <div class="col-12">
+                            <div class="border rounded-4 p-4 shadow-sm bg-white">
+                                <div class="fw-bold mb-2 d-flex align-items-center gap-2">
+                                    <i class="fa fa-book text-muted"/>
+                                    <span>Journal Summary</span>
+                                </div>
+
+                                <div class="text-muted small mb-2">
+                                    <i class="fa fa-info-circle me-1"/>
+                                    Display-only summary to help review accounting impact quickly.
+                                </div>
+
+                                <field name="journal_summary_html" nolabel="1" readonly="1"/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notebook -->
+                    <notebook class="mt-4">
+
+                        <page string="📦 Return Lines">
+                            <div class="border rounded-4 p-4 shadow-sm bg-white">
+
+                                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                    <div class="fw-bold d-flex align-items-center gap-2">
+                                        <i class="fa fa-list-ul text-muted"/>
+                                        <span>Products &amp; Returned Quantities</span>
+                                    </div>
+                                    <span class="badge rounded-pill bg-light border px-3 py-2">
+                                        <i class="fa fa-info-circle me-1 text-muted"/>
+                                        Fill Returned Qty
+                                    </span>
+                                </div>
+
+                                <div class="alert alert-info mb-3">
+                                    <i class="fa fa-lightbulb-o me-2"/>
+                                    <b>Tips:</b>
+                                    • Original Qty and Previously Returned Qty are readonly.
+                                    • Available Return Qty prevents over-returning.
+                                    • Net Amount = Subtotal - Discount - Commission.
+                                </div>
+
+                                <field name="return_lines" context="{'default_return_id': id}">
+                                    <tree editable="bottom" create="0">
+                                        <field name="product_id" required="1" options="{'no_create': True}" string="📦 Product"/>
+                                        <field name="currency_id" required="1" string="💱 Cur"/>
+
+                                        <field name="quantity" string="🧾 Original Qty" readonly="1" force_save="1"/>
+                                        <field name="previously_returned_qty" string="↩️ Prev Returned" readonly="1"/>
+                                        <field name="available_return_qty" string="✅ Available" readonly="1"/>
+
+                                        <field name="returned_quantity" string="⬅️ Returned Qty" required="1"/>
+                                        <field name="price_unit" string="💵 Price"/>
+
+                                        <field name="subtotal" string="💰 Subtotal" readonly="1" optional="show"/>
+                                        <field name="discount_amount" string="🏷️ Discount" readonly="1" optional="show"/>
+                                        <field name="commission_amount" string="🎯 Commission" readonly="1" optional="show"/>
+                                        <field name="net_amount" string="🧮 Net" readonly="1" optional="show"/>
+
+                                        <field name="USD_currency_id" readonly="1" optional="hide" string="🇺🇸 USD Cur"/>
+                                        <field name="total_net_usd" readonly="1" optional="show" string="🇺🇸 Net USD"/>
+                                        <field name="SL_currency_id" readonly="1" optional="hide" string="🇸🇴 SL Cur"/>
+                                        <field name="total_net_sl" readonly="1" optional="show" string="🇸🇴 Net SL"/>
+                                    </tree>
+                                </field>
+
+                                <div class="alert alert-warning mt-3 mb-0">
+                                    <i class="fa fa-exclamation-triangle me-2"/>
+                                    <b>Warning:</b> Returned Qty should not exceed Available Return Qty.
+                                </div>
+
+                            </div>
                         </page>
-                    </notebook>
-                   
-                </sheet>
-                <div class="oe_chatter">
-                <field name="message_follower_ids"/>
-            
-                <field name="message_ids" widget="mail_thread"/>
 
-                <field name="activity_ids"/>
-            </div>
+                    </notebook>
+
+                    <!-- Chatter -->
+                    <div class="oe_chatter">
+                        <field name="message_follower_ids"/>
+                        <field name="message_ids" widget="mail_thread"/>
+                        <field name="activity_ids"/>
+                    </div>
+
+                </sheet>
             </form>
         </field>
     </record>
 
-    <!-- Tree View for Sales Return Lines (Optional) -->
+    <!-- ===================================================== -->
+    <!-- 🌳 Tree: Sales Return Lines (Optional)                 -->
+    <!-- ===================================================== -->
     <record id="view_sales_return_line_tree" model="ir.ui.view">
         <field name="name">idil.sale.return.line.tree</field>
         <field name="model">idil.sale.return.line</field>
         <field name="arch" type="xml">
-            <tree>
-                <field name="product_id"/>
-                <field name="quantity"/>
-                <field name="returned_quantity"/>
-                <field name="price_unit"/>
-                <field name="subtotal"/>
+            <tree string="Sales Return Lines">
+                <field name="product_id" string="📦 Product"/>
+                <field name="quantity" string="🧾 Original Qty"/>
+                <field name="previously_returned_qty" string="↩️ Prev Returned"/>
+                <field name="available_return_qty" string="✅ Available"/>
+                <field name="returned_quantity" string="⬅️ Returned Qty"/>
+                <field name="price_unit" string="💵 Price"/>
+                <field name="subtotal" string="💰 Subtotal"/>
+                <field name="discount_amount" optional="show" string="🏷️ Discount"/>
+                <field name="commission_amount" optional="show" string="🎯 Commission"/>
+                <field name="net_amount" optional="show" string="🧮 Net"/>
             </tree>
         </field>
     </record>
+
 </odoo>

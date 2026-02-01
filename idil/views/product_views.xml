@@ -176,6 +176,15 @@
                                         </div>
 
                                         <div class="d-flex align-items-center justify-content-between">
+                                            <div class="text-muted"><i class="fa fa-cubes me-1"/>Min QTY</div>
+                                            <div class="fw-bold"><field name="min_qty" nolabel="1"/></div>
+                                             
+                                        </div>
+
+                                        
+                                        
+
+                                        <div class="d-flex align-items-center justify-content-between">
                                             <div class="text-muted"><i class="fa fa-tag me-1"/>Sale Price</div>
                                             <div class="fw-bold"><field name="sale_price" nolabel="1"/></div>
                                         </div>

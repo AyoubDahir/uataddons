@@ -165,6 +165,8 @@
         "views/warehouse_location_view.xml",
         "views/db_backup_views.xml",
         "views/internal_transfer_views.xml",
+        "reports/sale_invoice_report.xml",
+        "views/payment_method.xml",
         "views/menu.xml",
     ],
 }

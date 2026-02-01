@@ -1,6 +1,6 @@
-from odoo import models, fields, api
+# -*- coding: utf-8 -*-
+from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
-from datetime import date
 from dateutil.relativedelta import relativedelta
 import logging
 
@@ -16,6 +16,7 @@ class SalesCommission(models.Model):
     company_id = fields.Many2one(
         "res.company", default=lambda s: s.env.company, required=True
     )
+
     name = fields.Char(
         string="Commission Reference",
         required=True,
@@ -57,17 +58,39 @@ class SalesCommission(models.Model):
         readonly=True,
         tracking=True,
     )
+
+    # Payment tracking
+    payment_ids = fields.One2many(
+        "idil.sales.commission.payment",
+        "commission_id",
+        string="Commission Payments",
+        readonly=True,
+    )
+
     commission_paid = fields.Float(
         string="Commission Paid",
-        compute="_compute_commission_paid",
+        compute="_compute_paid_remaining_status",
         store=True,
         readonly=True,
     )
     commission_remaining = fields.Float(
         string="Commission Remaining",
-        compute="_compute_commission_remaining",
+        compute="_compute_paid_remaining_status",
         store=True,
         readonly=True,
+    )
+
+    payment_status = fields.Selection(
+        [
+            ("pending", "Pending"),
+            ("partial_paid", "Partial Paid"),
+            ("paid", "Paid"),
+            ("cancelled", "Cancelled"),
+            ("reallocated", "Reallocated"),
+        ],
+        compute="_compute_paid_remaining_status",
+        store=True,
+        tracking=True,
     )
 
     # Dates
@@ -108,23 +131,6 @@ class SalesCommission(models.Model):
         help="True if commission is due for payment today or earlier",
     )
 
-    # Payment Status
-    payment_status = fields.Selection(
-        [("pending", "Pending"), ("partial_paid", "Partial Paid"), ("paid", "Paid")],
-        string="Payment Status",
-        compute="_compute_payment_status",
-        store=True,
-        tracking=True,
-    )
-
-    # Payment tracking
-    payment_ids = fields.One2many(
-        "idil.sales.commission.payment",
-        "commission_id",
-        string="Commission Payments",
-        readonly=True,
-    )
-
     # Payment fields (for payment form)
     cash_account_id = fields.Many2one(
         "idil.chart.account",
@@ -132,234 +138,317 @@ class SalesCommission(models.Model):
         domain="[('account_type', 'in', ['cash', 'bank_transfer'])]",
         help="Select the cash or bank account for payment.",
     )
-    amount_to_pay = fields.Float(
-        string="Amount to Pay", digits=(16, 5), default=0.0
+    amount_to_pay = fields.Float(string="Amount to Pay", digits=(16, 5), default=0.0)
+
+    recovery_shifted = fields.Float(
+        string="Recovery Shifted",
+        digits=(16, 5),
+        default=0.0,
+        readonly=True,
+        tracking=True,
+        help="How much paid commission from this record has already been shifted to recovery bucket.",
     )
 
-    @api.depends("payment_ids", "payment_ids.amount")
-    def _compute_commission_paid(self):
-        """Compute total paid amount from all payments."""
-        for commission in self:
-            # Use SQL to get fresh totals, bypassing ORM cache
-            self.env.cr.execute(
-                """
-                SELECT COALESCE(SUM(amount), 0)
-                FROM idil_sales_commission_payment
-                WHERE commission_id = %s
-                """,
-                (commission.id,)
-            )
-            commission.commission_paid = self.env.cr.fetchone()[0]
+    balance_shifted = fields.Float(
+        string="Balance Shifted",
+        digits=(16, 5),
+        default=0.0,
+        readonly=True,
+        tracking=True,
+        help="How much from this commission has been shifted into salesperson balance (to prevent duplicates).",
+    )
+    balance_used = fields.Float(
+        string="Balance Used",
+        digits=(16, 5),
+        default=0.0,
+        readonly=True,
+        tracking=True,
+    )
 
-    @api.depends("commission_amount", "commission_paid")
-    def _compute_commission_remaining(self):
-        """Compute remaining commission amount."""
-        for commission in self:
-            commission.commission_remaining = (
-                commission.commission_amount - commission.commission_paid
+    def consume_salesperson_balance(self):
+        """
+        Use salesperson.commission_balance to pay this commission (once).
+        - Deduct from salesperson balance
+        - Create an allocation payment (+) on THIS commission
+        - Store how much was used in balance_used
+        """
+        self.ensure_one()
+
+        sp = self.sales_person_id
+        if not sp:
+            return 0.0
+
+        bal = float(sp.commission_balance or 0.0)
+        if bal <= 0:
+            return 0.0
+
+        total = float(self.commission_amount or 0.0)
+
+        # paid so far including allocations (safe for repeated calls)
+        already_paid = (
+            sum(self.payment_ids.mapped("amount")) if self.payment_ids else 0.0
+        )
+
+        need = total - already_paid
+        if need <= 0:
+            return 0.0
+
+        take = min(bal, need)
+        if take <= 0:
+            return 0.0
+
+        # ✅ deduct wallet so it can't be reused
+        sp.commission_balance = bal - take
+
+        # ✅ track on commission
+        self.balance_used = float(self.balance_used or 0.0) + take
+
+        # ✅ create allocation payment on this commission (IN)
+        self.env["idil.sales.commission.payment"].create(
+            {
+                "commission_id": self.id,
+                "sales_person_id": sp.id,
+                "currency_id": self.currency_id.id,
+                "amount": take,  # IN
+                "is_allocation": True,
+                "allocation_ref": f"BAL-IN-{self.sale_order_id.name}",
+                "date": fields.Date.context_today(self),
+            }
+        )
+
+        self.message_post(
+            body=(
+                f"✅ Commission balance used: {take:,.2f} {self.currency_id.name}. "
+                f"Remaining balance: {sp.commission_balance:,.2f}."
+            )
+        )
+
+        return take
+
+    @api.depends(
+        "payment_ids.amount", "payment_ids.is_allocation", "commission_amount", "state"
+    )
+    def _compute_paid_remaining_status(self):
+        for rec in self:
+            payments = rec.payment_ids
+            eps = 0.00001
+
+            paid_total = sum(payments.mapped("amount")) if payments else 0.0
+            real_paid = (
+                sum(payments.filtered(lambda p: not p.is_allocation).mapped("amount"))
+                if payments
+                else 0.0
+            )
+            alloc_out = (
+                abs(
+                    sum(
+                        payments.filtered(
+                            lambda p: p.is_allocation and (p.amount or 0.0) < 0
+                        ).mapped("amount")
+                    )
+                )
+                if payments
+                else 0.0
             )
 
-    @api.depends("date", "sales_person_id.commission_payment_schedule",
-                 "sales_person_id.commission_payment_day")
-    def _compute_due_date(self):
-        """Calculate due date based on salesperson's payment schedule"""
-        for commission in self:
-            if not commission.sales_person_id or not commission.date:
-                commission.due_date = commission.date
+            total = float(rec.commission_amount or 0.0)
+
+            # ===============================
+            # Returned commissions
+            # ===============================
+            if rec.state == "cancelled_return":
+                # Default: hide numbers once cancelled
+                rec.commission_remaining = 0.0
+
+                # If nothing paid at all => Cancelled (hide paid too)
+                if abs(real_paid) <= eps:
+                    rec.commission_paid = 0.0
+                    rec.payment_status = "cancelled"
+                    continue
+
+                # If paid > commission => Overpaid (warning)
+                if real_paid > total + eps:
+                    # show only what is still sitting (not shifted) but keep remaining hidden
+                    still_on_this = max(real_paid - alloc_out, 0.0)
+                    rec.commission_paid = still_on_this
+                    rec.payment_status = "reallocated"
+                    continue
+
+                # Fully shifted => Reallocated (hide paid)
+                if alloc_out >= real_paid - eps:
+                    rec.commission_paid = 0.0
+                    rec.payment_status = "reallocated"
+                    continue
+
+                # Partially shifted => Partial Reallocated (show only leftover)
+                if alloc_out > eps and alloc_out < real_paid - eps:
+                    rec.commission_paid = max(real_paid - alloc_out, 0.0)
+                    rec.payment_status = "partial_reallocated"
+                    continue
+
+                # Not shifted at all but has paid => Partial Paid (needs shift)
+                rec.commission_paid = real_paid
+                rec.payment_status = "partial_paid"
                 continue
 
-            if commission.sales_person_id.commission_payment_schedule == "daily":
-                # Due same day as transaction
-                commission.due_date = commission.date
-            else:  # monthly
-                # Due on specified day of next applicable month
-                transaction_date = fields.Date.from_string(commission.date)
-                payment_day = commission.sales_person_id.commission_payment_day or 1
+            # ===============================
+            # Normal commissions
+            # ===============================
+            remaining = total - paid_total
+            rec.commission_paid = paid_total
+            rec.commission_remaining = remaining
 
-                # Ensure payment day is valid (1-31)
-                payment_day = max(1, min(31, payment_day))
+            if remaining < -eps:
+                rec.payment_status = "reallocated"
+            elif total and paid_total >= total - eps:
+                rec.payment_status = "paid"
+            elif paid_total > eps:
+                rec.payment_status = "partial_paid"
+            else:
+                rec.payment_status = "pending"
 
-                # Calculate next payment date
-                if transaction_date.day < payment_day:
-                    # Payment is in the same month
-                    try:
-                        due_date = transaction_date.replace(day=payment_day)
-                    except ValueError:
-                        # Handle months with fewer days (e.g., Feb 30)
-                        due_date = transaction_date.replace(day=1) + relativedelta(
-                            months=1, days=-1
-                        )
-                else:
-                    # Payment is in the next month
-                    try:
-                        next_month = transaction_date + relativedelta(months=1)
-                        due_date = next_month.replace(day=payment_day)
-                    except ValueError:
-                        # Handle months with fewer days
-                        next_month = transaction_date + relativedelta(months=1)
-                        due_date = next_month.replace(day=1) + relativedelta(
-                            months=1, days=-1
-                        )
+    @api.depends(
+        "date",
+        "sales_person_id.commission_payment_schedule",
+        "sales_person_id.commission_payment_day",
+    )
+    def _compute_due_date(self):
+        for rec in self:
+            if not rec.sales_person_id or not rec.date:
+                rec.due_date = rec.date
+                continue
 
-                commission.due_date = due_date
+            if rec.sales_person_id.commission_payment_schedule == "daily":
+                rec.due_date = rec.date
+                continue
+
+            # monthly schedule
+            transaction_date = fields.Date.from_string(rec.date)
+            payment_day = rec.sales_person_id.commission_payment_day or 1
+            payment_day = max(1, min(31, payment_day))
+
+            # decide month
+            base = (
+                transaction_date
+                if transaction_date.day < payment_day
+                else (transaction_date + relativedelta(months=1))
+            )
+
+            # set day, fallback to last day of month
+            try:
+                rec.due_date = base.replace(day=payment_day)
+            except ValueError:
+                rec.due_date = base.replace(day=1) + relativedelta(months=1, days=-1)
 
     @api.depends("due_date", "payment_status")
     def _compute_is_payable(self):
-        """Check if commission is due for payment"""
-        today = fields.Date.today()
-        for commission in self:
-            commission.is_payable = (
-                commission.payment_status in ["pending", "partial_paid"]
-                and commission.due_date
-                and commission.due_date <= today
+        today = fields.Date.context_today(self)
+        for rec in self:
+            rec.is_payable = (
+                rec.payment_status in ("pending", "partial_paid")
+                and rec.due_date
+                and rec.due_date <= today
             )
 
     def _search_is_payable(self, operator, value):
-        """Allow searching for payable commissions"""
-        today = fields.Date.today()
+        today = fields.Date.context_today(self)
         if operator == "=" and value:
             return [
                 ("payment_status", "in", ["pending", "partial_paid"]),
                 ("due_date", "<=", today),
             ]
-        else:
-            return [
-                "|",
-                ("payment_status", "=", "paid"),
-                ("due_date", ">", today),
-            ]
+        return [
+            "|",
+            ("payment_status", "=", "paid"),
+            ("due_date", ">", today),
+        ]
 
-    @api.depends("commission_amount", "commission_paid")
-    def _compute_payment_status(self):
-        """Compute payment status using SQL for fresh data."""
-        for record in self:
-            # Use SQL to get fresh totals directly from DB
-            self.env.cr.execute(
-                """
-                SELECT COALESCE(SUM(amount), 0)
-                FROM idil_sales_commission_payment
-                WHERE commission_id = %s
-                """,
-                (record.id,)
-            )
-            paid_amount = self.env.cr.fetchone()[0] or 0.0
-            
-            # Update payment status based on fresh data
-            if paid_amount >= record.commission_amount:
-                record.payment_status = "paid"
-            elif paid_amount > 0:
-                record.payment_status = "partial_paid"
-            else:
-                record.payment_status = "pending"
-                
-            # Log for debugging
-            _logger.info(
-                f"Commission {record.id}: Amount={record.commission_amount}, Paid={paid_amount}, Status={record.payment_status}"
-            )
-
+    # --------------------------
+    # CREATE / ACTIONS (NO SQL)
+    # --------------------------
     @api.model
     def create(self, vals):
         if vals.get("name", "New") == "New":
-            vals["name"] = self.env["ir.sequence"].next_by_code(
-                "idil.sales.commission"
-            ) or "New"
-        return super(SalesCommission, self).create(vals)
+            vals["name"] = (
+                self.env["ir.sequence"].next_by_code("idil.sales.commission") or "New"
+            )
+        return super().create(vals)
 
     def pay_commission(self):
-        """Pay commission to salesperson"""
+        """Pay commission to salesperson (NO SQL)."""
         self.ensure_one()
 
-        # CRITICAL: Daily schedule commissions are NOT payable
-        # For daily schedule, commission is netted from receivables at sale time
-        # The salesperson already keeps their commission - no payment needed
-        if self.payment_schedule == 'daily':
+        # daily schedule is not payable
+        if self.payment_schedule == "daily":
             raise ValidationError(
-                "Daily schedule commissions are not payable. "
-                "The salesperson already received their commission at the time of sale "
-                "(netted from receivables)."
+                _(
+                    "Daily schedule commissions are not payable. "
+                    "The salesperson already received their commission at the time of sale (netted from receivables)."
+                )
             )
 
-        # Use SQL-level locking to prevent race conditions (SELECT FOR UPDATE)
-        self.env.cr.execute(
-            """
-            SELECT id FROM idil_sales_commission 
-            WHERE id = %s FOR UPDATE NOWAIT
-            """,
-            (self.id,)
-        )
-
-        # Guard with fresh DB state (avoid cache/UI staleness)
-        self.env.cr.execute(
-            """
-            SELECT COALESCE(SUM(amount), 0) 
-            FROM idil_sales_commission_payment 
-            WHERE commission_id = %s
-            """,
-            (self.id,)
-        )
-        total_paid = self.env.cr.fetchone()[0]
-        remaining = (self.commission_amount or 0.0) - total_paid
-        
-        if remaining <= 0:
-            raise ValidationError("This commission is already fully paid.")
+        if self.payment_status == "paid" or (self.commission_remaining or 0.0) <= 0:
+            raise ValidationError(_("This commission is already fully paid."))
 
         if not self.cash_account_id:
             raise ValidationError(
-                "Please select a cash account before paying the commission."
+                _("Please select a cash/bank account before paying the commission.")
             )
 
         if self.amount_to_pay <= 0:
-            raise ValidationError("Amount to pay must be greater than 0.")
+            raise ValidationError(_("Amount to pay must be greater than 0."))
 
-        # Validate against fresh remaining to prevent overpay from stale cache/UI
-        if self.amount_to_pay > remaining + 0.001:  # Small tolerance for float precision
+        # avoid overpayment based on current computed remaining
+        if self.amount_to_pay > (self.commission_remaining or 0.0):
             raise ValidationError(
-                f"The amount to pay ({self.amount_to_pay:.2f}) exceeds the remaining "
-                f"commission amount ({remaining:.2f})."
+                _(
+                    "The amount to pay (%.2f) exceeds the remaining commission amount (%.2f)."
+                )
+                % (self.amount_to_pay, self.commission_remaining or 0.0)
             )
-        
-        # Cap amount to remaining if within tolerance
-        actual_amount = min(self.amount_to_pay, remaining)
-        
-        # Round payment amount to 2 decimal places to prevent floating-point issues
+
+        # optional: round to 2 decimals if your accounting requires it
         payment_amount = round(self.amount_to_pay, 2)
 
-        # Validate commission payable account exists for monthly schedule
+        # monthly schedule requires payable account
         if not self.sales_person_id.commission_payable_account_id:
             raise ValidationError(
-                f"Salesperson '{self.sales_person_id.name}' has monthly commission schedule "
-                "but no Commission Payable Account configured."
+                _(
+                    "Salesperson '%s' has monthly commission schedule but no Commission Payable Account configured."
+                )
+                % (self.sales_person_id.name,)
             )
 
-        # Create payment record with rounded amount
-        payment_vals = {
-            "commission_id": self.id,
-            "sales_person_id": self.sales_person_id.id,
-            "amount": payment_amount,
-            "date": fields.Date.context_today(self),
-            "cash_account_id": self.cash_account_id.id,
-        }
-        payment = self.env["idil.sales.commission.payment"].create(payment_vals)
+        # create payment record (this will also validate again in payment.create())
+        payment = self.env["idil.sales.commission.payment"].create(
+            {
+                "commission_id": self.id,
+                "sales_person_id": self.sales_person_id.id,
+                "currency_id": self.currency_id.id,
+                "amount": payment_amount,
+                "date": fields.Date.context_today(self),
+                "cash_account_id": self.cash_account_id.id,
+            }
+        )
 
-        # Book accounting entry for commission payment (monthly schedule only)
-        # Daily schedule doesn't use Commission Payable, so no clearing entry needed
-        if self.payment_schedule == 'monthly':
+        # Accounting booking for monthly schedule (NO SQL)
+        if self.payment_schedule == "monthly":
             trx_source = self.env["idil.transaction.source"].search(
                 [("name", "=", "Commission Payment")], limit=1
             )
             if not trx_source:
-                # Fallback to Receipt source if Commission Payment doesn't exist
                 trx_source = self.env["idil.transaction.source"].search(
                     [("name", "=", "Receipt")], limit=1
                 )
-            
-            # Get exchange rate - use the rate from the sale order or default to 1.0
-            rate = self.sale_order_id.rate if self.sale_order_id and self.sale_order_id.rate else 1.0
-            
-            # Create transaction booking with all required fields
-            # Add more comprehensive error handling
-            try:
-                booking_vals = {
+
+            rate = (
+                self.sale_order_id.rate
+                if self.sale_order_id and self.sale_order_id.rate
+                else 1.0
+            )
+
+            booking = self.env["idil.transaction_booking"].create(
+                {
                     "sales_person_id": self.sales_person_id.id,
                     "trx_source_id": trx_source.id if trx_source else False,
                     "trx_date": fields.Date.context_today(self),
@@ -368,252 +457,163 @@ class SalesCommission(models.Model):
                     "payment_status": "paid",
                     "reffno": f"Commission Payment - {self.name}",
                     "rate": rate,
-                    "sale_order_id": self.sale_order_id.id if self.sale_order_id else False,
+                    "sale_order_id": (
+                        self.sale_order_id.id if self.sale_order_id else False
+                    ),
+                    # "company_id": self.company_id.id,
+                    "currency_id": self.currency_id.id,
                 }
-                _logger.info(f"Creating transaction booking with values: {booking_vals}")
-                booking = self.env["idil.transaction_booking"].create(booking_vals)
-                _logger.info(f"Successfully created transaction booking ID: {booking.id}")
-            except Exception as e:
-                _logger.error(f"Failed to create transaction booking: {str(e)}")
-                raise ValidationError(f"Failed to create accounting entry: {str(e)}")
-            
-            try:
-                # Get account details for logging
-                payable_account = self.sales_person_id.commission_payable_account_id
-                cash_account = self.cash_account_id
-                
-                # CRITICAL: Round amount to 2 decimal places to prevent floating-point precision issues
-                # This ensures DR and CR entries are exactly equal
-                rounded_amount = round(self.amount_to_pay, 2)
-                
-                _logger.info(f"Commission Payment Accounting:")
-                _logger.info(f"  - Commission: {self.name}, Amount: {rounded_amount}")
-                _logger.info(f"  - DR Account: {payable_account.code} - {payable_account.name} (Currency: {payable_account.currency_id.name})")
-                _logger.info(f"  - CR Account: {cash_account.code} - {cash_account.name} (Currency: {cash_account.currency_id.name})")
-                
-                # DR Commission Payable (clear the liability)
-                dr_line = self.env["idil.transaction_bookingline"].create(
-                    {
-                        "transaction_booking_id": booking.id,
-                        "description": f"Commission Payment - {self.sale_order_id.name if self.sale_order_id else self.name}",
-                        "account_number": payable_account.id,
-                        "transaction_type": "dr",
-                        "dr_amount": rounded_amount,
-                        "cr_amount": 0,
-                        "transaction_date": fields.Date.context_today(self),
-                        "company_id": self.company_id.id,
-                    }
-                )
-                _logger.info(f"Created DR booking line ID: {dr_line.id} for account {payable_account.code}")
-                
-                # CR Cash/Bank (record cash outflow)
-                cr_line = self.env["idil.transaction_bookingline"].create(
-                    {
-                        "transaction_booking_id": booking.id,
-                        "description": f"Commission Payment - {self.sale_order_id.name if self.sale_order_id else self.name}",
-                        "account_number": cash_account.id,
-                        "transaction_type": "cr",
-                        "dr_amount": 0,
-                        "cr_amount": rounded_amount,
-                        "transaction_date": fields.Date.context_today(self),
-                        "company_id": self.company_id.id,
-                    }
-                )
-                _logger.info(f"Created CR booking line ID: {cr_line.id} for account {cash_account.code}")
-                
-                # Flush to ensure database consistency
-                self.env.cr.execute("COMMIT")
-                
-            except Exception as e:
-                _logger.error(f"Failed to create transaction booking lines: {str(e)}")
-                raise ValidationError(f"Failed to create accounting entries: {str(e)}")
-            
-            # Link booking to payment record for trial balance tracking
+            )
+
+            payable_account = self.sales_person_id.commission_payable_account_id
+            cash_account = self.cash_account_id
+
+            # DR Commission Payable
+            self.env["idil.transaction_bookingline"].create(
+                {
+                    "transaction_booking_id": booking.id,
+                    "description": f"Commission Payment - {self.sale_order_id.name if self.sale_order_id else self.name}",
+                    "account_number": payable_account.id,
+                    "transaction_type": "dr",
+                    "dr_amount": payment_amount,
+                    "cr_amount": 0.0,
+                    "transaction_date": fields.Date.context_today(self),
+                    "company_id": self.company_id.id,
+                    "currency_id": self.currency_id.id,
+                }
+            )
+
+            # CR Cash/Bank
+            self.env["idil.transaction_bookingline"].create(
+                {
+                    "transaction_booking_id": booking.id,
+                    "description": f"Commission Payment - {self.sale_order_id.name if self.sale_order_id else self.name}",
+                    "account_number": cash_account.id,
+                    "transaction_type": "cr",
+                    "dr_amount": 0.0,
+                    "cr_amount": payment_amount,
+                    "transaction_date": fields.Date.context_today(self),
+                    "company_id": self.company_id.id,
+                    "currency_id": self.currency_id.id,
+                }
+            )
+
             payment.write({"transaction_booking_id": booking.id})
 
-        # CRITICAL: Explicitly update payment_status in database using SQL
-        # This ensures the status is persisted even if ORM caching causes issues
-        self.env.cr.execute(
-            """
-            SELECT COALESCE(SUM(amount), 0) 
-            FROM idil_sales_commission_payment 
-            WHERE commission_id = %s
-            """,
-            (self.id,)
-        )
-        total_paid_after = self.env.cr.fetchone()[0]
-        
-        # Determine new status based on actual payments
-        if total_paid_after >= self.commission_amount:
-            new_status = 'paid'
-        elif total_paid_after > 0:
-            new_status = 'partial_paid'
-        else:
-            new_status = 'pending'
-        
-        # Update status directly in database to ensure persistence
-        self.env.cr.execute(
-            """
-            UPDATE idil_sales_commission 
-            SET payment_status = %s,
-                commission_paid = %s,
-                commission_remaining = %s
-            WHERE id = %s
-            """,
-            (new_status, total_paid_after, self.commission_amount - total_paid_after, self.id)
-        )
-        
-        # Commit the status update
-        self.env.cr.commit()
-        
-        _logger.info(f"Commission {self.id}: Updated payment_status to '{new_status}' (paid: {total_paid_after}, total: {self.commission_amount})")
-
-        # Reset amount_to_pay and reload the view to reflect updated status
+        # reset input
         self.amount_to_pay = 0.0
 
+        # bulk flow support
+        if self.env.context.get("return_payment_record"):
+            return payment
+
         return {"type": "ir.actions.client", "tag": "reload"}
-        
-    def action_sync_payments(self):
-        """Action to manually sync payment records and create missing transaction bookings.
-        This helps fix inconsistencies between commission payments and accounting entries."""
+
+    def _apply_previous_paid_commission_to_this(self):
+        """
+        Like receipt allocation:
+        - Take paid commission from old cancelled_return commissions (same salesperson+currency)
+        - Create negative payment on source commission
+        - Create positive payment on this commission
+        """
         self.ensure_one()
-        
-        # Check if any payment exists without transaction booking
-        missing_bookings = self.env['idil.sales.commission.payment'].search([
-            ('commission_id', '=', self.id),
-            ('transaction_booking_id', '=', False),
-        ])
-        
-        if not missing_bookings:
-            raise ValidationError("All payments already have transaction bookings. Nothing to sync.")
-            
-        created_bookings = 0
-        for payment in missing_bookings:
-            try:
-                # Create missing transaction booking
-                trx_source = self.env["idil.transaction.source"].search(
-                    [("name", "=", "Commission Payment")], limit=1
-                ) or self.env["idil.transaction.source"].search([("name", "=", "Receipt")], limit=1)
-                
-                rate = self.sale_order_id.rate if self.sale_order_id and self.sale_order_id.rate else 1.0
-                
-                # Create booking for this payment
-                booking = self.env["idil.transaction_booking"].create({
+
+        Payment = self.env["idil.sales.commission.payment"]
+        Comm = self.env["idil.sales.commission"]
+
+        if (self.commission_remaining or 0.0) <= 0:
+            return 0.0
+
+        allocation_ref = f"COMM-ALLOC-{self.sale_order_id.name}"
+
+        # Source = old returned commissions with paid > 0
+        sources = Comm.search(
+            [
+                ("sales_person_id", "=", self.sales_person_id.id),
+                ("currency_id", "=", self.currency_id.id),
+                ("state", "=", "cancelled_return"),
+                ("id", "!=", self.id),
+            ],
+            order="id asc",
+        )
+
+        left = float(self.commission_remaining or 0.0)
+        applied = 0.0
+
+        for src in sources:
+            src_paid = float(src.commission_paid or 0.0)
+            if src_paid <= 0:
+                continue
+
+            take = min(src_paid, left)
+            if take <= 0:
+                continue
+
+            # 1) NEGATIVE payment on SOURCE (remove paid from source)
+            Payment.create(
+                {
+                    "commission_id": src.id,
+                    "sales_person_id": src.sales_person_id.id,
+                    "currency_id": src.currency_id.id,
+                    "amount": -take,
+                    "date": fields.Date.context_today(self),
+                    "cash_account_id": (
+                        self.cash_account_id.id if self.cash_account_id else False
+                    ),
+                    "is_allocation": True,
+                    "allocation_ref": allocation_ref,
+                }
+            )
+
+            # 2) POSITIVE payment on TARGET (apply to this commission)
+            Payment.create(
+                {
+                    "commission_id": self.id,
                     "sales_person_id": self.sales_person_id.id,
-                    "trx_source_id": trx_source.id if trx_source else False,
-                    "trx_date": payment.date,
-                    "amount": payment.amount,
-                    "payment_method": "commission_payment",
-                    "payment_status": "paid",
-                    "reffno": f"Commission Payment - {self.name} (Sync)",
-                    "rate": rate,
-                    "sale_order_id": self.sale_order_id.id if self.sale_order_id else False,
-                    "company_id": self.company_id.id,
                     "currency_id": self.currency_id.id,
-                })
-                
-                # Create DR/CR lines
-                self.env["idil.transaction_bookingline"].create({
-                    "transaction_booking_id": booking.id,
-                    "description": f"Commission Payment - {self.name} (Sync)",
-                    "account_number": self.sales_person_id.commission_payable_account_id.id,
-                    "transaction_type": "dr",
-                    "dr_amount": payment.amount,
-                    "cr_amount": 0,
-                    "transaction_date": payment.date,
-                    "company_id": self.company_id.id,
-                    "currency_id": self.currency_id.id,
-                })
-                
-                self.env["idil.transaction_bookingline"].create({
-                    "transaction_booking_id": booking.id,
-                    "description": f"Commission Payment - {self.name} (Sync)",
-                    "account_number": payment.cash_account_id.id,
-                    "transaction_type": "cr",
-                    "dr_amount": 0,
-                    "cr_amount": payment.amount,
-                    "transaction_date": payment.date,
-                    "company_id": self.company_id.id,
-                    "currency_id": self.currency_id.id,
-                })
-                
-                # Link booking to payment
-                payment.write({"transaction_booking_id": booking.id})
-                created_bookings += 1
-                
-                # Commit after each successful booking creation
-                self.env.cr.commit()
-                
-            except Exception as e:
-                _logger.error(f"Failed to sync payment {payment.id}: {str(e)}")
-        
-        # Recompute payment status
-        self.invalidate_recordset(['commission_paid', 'commission_remaining', 'payment_status'])
-        self._compute_commission_paid()
-        self._compute_commission_remaining()
-        self._compute_payment_status()
-        self.flush_recordset(['commission_paid', 'commission_remaining', 'payment_status'])
-        
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': 'Sync Complete',
-                'message': f"Created {created_bookings} transaction bookings for previously missing payments",
-                'type': 'success',
-                'sticky': False,
-            }
-        }
+                    "amount": take,
+                    "date": fields.Date.context_today(self),
+                    "cash_account_id": (
+                        self.cash_account_id.id if self.cash_account_id else False
+                    ),
+                    "is_allocation": True,
+                    "allocation_ref": allocation_ref,
+                }
+            )
+
+            applied += take
+            left -= take
+            if left <= 0:
+                break
+
+        return applied
 
     @api.model
     def fix_all_commission_statuses(self):
-        """Fix all commission statuses based on actual payment totals.
-        This is a utility method to fix data inconsistencies where
-        commissions were paid but payment_status was not updated."""
-        
-        # Find all commissions and update their status based on actual payments
-        self.env.cr.execute(
-            """
-            UPDATE idil_sales_commission sc
-            SET 
-                payment_status = CASE 
-                    WHEN COALESCE(paid.total_paid, 0) >= sc.commission_amount THEN 'paid'
-                    WHEN COALESCE(paid.total_paid, 0) > 0 THEN 'partial_paid'
-                    ELSE 'pending'
-                END,
-                commission_paid = COALESCE(paid.total_paid, 0),
-                commission_remaining = sc.commission_amount - COALESCE(paid.total_paid, 0)
-            FROM (
-                SELECT commission_id, SUM(amount) as total_paid
-                FROM idil_sales_commission_payment
-                GROUP BY commission_id
-            ) paid
-            WHERE paid.commission_id = sc.id
-            AND (
-                sc.payment_status != CASE 
-                    WHEN COALESCE(paid.total_paid, 0) >= sc.commission_amount THEN 'paid'
-                    WHEN COALESCE(paid.total_paid, 0) > 0 THEN 'partial_paid'
-                    ELSE 'pending'
-                END
-                OR sc.payment_status IS NULL
-            )
-            """
+        """
+        Standard ORM utility:
+        recompute stored fields for all commissions.
+        (No SQL update, just triggers recompute/store.)
+        """
+        commissions = self.search([])
+        commissions.invalidate_recordset(
+            ["commission_paid", "commission_remaining", "payment_status"]
         )
-        
-        updated_count = self.env.cr.rowcount
-        self.env.cr.commit()
-        
-        _logger.info(f"Fixed {updated_count} commission statuses")
-        
+        # recompute store fields
+        commissions._compute_paid_remaining_status()
+
         return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': 'Status Fix Complete',
-                'message': f"Updated {updated_count} commission statuses based on actual payments",
-                'type': 'success',
-                'sticky': False,
-            }
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": _("Status Fix Complete"),
+                "message": _(
+                    "Recomputed commission paid/remaining/status for %s records."
+                )
+                % len(commissions),
+                "type": "success",
+                "sticky": False,
+            },
         }
 
 
@@ -631,12 +631,14 @@ class SalesCommissionPayment(models.Model):
     company_id = fields.Many2one(
         "res.company", default=lambda s: s.env.company, required=True
     )
+
     commission_id = fields.Many2one(
         "idil.sales.commission", string="Commission", required=True, ondelete="cascade"
     )
     sales_person_id = fields.Many2one(
         "idil.sales.sales_personnel", string="Salesperson", required=True
     )
+
     currency_id = fields.Many2one(
         "res.currency",
         string="Currency",
@@ -646,11 +648,15 @@ class SalesCommissionPayment(models.Model):
         ),
         readonly=True,
     )
+
     amount = fields.Float(string="Amount", digits=(16, 5), required=True)
+    is_allocation = fields.Boolean(default=False)
+    allocation_ref = fields.Char()
+
     date = fields.Date(string="Date", default=fields.Date.context_today, required=True)
-    cash_account_id = fields.Many2one(
-        "idil.chart.account", string="Cash/Bank Account", required=True
-    )
+
+    cash_account_id = fields.Many2one("idil.chart.account", string="Cash/Bank Account")
+
     transaction_booking_id = fields.Many2one(
         "idil.transaction_booking",
         string="Transaction Booking",
@@ -660,157 +666,105 @@ class SalesCommissionPayment(models.Model):
 
     @api.model
     def create(self, vals):
-        """Create payment with SQL-level validation to prevent overpayment."""
-        commission = None
-        if vals.get("commission_id"):
-            commission_id = vals["commission_id"]
-            commission = self.env["idil.sales.commission"].browse(commission_id)
-            
-            # CRITICAL: Block daily schedule commission payments
-            if commission.payment_schedule == 'daily':
-                raise ValidationError(
-                    "Daily schedule commissions are not payable. "
-                    "The salesperson already received their commission at the time of sale."
-                )
-            
-            # Use SQL-level locking to prevent race conditions
-            self.env.cr.execute(
-                """
-                SELECT id FROM idil_sales_commission 
-                WHERE id = %s FOR UPDATE NOWAIT
-                """,
-                (commission_id,)
-            )
-            
-            # Get fresh totals directly from DB
-            self.env.cr.execute(
-                """
-                SELECT COALESCE(SUM(amount), 0) 
-                FROM idil_sales_commission_payment 
-                WHERE commission_id = %s
-                """,
-                (commission_id,)
-            )
-            total_paid = self.env.cr.fetchone()[0]
-            remaining = (commission.commission_amount or 0.0) - total_paid
-            amount = (vals.get("amount") or 0.0)
-            
-            if remaining <= 0:
-                raise ValidationError("This commission is already fully paid.")
-            if amount > remaining + 0.001:  # Small tolerance for float precision
-                raise ValidationError(
-                    f"The amount to pay ({amount:.2f}) exceeds the remaining commission amount ({remaining:.2f})."
-                )
-            # Cap amount to remaining if within tolerance
-            if amount > remaining:
-                vals["amount"] = remaining
+        commission = self.env["idil.sales.commission"].browse(vals.get("commission_id"))
 
-        payment = super(SalesCommissionPayment, self).create(vals)
-        # Create salesperson transaction (In - reduces what they owe)
-        payment._create_salesperson_transaction()
-        
-        # Explicitly update commission fields to ensure persistence
-        payment._update_commission_balance()
-        
+        # daily schedule still blocked
+        if commission and commission.payment_schedule == "daily":
+            raise ValidationError(_("Daily schedule commissions are not payable."))
+
+        is_alloc = bool(vals.get("is_allocation"))
+        amount = float(vals.get("amount") or 0.0)
+
+        # ✅ normal payments must be > 0
+        # ✅ allocations can be negative or positive, but not zero
+        if (not is_alloc and amount <= 0) or (is_alloc and amount == 0):
+            raise ValidationError(_("Invalid commission payment amount."))
+
+        # ✅ Prevent overpay ONLY for normal payments
+        if (
+            not is_alloc
+            and commission
+            and amount > (commission.commission_remaining or 0.0)
+        ):
+            raise ValidationError(
+                _("Payment amount (%.2f) exceeds remaining commission (%.2f).")
+                % (amount, commission.commission_remaining or 0.0)
+            )
+
+        payment = super().create(vals)
+
+        # ✅ Only real cash payments create salesperson transaction
+        if not is_alloc:
+            payment._create_salesperson_transaction()
+
         return payment
 
+    @api.constrains("amount", "commission_id", "is_allocation")
+    def _check_amount_not_exceed_remaining(self):
+        for rec in self:
+            if not rec.commission_id:
+                continue
+
+            # ✅ Allocation lines can be negative/positive and must NOT be blocked here
+            if rec.is_allocation:
+                continue
+
+            if rec.commission_id.payment_schedule == "daily":
+                raise ValidationError(_("Daily schedule commissions are not payable."))
+
+            # remaining excluding THIS record
+            other_paid = sum(
+                rec.commission_id.payment_ids.filtered(lambda p: p.id != rec.id).mapped(
+                    "amount"
+                )
+            )
+            remaining = (rec.commission_id.commission_amount or 0.0) - other_paid
+
+            if rec.amount > remaining + 0.00001:
+                raise ValidationError(
+                    _("Payment amount (%.2f) exceeds remaining commission (%.2f).")
+                    % (rec.amount, remaining)
+                )
+
     def _create_salesperson_transaction(self):
-        """Post commission payment to salesperson account"""
-        self.env["idil.salesperson.transaction"].create(
-            {
-                "sales_person_id": self.sales_person_id.id,
-                "date": self.date,
-                "transaction_type": "in",
-                "amount": self.amount,
-                "description": f"Commission Payment - {self.commission_id.sale_order_id.name}",
-            }
-        )
+        """Post commission payment to salesperson account."""
+        for rec in self:
+            self.env["idil.salesperson.transaction"].create(
+                {
+                    "sales_person_id": rec.sales_person_id.id,
+                    "date": rec.date,
+                    "transaction_type": "other",
+                    "amount": rec.amount,
+                    "description": f"Commission Payment - {rec.commission_id.sale_order_id.name}",
+                }
+            )
 
     def unlink(self):
-        """Delete associated salesperson transaction when payment is deleted"""
-        # Store commissions to update before deletion
-        commissions = self.mapped('commission_id')
-        
-        for payment in self:
-            # Find and delete the transaction
-            transaction = self.env["idil.salesperson.transaction"].search(
+        """Delete associated salesperson transaction when payment is deleted (NO SQL)."""
+        commissions = self.mapped("commission_id")
+
+        for pay in self:
+            trx = self.env["idil.salesperson.transaction"].search(
                 [
-                    ("sales_person_id", "=", payment.sales_person_id.id),
-                    ("date", "=", payment.date),
-                    ("amount", "=", payment.amount),
+                    ("sales_person_id", "=", pay.sales_person_id.id),
+                    ("date", "=", pay.date),
+                    ("amount", "=", pay.amount),
                     ("transaction_type", "=", "in"),
                     (
                         "description",
                         "=",
-                        f"Commission Payment - {payment.commission_id.sale_order_id.name}",
+                        f"Commission Payment - {pay.commission_id.sale_order_id.name}   ",
                     ),
                 ],
                 limit=1,
             )
-            if transaction:
-                transaction.unlink()
+            if trx:
+                trx.unlink()
 
-        res = super(SalesCommissionPayment, self).unlink()
-        
-        # Force recomputation after deletion
-        for commission in commissions:
-            # Invalidate cache and trigger recomputation
-            commission.invalidate_recordset(
-                ['commission_paid', 'commission_remaining', 'payment_status']
-            )
-            commission._compute_commission_paid()
-            commission._compute_commission_remaining()
-            commission._compute_payment_status()
-            commission.flush_recordset(
-                ['commission_paid', 'commission_remaining', 'payment_status']
-            )
-            
+        res = super().unlink()
+
+        # Standard invalidate (stored compute will refresh when accessed)
+        commissions.invalidate_recordset(
+            ["commission_paid", "commission_remaining", "payment_status"]
+        )
         return res
-
-    def _update_commission_balance(self):
-        """Trigger recomputation of commission balance fields."""
-        for payment in self:
-            commission = payment.commission_id
-            # Invalidate cache to force recomputation
-            commission.invalidate_recordset(
-                ['commission_paid', 'commission_remaining', 'payment_status']
-            )
-            # Force recomputation by accessing the fields
-            commission._compute_commission_paid()
-            commission._compute_commission_remaining()
-            commission._compute_payment_status()
-            # Flush to database
-            commission.flush_recordset(
-                ['commission_paid', 'commission_remaining', 'payment_status']
-            )
-
-    @api.constrains("amount", "commission_id")
-    def _check_amount_not_exceed_remaining(self):
-        """Safety net to prevent overpayment using SQL-level check."""
-        for rec in self:
-            if not rec.commission_id:
-                continue
-            
-            # Block daily schedule payments at constraint level too
-            if rec.commission_id.payment_schedule == 'daily':
-                raise ValidationError(
-                    "Daily schedule commissions are not payable. "
-                    "The salesperson already received their commission at the time of sale."
-                )
-            
-            # Use SQL to get fresh totals excluding current record
-            self.env.cr.execute(
-                """
-                SELECT COALESCE(SUM(amount), 0) 
-                FROM idil_sales_commission_payment 
-                WHERE commission_id = %s AND id != %s
-                """,
-                (rec.commission_id.id, rec.id or 0)
-            )
-            already_paid = self.env.cr.fetchone()[0]
-            remaining = (rec.commission_id.commission_amount or 0.0) - already_paid
-            
-            if rec.amount > remaining + 0.001:  # Small tolerance for float precision
-                raise ValidationError(
-                    f"Payment amount ({rec.amount:.2f}) exceeds remaining commission ({remaining:.2f})."
-                )

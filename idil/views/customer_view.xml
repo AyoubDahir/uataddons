@@ -182,7 +182,7 @@
                                 <tree create="0" edit="0" delete="0">
                                     <field name="order_id"/>
                                     <field name="currency_id"/>
-                                    <field name="payment_method"/>
+                                    <field name="payment_method_id"/>
                                     <field name="account_id"/>
                                     <field name="amount" sum="total"/>
                                 </tree>

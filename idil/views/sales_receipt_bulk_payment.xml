@@ -40,6 +40,7 @@
                     </div>
                     <group>
                         <group>
+                            <field name="company_id" invisible="1"/>
                             <field name="partner_type" required="1" class="o_main_field"/>
                             <field name="salesperson_id" invisible="partner_type != 'salesperson'"/>
                             <field name="customer_id" invisible="partner_type != 'customer'"/>
@@ -70,8 +71,9 @@
                     <div class="oe_form_box" style="margin-bottom: 8px; background: #f8f8ff; border-radius: 10px; padding: 16px; border: 1px solid #eee;">
                         <field name="payment_method_ids">
                             <tree editable="bottom" decoration-success="payment_amount">
-                            
+                               <field name="company_id" invisible="1"/>
                                 <field name="payment_date"/>
+                                 <field name="payment_method_id"/>
                                 <field name="payment_account_id"/>
                                 <field name="account_currency_id"/>
                                 <field name="currency_id"/>

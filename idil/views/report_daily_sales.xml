@@ -28,6 +28,7 @@
                     </group>
                 </group>
                 <footer>
+                    <button string="View Report" type="object" name="view_report" class="btn-info"/>
                     <button string="Generate PDF" type="object" name="generate_pdf_report" class="btn-primary"/>
                     <button string="Export to Excel" type="object" name="generate_excel_report" class="btn-success"/>
                     <button string="Cancel" class="btn-secondary" special="cancel"/>

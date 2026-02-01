@@ -20,6 +20,12 @@
                 <field name="commission_amount" sum="Total Amount"/>
                 <field name="commission_paid" sum="Total Paid"/>
                 <field name="commission_remaining" sum="Total Remaining"/>
+                
+                <field name="state" widget="badge" 
+                       decoration-success="payment_status == 'normal'"
+                       decoration-warning="payment_status == 'cancelled_return'"/>
+
+
                 <field name="payment_status" widget="badge" 
                        decoration-success="payment_status == 'paid'"
                        decoration-warning="payment_status == 'partial_paid'"
@@ -35,10 +41,17 @@
         <field name="arch" type="xml">
             <form string="Sales Commission" create="false" edit="false">
                 <header>
-                    <button name="action_sync_payments" string="Sync Transactions" 
-                            type="object" class="btn btn-secondary"
-                            help="Create missing transaction bookings for payments"/>
-                    <field name="payment_status" widget="statusbar"/>
+                    
+                     <field name="state" widget="badge" 
+                       decoration-success="payment_status == 'normal'"
+                       decoration-warning="payment_status == 'cancelled_return'"/>
+
+
+                <field name="payment_status" widget="badge" 
+                       decoration-success="payment_status == 'paid'"
+                       decoration-warning="payment_status == 'partial_paid'"
+                       decoration-info="payment_status == 'pending'"/>
+                       
                 </header>
                 <sheet>
                     <div class="oe_title">
@@ -161,21 +174,6 @@
     <!-- Assuming there is a parent menu for Sales Operations or similar -->
     <!-- You might need to adjust the parent="idil.menu_sales_operations" based on existing menus -->
     
-    <menuitem id="menu_sales_commission_root" 
-              name="Commissions" 
-              parent="menu_sales" 
-              sequence="50"/>
-
-    <menuitem id="menu_sales_commission_all" 
-              name="All Commissions" 
-              parent="menu_sales_commission_root" 
-              action="action_sales_commission" 
-              sequence="10"/>
-
-    <menuitem id="menu_sales_commission_payable" 
-              name="Payable Now" 
-              parent="menu_sales_commission_root" 
-              action="action_sales_commission_payable" 
-              sequence="20"/>
+    
 
 </odoo>

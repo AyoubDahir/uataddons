@@ -21,6 +21,7 @@ class Product(models.Model):
         store=False,  # do NOT store, so it reflects real-time movement
         help="Quantity in stock, computed from movement history (IN - OUT)",
     )
+    min_qty = fields.Float(string="Min Quantity", default=0.0)
 
     category_id = fields.Many2one("product.category", string="Product Category")
     # New field for POS categories
@@ -29,11 +30,6 @@ class Product(models.Model):
     pos_categ_ids = fields.Many2many(
         "pos.category",
         string="POS Categories",
-    )
-    cost_value_currency_id = fields.Many2one(
-        "res.currency",
-        string="Cost Value Currency",
-        default=lambda self: self.env.company.currency_id,
     )
 
     detailed_type = fields.Selection(

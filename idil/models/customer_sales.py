@@ -2,6 +2,7 @@ import re
 
 from odoo import models, fields, api
 from odoo.exceptions import UserError, ValidationError
+from odoo.tools import float_compare
 from odoo.tools.safe_eval import datetime
 import logging
 
@@ -21,11 +22,14 @@ class CustomerSaleOrder(models.Model):
         "idil.customer.registration", string="Customer", required=True
     )
     # Add the field to link to the Customer Place Order
+
     customer_place_order_id = fields.Many2one(
         "idil.customer.place.order",
         string="Customer Place Order",
-        domain="[('customer_id', '=', customer_id), ('state', '=', 'draft')]",
+        domain="[('customer_id', '=', customer_id), ('state', 'in', ('draft','sent','approved'))]",
+        required=False,
     )
+
     order_date = fields.Datetime(string="Order Date", default=fields.Datetime.now)
     order_lines = fields.One2many(
         "idil.customer.sale.order.line", "order_id", string="Order Lines"
@@ -42,30 +46,15 @@ class CustomerSaleOrder(models.Model):
         "res.currency",
         string="Currency",
         required=True,
-        default=lambda self: self.env["res.currency"].search(
-            [("name", "=", "SL")], limit=1
-        ),
+        default=lambda self: self.env.company.currency_id,
         readonly=True,
     )
+
     rate = fields.Float(
         string="Exchange Rate",
         compute="_compute_exchange_rate",
         store=True,
         readonly=True,
-    )
-    payment_method = fields.Selection(
-        [
-            ("cash", "Cash"),
-            ("bank_transfer", "Bank"),
-            ("receivable", "Account Receivable"),
-        ],
-        string="Payment Method",
-    )
-    account_number = fields.Many2one(
-        "idil.chart.account",
-        string="Account Number",
-        required=True,
-        domain="[('account_type', '=', payment_method)]",
     )
 
     # One2many field for multiple payment methods
@@ -106,33 +95,46 @@ class CustomerSaleOrder(models.Model):
         tracking=True,
     )
 
+    @api.constrains("order_lines", "customer_opening_balance_id")
+    def _check_has_lines(self):
+        for order in self:
+            if order.customer_opening_balance_id:
+                continue
+            if not order.order_lines:
+                raise ValidationError(_("You must add at least one order line."))
+
     # Automatically populate order lines from the place order when customer_place_order_id is selected
     @api.onchange("customer_place_order_id")
     def _onchange_customer_place_order(self):
-        """Automatically populate order lines based on the selected Customer Place Order."""
-        if self.customer_place_order_id:
-            # Clear existing order lines first
-            self.order_lines = [(5, 0, 0)]  # Remove all existing lines
+        if not self.customer_place_order_id:
+            return
 
-            # Copy order lines from the selected CustomerPlaceOrder
-            order_line_vals = []
-            for line in self.customer_place_order_id.order_lines:
-                order_line_vals.append(
-                    (
-                        0,
-                        0,
-                        {
-                            "product_id": line.product_id.id,
-                            "quantity": line.quantity,
-                            "price_unit": line.product_id.sale_price,  # Use product's sale price
-                        },
-                    )
+        # If user already typed manual lines, prevent accidental overwrite
+        if self.order_lines:
+            return {
+                "warning": {
+                    "title": _("Warning"),
+                    "message": _(
+                        "Order lines already exist. Clear them first if you want to load from Place Order."
+                    ),
+                }
+            }
+
+        order_line_vals = []
+        for line in self.customer_place_order_id.order_lines:
+            order_line_vals.append(
+                (
+                    0,
+                    0,
+                    {
+                        "product_id": line.product_id.id,
+                        "quantity": line.quantity,
+                        "price_unit": line.product_id.sale_price,
+                    },
                 )
-            # Assign the lines to the current order
-            self.order_lines = order_line_vals
-            _logger.info(
-                f"Order lines populated for Customer {self.customer_id.name} from Place Order {self.customer_place_order_id.name}."
             )
+
+        self.order_lines = order_line_vals
 
     @api.depends("order_lines", "order_lines.product_id", "order_lines.quantity")
     def _compute_total_cost_price(self):
@@ -154,22 +156,13 @@ class CustomerSaleOrder(models.Model):
                         total += (product.cost * qty) / order.rate
             order.total_cost_price = total
 
-    @api.depends(
-        "balance_due",
-        "total_return_amount",
-        "payment_method",
-        "order_total",
-        "total_paid",
-    )
+    @api.depends("order_total", "total_paid", "total_return_amount")
     def _compute_net_balance(self):
         for order in self:
-            base_balance = order.order_total - order.total_paid
-
-            # If payment is cash or bank, returns don't affect due — full payment already done
-            if order.payment_method in ("cash", "bank_transfer"):
-                order.net_balance = base_balance
-            else:
-                order.net_balance = base_balance - order.total_return_amount
+            # Net balance after returns (simple + stable)
+            order.net_balance = (
+                order.order_total - order.total_paid
+            ) - order.total_return_amount
 
     @api.depends("order_lines", "order_lines.product_id")  # triggers on change
     def _compute_total_return_amount(self):
@@ -182,32 +175,22 @@ class CustomerSaleOrder(models.Model):
             )
             order.total_return_amount = sum(return_lines.mapped("total_amount"))
 
-    @api.onchange("payment_method", "customer_id")
-    def _onchange_payment_method_account(self):
-        """Auto-fill account_number based on payment method."""
-        for order in self:
-            if order.payment_method == "receivable" and order.customer_id:
-                order.account_number = order.customer_id.account_receivable_id
-            elif order.payment_method in ["cash", "bank_transfer"]:
-                order.account_number = False  # Clear it for cash, let user choose
-
     @api.depends("payment_lines.amount")
     def _compute_total_paid(self):
         for order in self:
             order.total_paid = sum(order.payment_lines.mapped("amount"))
 
-    @api.depends("order_total", "total_paid", "payment_method")
+    @api.depends("order_total", "payment_lines.amount")
     def _compute_balance_due(self):
         for order in self:
-            if order.payment_method in ["cash", "bank_transfer"]:
-                order.balance_due = 0.0
-            else:
-                order.balance_due = order.order_total - order.total_paid
+            total_paid = sum(order.payment_lines.mapped("amount")) or 0.0
+            order.balance_due = max(order.order_total - total_paid, 0.0)
 
-    @api.constrains("total_paid", "order_total")
+    @api.constrains("payment_lines", "order_total")
     def _check_payment_balance(self):
         for order in self:
-            if order.total_paid > order.order_total:
+            total_paid = sum(order.payment_lines.mapped("amount")) or 0.0
+            if float_compare(total_paid, order.order_total, precision_digits=5) > 0:
                 raise ValidationError(
                     "The total paid amount cannot exceed the order total."
                 )
@@ -267,15 +250,14 @@ class CustomerSaleOrder(models.Model):
                     )
 
                 # Step 4: Book accounting entries for the new order
-                new_order.book_accounting_entry()
-                # after: new_order.book_accounting_entry()
+                new_order.sync_sale_financials()
 
                 # ✅ If this sale order came from a Customer Place Order, confirm it and link back
                 if new_order.customer_place_order_id:
                     new_order.customer_place_order_id.write(
                         {
-                            "state": "confirmed",
-                            "sale_order_id": new_order.id,  # if you added the field above
+                            "state": "confirmed",  # or "converted" if you later rename
+                            "sale_order_id": new_order.id,
                         }
                     )
 
@@ -309,238 +291,357 @@ class CustomerSaleOrder(models.Model):
         for order in self:
             order.order_total = sum(order.order_lines.mapped("subtotal"))
 
-    def book_accounting_entry(self):
+    def sync_sale_financials(self):
         """
-        Create a transaction booking for the given SaleOrder, with entries for:
-
-        1. Debiting the Asset Inventory account for each order line's product
-        2. Crediting the COGS account for each order line's product
-        3. Debiting the Sales Account Receivable for each order line's amount
-        4. Crediting the product's income account for each order line's amount
+        Flow (ordered as you requested):
+        1) If you want default payment leg AND no payment lines:
+            - get PayMethod
+            - create Payment leg
+        2) Create/Update Booking (header) then rebuild BookingLines
+        3) Create/Update Receipt
+        4) Link payment legs to receipt (sales_receipt_id)
         """
-        try:
-            with self.env.cr.savepoint():
-                for order in self:
-                    if not order.customer_id.account_receivable_id:
-                        raise ValidationError(
-                            "The Customer does not have a receivable account."
-                        )
-                    if order.rate <= 0:
-                        raise ValidationError(
-                            "Please insert a valid exchange rate greater than 0."
-                        )
-                    # Only check order lines if not from opening balance
-                    if not order.customer_opening_balance_id and not order.order_lines:
-                        raise ValidationError(
-                            "You must insert at least one product to proceed with the sale."
-                        )
-                    # If this order is for opening balance, skip accounting booking: opening balance does its own accounting
-                    if order.customer_opening_balance_id:
-                        return
 
-                    if order.payment_method in ["cash", "bank_transfer"]:
-                        account_to_use = self.account_number
-                    else:
-                        account_to_use = order.customer_id.account_receivable_id
+        PayMethod = self.env["idil.payment.method"]
+        Payment = self.env["idil.customer.sale.payment"]
+        Booking = self.env["idil.transaction_booking"]
+        BookingLine = self.env["idil.transaction_bookingline"]
+        Receipt = self.env["idil.sales.receipt"]
 
-                    # Define the expected currency from the salesperson's account receivable
-                    expected_currency = (
-                        order.customer_id.account_receivable_id.currency_id
-                    )
+        for order in self:
+            if order.customer_opening_balance_id:
+                continue
 
-                    # Search for transaction source ID using "Receipt"
-                    trx_source = self.env["idil.transaction.source"].search(
-                        [("name", "=", "Customer Sales Order")], limit=1
-                    )
-                    if not trx_source:
-                        raise UserError(
-                            "Transaction source 'Customer Sales Order' not found."
-                        )
+            # -----------------------------
+            # Validations
+            # -----------------------------
+            if not order.customer_id.account_receivable_id:
+                raise ValidationError(
+                    "The Customer does not have a receivable account."
+                )
+            if order.rate <= 0:
+                raise ValidationError(
+                    "Please insert a valid exchange rate greater than 0."
+                )
+            if not order.order_lines:
+                raise ValidationError(
+                    "You must insert at least one product to proceed with the sale."
+                )
 
-                    # Create a transaction booking
-                    transaction_booking = self.env["idil.transaction_booking"].create(
+            expected_currency = order.customer_id.account_receivable_id.currency_id
+
+            # ---------------------------------------------------------
+            # 1) OPTIONAL: Auto-create ONE default payment leg if none exist
+            # IMPORTANT: This will make every order paid automatically if you leave it enabled.
+            # If you want A/R by default, set AUTO_CREATE_DEFAULT_PAYMENT = False.
+            # ---------------------------------------------------------
+            AUTO_CREATE_DEFAULT_PAYMENT = (
+                False  # <<< set True only if you really want auto full cash/bank
+            )
+
+            if AUTO_CREATE_DEFAULT_PAYMENT and not order.payment_lines:
+                # DO NOT domain-search on account_id.account_type (it fails in your env)
+                methods = PayMethod.search(
+                    [("company_id", "=", order.company_id.id), ("active", "=", True)]
+                )
+
+                # choose cash first then bank using python filtering
+                default_method = False
+                for m in methods:
+                    acc = m.account_id
+                    if acc and acc.account_type == "cash":
+                        default_method = m
+                        break
+                if not default_method:
+                    for m in methods:
+                        acc = m.account_id
+                        if acc and acc.account_type == "bank_transfer":
+                            default_method = m
+                            break
+
+                if default_method:
+                    Payment.create(
                         {
-                            "customer_id": order.customer_id.id,
-                            "cusotmer_sale_order_id": order.id,  # Set the sale_order_id to the current SaleOrder's ID
-                            "trx_source_id": trx_source.id,
-                            "reffno": order.name,  # Use the Sale Order name as reference
-                            "Sales_order_number": order.id,
-                            "payment_method": "bank_transfer",  # Assuming default payment method; adjust as needed
-                            "payment_status": "pending",  # Assuming initial payment status; adjust as needed
-                            "rate": order.rate,
-                            "trx_date": order.order_date,
+                            "order_id": order.id,
+                            "sales_receipt_id": order.id,
+                            "payment_method_id": default_method.id,
                             "amount": order.order_total,
-                            # Include other necessary fields
+                            "date": (
+                                fields.Date.to_date(order.order_date)
+                                if order.order_date
+                                else fields.Date.context_today(self)
+                            ),
                         }
                     )
-                    # ✅ Only create receipt if payment method is NOT cash
-                    if order.payment_method not in ["cash", "bank_transfer"]:
-                        self.env["idil.sales.receipt"].create(
-                            {
-                                "cusotmer_sale_order_id": order.id,
-                                "receipt_date": order.order_date,
-                                "due_amount": order.order_total,
-                                "paid_amount": 0,
-                                "remaining_amount": order.order_total,
-                                "customer_id": order.customer_id.id,
-                            }
+
+            # -----------------------------
+            # Totals & Overpayment
+            # -----------------------------
+            total_paid = sum(order.payment_lines.mapped("amount")) or 0.0
+            remaining = max(order.order_total - total_paid, 0.0)
+
+            if float_compare(total_paid, order.order_total, precision_digits=5) > 0:
+                raise ValidationError(
+                    "The total paid amount cannot exceed the order total."
+                )
+
+            # status
+            if float_compare(total_paid, 0.0, precision_digits=5) <= 0:
+                receipt_status = "pending"
+            elif float_compare(remaining, 0.0, precision_digits=5) <= 0:
+                receipt_status = "paid"
+            else:
+                receipt_status = "partial"
+
+            # Validate payment accounts currency ONLY if payment lines exist
+            for p in order.payment_lines:
+                if not p.account_id:
+                    raise ValidationError("Payment line is missing an account.")
+                if (
+                    p.account_id.currency_id
+                    and p.account_id.currency_id != expected_currency
+                ):
+                    raise ValidationError(
+                        f"Currency mismatch in payment method '{p.payment_method_id.name}'.\n"
+                        f"Payment account currency is '{p.account_id.currency_id.name}', "
+                        f"but Customer A/R currency is '{expected_currency.name}'."
+                    )
+
+            # -----------------------------
+            # 2) Create/Update Booking FIRST (as you requested)
+            # -----------------------------
+            trx_source = self.env["idil.transaction.source"].search(
+                [("name", "=", "Customer Sales Order")], limit=1
+            )
+            if not trx_source:
+                raise UserError("Transaction source 'Customer Sales Order' not found.")
+
+            # header payment method label using safe python loop
+            header_payment_method = "receivable"
+            found_bank = False
+            found_cash = False
+            for p in order.payment_lines:
+                if p.account_id and p.account_id.account_type == "bank_transfer":
+                    found_bank = True
+                elif p.account_id and p.account_id.account_type == "cash":
+                    found_cash = True
+            if found_bank:
+                header_payment_method = "bank_transfer"
+            elif found_cash:
+                header_payment_method = "cash"
+
+            booking = Booking.search(
+                [("cusotmer_sale_order_id", "=", order.id)], limit=1
+            )
+            if booking:
+                booking.write(
+                    {
+                        "customer_id": order.customer_id.id,
+                        "trx_source_id": trx_source.id,
+                        "reffno": order.name,
+                        "Sales_order_number": order.id,
+                        "payment_method": header_payment_method,
+                        "payment_status": receipt_status,
+                        "rate": order.rate,
+                        "trx_date": order.order_date,
+                        "amount": order.order_total,
+                    }
+                )
+                # rebuild lines
+                BookingLine.search(
+                    [("transaction_booking_id", "=", booking.id)]
+                ).unlink()
+            else:
+                booking = Booking.create(
+                    {
+                        "customer_id": order.customer_id.id,
+                        "cusotmer_sale_order_id": order.id,
+                        "trx_source_id": trx_source.id,
+                        "reffno": order.name,
+                        "Sales_order_number": order.id,
+                        "payment_method": header_payment_method,
+                        "payment_status": receipt_status,
+                        "rate": order.rate,
+                        "trx_date": order.order_date,
+                        "amount": order.order_total,
+                    }
+                )
+
+            # ---- Booking line A: DR Customer A/R (full)
+            BookingLine.create(
+                {
+                    "transaction_booking_id": booking.id,
+                    "description": f"Customer Sales Order A/R - {order.name}",
+                    "product_id": False,
+                    "account_number": order.customer_id.account_receivable_id.id,
+                    "transaction_type": "dr",
+                    "dr_amount": order.order_total,
+                    "cr_amount": 0.0,
+                    "transaction_date": fields.Date.context_today(self),
+                }
+            )
+
+            # ---- Product lines: DR COGS, CR Inventory, CR Income
+            for line in order.order_lines:
+                product = line.product_id
+
+                bom_currency = (
+                    product.bom_id.currency_id
+                    if product.bom_id
+                    else product.currency_id
+                )
+                amount_in_bom_currency = product.cost * line.quantity
+                product_cost_amount = (
+                    amount_in_bom_currency * order.rate
+                    if (bom_currency and bom_currency.name == "USD")
+                    else amount_in_bom_currency
+                )
+
+                if not product.asset_account_id:
+                    raise ValidationError(
+                        f"Product '{product.name}' does not have an Asset Account set."
+                    )
+                if not product.income_account_id:
+                    raise ValidationError(
+                        f"Product '{product.name}' does not have an Income Account set."
+                    )
+                if not product.account_cogs_id:
+                    raise ValidationError(
+                        f"No COGS account assigned for the product '{product.name}'.\n"
+                        f"Please configure 'COGS Account' in the product settings before continuing."
+                    )
+
+                for acc_name, acc in {
+                    "Asset": product.asset_account_id,
+                    "Income": product.income_account_id,
+                    "COGS": product.account_cogs_id,
+                }.items():
+                    if acc.currency_id and acc.currency_id != expected_currency:
+                        raise ValidationError(
+                            f"{acc_name} account currency mismatch for product '{product.name}'.\n"
+                            f"Expected: {expected_currency.name} | Actual: {acc.currency_id.name}"
                         )
 
-                    if order.payment_method in ["cash", "bank_transfer"]:
-                        self.env["idil.customer.sale.payment"].create(
-                            {
-                                "order_id": order.id,
-                                "customer_id": order.customer_id.id,
-                                "date": order.order_date,
-                                "payment_method": "cash",  # or use dynamic logic to determine the method
-                                "account_id": order.account_number.id,
-                                "amount": order.order_total,
-                            }
-                        )
+                # DR COGS
+                BookingLine.create(
+                    {
+                        "transaction_booking_id": booking.id,
+                        "description": f"Sales Order - COGS for {product.name}",
+                        "product_id": product.id,
+                        "account_number": product.account_cogs_id.id,
+                        "transaction_type": "dr",
+                        "dr_amount": product_cost_amount,
+                        "cr_amount": 0.0,
+                        "transaction_date": fields.Date.context_today(self),
+                    }
+                )
 
-                    total_debit = 0
-                    # For each order line, create a booking line entry for debit
-                    for line in order.order_lines:
-                        product = line.product_id
+                # CR Inventory
+                BookingLine.create(
+                    {
+                        "transaction_booking_id": booking.id,
+                        "description": f"Sales Order - Inventory out for {product.name}",
+                        "product_id": product.id,
+                        "account_number": product.asset_account_id.id,
+                        "transaction_type": "cr",
+                        "dr_amount": 0.0,
+                        "cr_amount": product_cost_amount,
+                        "transaction_date": fields.Date.context_today(self),
+                    }
+                )
 
-                        bom_currency = (
-                            product.bom_id.currency_id
-                            if product.bom_id
-                            else product.currency_id
-                        )
+                # CR Income
+                BookingLine.create(
+                    {
+                        "transaction_booking_id": booking.id,
+                        "description": f"Sales Revenue - {product.name}",
+                        "product_id": product.id,
+                        "account_number": product.income_account_id.id,
+                        "transaction_type": "cr",
+                        "dr_amount": 0.0,
+                        "cr_amount": line.subtotal,
+                        "transaction_date": fields.Date.context_today(self),
+                    }
+                )
 
-                        amount_in_bom_currency = product.cost * line.quantity
+            # ---- Payment legs: DR payment account / CR A/R (only if payment lines exist)
+            for p in order.payment_lines:
+                if float_compare(p.amount, 0.0, precision_digits=5) <= 0:
+                    continue
 
-                        if bom_currency.name == "USD":
-                            product_cost_amount = amount_in_bom_currency * self.rate
-                        else:
-                            product_cost_amount = amount_in_bom_currency
+                acc_type = p.account_id.account_type if p.account_id else "N/A"
 
-                        # product_cost_amount = product.cost * line.quantity
-                        _logger.info(
-                            f"Product Cost Amount: {product_cost_amount} for product {product.name}"
-                        )
+                BookingLine.create(
+                    {
+                        "transaction_booking_id": booking.id,
+                        "description": f"Payment - {p.payment_method_id.name} ({acc_type})",
+                        "product_id": False,
+                        "account_number": p.account_id.id,
+                        "transaction_type": "dr",
+                        "dr_amount": p.amount,
+                        "cr_amount": 0.0,
+                        "transaction_date": fields.Date.context_today(self),
+                    }
+                )
+                BookingLine.create(
+                    {
+                        "transaction_booking_id": booking.id,
+                        "description": f"Payment applied to A/R - {p.payment_method_id.name}",
+                        "product_id": False,
+                        "account_number": order.customer_id.account_receivable_id.id,
+                        "transaction_type": "cr",
+                        "dr_amount": 0.0,
+                        "cr_amount": p.amount,
+                        "transaction_date": fields.Date.context_today(self),
+                    }
+                )
 
-                        if not product.asset_account_id:
-                            raise ValidationError(
-                                f"Product '{product.name}' does not have an Asset Account set."
-                            )
-                        if product.asset_account_id.currency_id != expected_currency:
-                            raise ValidationError(
-                                f"Asset Account for product '{product.name}' has a different currency.\n"
-                                f"Expected currency: {expected_currency.name}, "
-                                f"Actual currency: {product.asset_account_id.currency_id.name}."
-                            )
+            # -----------------------------
+            # 3) Create/Update Receipt LAST (as you requested)
+            # -----------------------------
+            receipt = Receipt.search(
+                [("cusotmer_sale_order_id", "=", order.id)], limit=1
+            )
 
-                        if not product.income_account_id:
-                            raise ValidationError(
-                                f"Product '{product.name}' does not have an Income Account set."
-                            )
-                        if product.income_account_id.currency_id != expected_currency:
-                            raise ValidationError(
-                                f"Income Account for product '{product.name}' has a different currency.\n"
-                                f"Expected currency: {expected_currency.name}, "
-                                f"Actual currency: {product.income_account_id.currency_id.name}."
-                            )
-                        # ------------------------------------------------------------------------------------------------------
-                        # Validate that the product has a COGS account
-                        if not product.account_cogs_id:
-                            raise ValidationError(
-                                f"No COGS (Cost of Goods Sold) account assigned for the product '{product.name}'.\n"
-                                f"Please configure 'COGS Account' in the product settings before continuing."
-                            )
-                        # === Validate all required accounts ===
-                        if not product.asset_account_id:
-                            raise ValidationError(
-                                f"Product '{product.name}' has no Asset account."
-                            )
-                        if not product.income_account_id:
-                            raise ValidationError(
-                                f"Product '{product.name}' has no Income account."
-                            )
+            receipt_vals = {
+                "cusotmer_sale_order_id": order.id,
+                "receipt_date": order.order_date,
+                "due_amount": order.order_total,
+                "paid_amount": total_paid,
+                "remaining_amount": remaining,
+                "customer_id": order.customer_id.id,
+            }
+            if "payment_status" in Receipt._fields:
+                receipt_vals["payment_status"] = receipt_status
+            elif "state" in Receipt._fields:
+                receipt_vals["state"] = receipt_status
 
-                        # ✅ Validate currencies if payment is cash
-                        if order.payment_method in ["cash", "bank_transfer"]:
-                            cash_currency = order.account_number.currency_id
-                            involved_accounts = {
-                                "COGS": product.account_cogs_id,
-                                "Asset": product.asset_account_id,
-                                "Income": product.income_account_id,
-                            }
+            if receipt:
+                receipt.write(receipt_vals)
+            else:
+                receipt = Receipt.create(receipt_vals)
 
-                            for acc_name, acc in involved_accounts.items():
-                                if acc.currency_id and acc.currency_id != cash_currency:
-                                    raise ValidationError(
-                                        f"Currency mismatch for product '{product.name}'.\n"
-                                        f"{acc_name} account currency is '{acc.currency_id.name}', but Cash account currency is '{cash_currency.name}'.\n"
-                                        f"All accounts must match Cash account currency when payment method is Cash."
-                                    )
+            # -----------------------------
+            # 4) Link payment legs to receipt (customer sales payment management)
+            # -----------------------------
+            for p in order.payment_lines:
+                if p.sales_receipt_id != receipt:
+                    p.write({"sales_receipt_id": receipt.id})
 
-                        # Credit entry Expanses inventory of COGS account for the product
-                        self.env["idil.transaction_bookingline"].create(
-                            {
-                                "transaction_booking_id": transaction_booking.id,
-                                "description": f"Sales Order -- Expanses COGS account for - {product.name}",
-                                "product_id": product.id,
-                                "account_number": product.account_cogs_id.id,
-                                # Use the COGS Account_number
-                                "transaction_type": "dr",
-                                "dr_amount": product_cost_amount,
-                                "cr_amount": 0,
-                                "transaction_date": fields.Date.context_today(self),
-                                # Include other necessary fields
-                            }
-                        )
-                        # Credit entry asset inventory account of the product
-                        self.env["idil.transaction_bookingline"].create(
-                            {
-                                "transaction_booking_id": transaction_booking.id,
-                                "description": f"Sales Inventory account for - {product.name}",
-                                "product_id": product.id,
-                                "account_number": product.asset_account_id.id,
-                                "transaction_type": "cr",
-                                "dr_amount": 0,
-                                "cr_amount": product_cost_amount,
-                                "transaction_date": fields.Date.context_today(self),
-                                # Include other necessary fields
-                            }
-                        )
-                        # ------------------------------------------------------------------------------------------------------
-                        # Debit entry for the order line amount Sales Account Receivable
-                        self.env["idil.transaction_bookingline"].create(
-                            {
-                                "transaction_booking_id": transaction_booking.id,
-                                "description": f"Sale of {product.name}",
-                                "product_id": product.id,
-                                "account_number": account_to_use.id,
-                                "transaction_type": "dr",  # Debit transaction
-                                "dr_amount": line.subtotal,
-                                "cr_amount": 0,
-                                "transaction_date": fields.Date.context_today(self),
-                                # Include other necessary fields
-                            }
-                        )
-                        total_debit += line.subtotal
-
-                        # Credit entry using the product's income account
-                        self.env["idil.transaction_bookingline"].create(
-                            {
-                                "transaction_booking_id": transaction_booking.id,
-                                "description": f"Sales Revenue - {product.name}",
-                                "product_id": product.id,
-                                "account_number": product.income_account_id.id,
-                                "transaction_type": "cr",
-                                "dr_amount": 0,
-                                "cr_amount": (line.subtotal),
-                                "transaction_date": fields.Date.context_today(self),
-                                # Include other necessary fields
-                            }
-                        )
-                        # After booking the entries, confirm the place order
-
-        except Exception as e:
-            _logger.error(f"transaction failed: {str(e)}")
-            raise ValidationError(f"Transaction failed: {str(e)}")
+            # Optional log
+            try:
+                order.message_post(
+                    body=(
+                        "✅ <b>Sale Financials Synced</b><br/>"
+                        f"• Order Total: <b>{order.order_total}</b><br/>"
+                        f"• Total Paid: <b>{total_paid}</b><br/>"
+                        f"• Remaining: <b>{remaining}</b><br/>"
+                        f"• Receipt Status: <b>{receipt_status}</b><br/>"
+                        f"• Payment Legs: <b>{len(order.payment_lines)}</b>"
+                    )
+                )
+            except Exception:
+                pass
 
     def write(self, vals):
         try:
@@ -850,6 +951,58 @@ class CustomerSaleOrderLine(models.Model):
         ondelete="cascade",
     )
 
+    @api.constrains("product_id", "price_unit")
+    def _check_min_sales_price(self):
+        for line in self:
+            if not line.product_id or not line.price_unit:
+                continue
+
+            min_price = line.product_id.min_sales_price or 0.0
+            if min_price <= 0:
+                continue
+
+            # safe float compare
+            if float_compare(line.price_unit, min_price, precision_digits=5) < 0:
+                raise ValidationError(
+                    models._(
+                        "Unit Price for '%(product)s' cannot be less than Min Sales Price.\n"
+                        "Min: %(min)s | Entered: %(entered)s"
+                    )
+                    % {
+                        "product": line.product_id.name,
+                        "min": min_price,
+                        "entered": line.price_unit,
+                    }
+                )
+
+    @api.onchange("product_id", "price_unit")
+    def _onchange_max_sales_price_warning(self):
+        for line in self:
+            if not line.product_id or not line.price_unit:
+                continue
+
+            max_price = line.product_id.max_sales_price or 0.0
+            if max_price <= 0:
+                continue
+
+            # If entered price is higher than max => WARNING (allow proceed)
+            if float_compare(line.price_unit, max_price, precision_digits=5) > 0:
+                return {
+                    "warning": {
+                        "title": models._("High Price Warning"),
+                        "message": models._(
+                            "The Unit Price for '%(product)s' is higher than the Max Sales Price.\n"
+                            "Max: %(max)s | Entered: %(entered)s\n\n"
+                            "You can proceed, but please confirm this price is correct."
+                        )
+                        % {
+                            "product": line.product_id.name,
+                            "max": max_price,
+                            "entered": line.price_unit,
+                        },
+                    }
+                }
+
     @api.depends("quantity", "price_unit")
     def _compute_subtotal(self):
         for line in self:
@@ -950,8 +1103,13 @@ class CustomerSalePayment(models.Model):
     sales_receipt_id = fields.Many2one("idil.sales.receipt", string="Sales Receipt")
 
     customer_id = fields.Many2one(
-        "idil.customer.registration", string="Customer", required=True
+        "idil.customer.registration",
+        string="Customer",
+        related="order_id.customer_id",
+        store=True,
+        readonly=True,
     )
+
     # Currency fields
     currency_id = fields.Many2one(
         "res.currency",
@@ -963,15 +1121,39 @@ class CustomerSalePayment(models.Model):
         readonly=True,
     )
 
-    payment_method = fields.Selection(
-        [("cash", "Cash"), ("ar", "A/R")],
-        string="Payment Method",
-        required=True,
+    company_id = fields.Many2one(
+        related="order_id.company_id", store=True, readonly=True
     )
 
-    account_id = fields.Many2one("idil.chart.account", string="Account", required=True)
+    payment_method_id = fields.Many2one(
+        "idil.payment.method",
+        string="Payment Method",
+        required=True,
+        domain="[('company_id','=',company_id), ('active','=',True)]",
+    )
+
+    account_id = fields.Many2one(
+        "idil.chart.account",
+        string="Account",
+        related="payment_method_id.account_id",
+        store=True,
+        readonly=True,
+    )
+
     amount = fields.Float(string="Amount", required=True)
     date = fields.Date(string="Date", required=True)
     bulk_receipt_payment_id = fields.Many2one(
         "idil.receipt.bulk.payment", index=True, ondelete="cascade"
     )
+
+    @api.onchange("payment_method_id")
+    def _onchange_payment_method_id(self):
+        for rec in self:
+            if rec.payment_method_id:
+                rec.account_id = rec.payment_method_id.account_id
+
+    @api.constrains("amount")
+    def _check_amount(self):
+        for rec in self:
+            if rec.amount <= 0:
+                raise ValidationError("Payment amount must be greater than zero.")
