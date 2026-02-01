@@ -1,100 +1,354 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- Sale Order Tree View -->
+    <!-- ===================================================== -->
+    <!-- 🧾 Customer Sale Order | Tree                          -->
+    <!-- ===================================================== -->
     <record id="view_customer_sale_order_tree" model="ir.ui.view">
-        <field name="name">customer.sale.order.tree</field>
+        <field name="name">idil.customer.sale.order.tree</field>
         <field name="model">idil.customer.sale.order</field>
         <field name="arch" type="xml">
-            <tree>
-                <field name="name"/>
-                <field name="customer_id"/>
-                
-                <field name="order_date"/>
-                 <field name="payment_method"/>
-                <field name="total_cost_price" sum="total"/>
-                <field name="order_total" sum="total"/>
-                <field name="total_paid" sum="total"/>
-                <field name="balance_due" sum="total"/>
-                <field name="total_return_amount" sum="total"/>
-                <field name="net_balance" sum="total"/>
-            
+            <tree string="🧾 Customer Sale Orders" default_order="id desc">
+                <field name="name" string="🔖 Ref"/>
+                <field name="order_date" string="📅 Date"/>
+                <field name="customer_id" string="👤 Customer"/>
 
-                <field name="currency_id"/>
-                <field name="rate"/>
-                <field name="state"/>
+                <field name="currency_id" string="💱 Cur"/>
+                <field name="rate" string="📈 Rate"/>
+
+                <field name="order_total" string="💰 Total" sum="Total"/>
+                <field name="total_paid" string="✅ Paid" sum="Paid"/>
+                <field name="balance_due" string="🧾 Due" sum="Due"/>
+                <field name="total_return_amount" string="↩️ Returned" sum="Returned"/>
+                <field name="net_balance" string="⚖️ Net" sum="Net"/>
+                <field name="total_cost_price" string="📦 Cost" sum="Cost"/>
+
+                <field name="state" string="🏷️ Status" widget="badge"/>
             </tree>
         </field>
     </record>
 
+    <!-- ===================================================== -->
+    <!-- 🧾 Customer Sale Order | Form                           -->
+    <!-- ===================================================== -->
     <record id="view_customer_sale_order_form" model="ir.ui.view">
-        <field name="name">customer.sale.order.form</field>
+        <field name="name">idil.customer.sale.order.form</field>
         <field name="model">idil.customer.sale.order</field>
         <field name="arch" type="xml">
-            <form>
-                <sheet>
-                        <!-- General Details -->
-                        <group>
-                            <group>
-                                <field name="name" string="Order Reference" readonly="1"/>
-                            </group>
-                            <group>
-                                <field name="customer_id" string="Customer" required="1"/>
-                                <field name="customer_place_order_id" required="1"/>
-                                
-                                <field name="order_date" string="Order Date" required="1"/>
-                                <field name="currency_id" string="Currency" required="1"/>
-                                <field name="payment_method" string="Payment Method" required="1"/>
-                                <field name="account_number"/>
-                                
-                                
-                                <field name="rate" string="Exchange Rate"/>
-                                <field name="state" string="Status" readonly="1"/>
-                            </group>
-                        </group>
-                    <notebook>
-                        <!-- Order Lines Tab -->
-                        <page string="Order Lines">
-                            <field name="order_lines" widget="many2many_list">
-                              
-                                 <tree editable="bottom" delete="false">
-                                    <field name="product_id" string="Product" required="1" width="25%"/>
-                                    <field name="available_stock" width="25%" readonly="1"/>
-                                    
-                                    <field name="quantity" string="Quantity"
-                                        help="Enter the actual quantity utilized in fulfilling this sales order. 
-                                        This field is editable, allowing you to adjust the quantity based on real consumption or order fulfillment requirements."
-                                        width="25%"/>
+            <form string="🧾 Customer Sale Order" class="o_form_full o_form_nosheet">
 
-                                        
-                                     
-                                    <field name="price_unit" string="Unit Price" width="25%"/>
-                                    <field name="subtotal" string="Subtotal" sum="Total" readonly="1" width="25%"/>
-                                     
-                                </tree>
-                            </field>
+                <header>
+                    <span class="ms-2 badge rounded-pill bg-light border text-muted px-3 py-2">
+                        <i class="fa fa-flag me-1"/>
+                        Status:
+                        <field name="state" widget="badge" readonly="1" class="ms-1"/>
+                    </span>
+                </header>
+
+                <sheet>
+
+                    <!-- Title -->
+                    <div class="oe_title">
+                        <h1 class="mb-1">
+                            <i class="fa fa-shopping-bag me-2 text-primary" role="img" aria-label="Sale"/>
+                            Sale Order
+                            <span class="ms-2 badge rounded-pill bg-light border text-muted px-3 py-2">
+                                <i class="fa fa-hashtag me-1"/>
+                                <field name="name" readonly="1" nolabel="1"/>
+                            </span>
+                        </h1>
+
+                        <div class="text-muted">
+                            <i class="fa fa-info-circle me-1"/>
+                            Create a sale order manually, or optionally select a Customer Place Order to auto-fill the lines.
+                        </div>
+                    </div>
+
+                    <!-- ✅ 3 cards (horizontal) -->
+                    <div class="row g-3 mt-3">
+
+                        <!-- Customer & Document -->
+                        <div class="col-12 col-lg-5">
+                            <div class="border rounded-4 p-3 shadow-sm bg-white h-100">
+                                <div class="fw-bold mb-2 d-flex align-items-center gap-2 flex-wrap">
+                                    <i class="fa fa-file-text-o text-muted"/>
+                                    <span>Customer &amp; Document</span>
+                                </div>
+
+                                <div class="d-grid gap-2">
+
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="text-muted" style="width:24px; text-align:center;">
+                                            <i class="fa fa-user"/>
+                                        </span>
+                                        <span class="o_form_label mb-0" style="min-width:160px;">Customer</span>
+                                        <div class="flex-grow-1" style="min-width:260px;">
+                                            <field name="customer_id" nolabel="1"/>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="text-muted" style="width:24px; text-align:center;">
+                                            <i class="fa fa-list-alt"/>
+                                        </span>
+                                        <span class="o_form_label mb-0" style="min-width:160px;">Place Order (Optional)</span>
+                                        <div class="flex-grow-1" style="min-width:260px;">
+                                            <field name="customer_place_order_id" nolabel="1" required="0"/>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="text-muted" style="width:24px; text-align:center;">
+                                            <i class="fa fa-calendar"/>
+                                        </span>
+                                        <span class="o_form_label mb-0" style="min-width:160px;">Order Date</span>
+                                        <div class="flex-grow-1" style="min-width:260px;">
+                                            <field name="order_date" nolabel="1"/>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                <div class="alert alert-info mt-3 mb-0" role="alert">
+                                    <i class="fa fa-lightbulb-o me-1"/>
+                                    Tip: If you select <b>Place Order</b>, products and quantities are auto-copied into lines.
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- Finance -->
+                        <div class="col-12 col-lg-4">
+                            <div class="border rounded-4 p-3 shadow-sm bg-white h-100">
+                                <div class="fw-bold mb-2 d-flex align-items-center gap-2 flex-wrap">
+                                    <i class="fa fa-line-chart text-muted"/>
+                                    <span>Finance</span>
+                                </div>
+
+                                <div class="d-grid gap-2">
+
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="text-muted" style="width:24px; text-align:center;">
+                                            <i class="fa fa-building"/>
+                                        </span>
+                                        <span class="o_form_label mb-0" style="min-width:160px;">Company</span>
+                                        <div class="flex-grow-1" style="min-width:220px;">
+                                            <field name="company_id" nolabel="1" readonly="1"/>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="text-muted" style="width:24px; text-align:center;">
+                                            <i class="fa fa-money"/>
+                                        </span>
+                                        <span class="o_form_label mb-0" style="min-width:160px;">Currency</span>
+                                        <div class="flex-grow-1" style="min-width:220px;">
+                                            <field name="currency_id" nolabel="1" readonly="1"/>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="text-muted" style="width:24px; text-align:center;">
+                                            <i class="fa fa-exchange"/>
+                                        </span>
+                                        <span class="o_form_label mb-0" style="min-width:160px;">Exchange Rate</span>
+                                        <div class="flex-grow-1" style="min-width:220px;">
+                                            <field name="rate" nolabel="1" readonly="1"/>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="text-muted" style="width:24px; text-align:center;">
+                                            <i class="fa fa-check-circle"/>
+                                        </span>
+                                        <span class="o_form_label mb-0" style="min-width:160px;">Total Paid</span>
+                                        <div class="flex-grow-1" style="min-width:220px;">
+                                            <field name="total_paid" nolabel="1" readonly="1"/>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="text-muted" style="width:24px; text-align:center;">
+                                            <i class="fa fa-file-text-o"/>
+                                        </span>
+                                        <span class="o_form_label mb-0" style="min-width:160px;">Balance Due</span>
+                                        <div class="flex-grow-1" style="min-width:220px;">
+                                            <field name="balance_due" nolabel="1" readonly="1"/>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                <div class="mt-3">
+                                    <div class="badge rounded-pill bg-light border text-muted px-3 py-2">
+                                        <i class="fa fa-shield me-1"/>
+                                        Totals are computed from order lines + payments + returns.
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- Totals (small card) -->
+                        <div class="col-12 col-lg-3">
+                            <div class="border rounded-4 p-3 shadow-sm bg-white h-100">
+                                <div class="fw-bold mb-2 d-flex align-items-center gap-2">
+                                    <i class="fa fa-calculator text-muted"/>
+                                    <span>Totals</span>
+                                </div>
+
+                                <div class="d-grid gap-2">
+
+                                    <div class="border rounded-4 p-2 bg-white">
+                                        <div class="text-muted small"><i class="fa fa-money me-1"/> Order Total</div>
+                                        <div class="fw-bold">
+                                            <field name="order_total" nolabel="1" readonly="1"/>
+                                        </div>
+                                    </div>
+
+                                    <div class="border rounded-4 p-2 bg-white">
+                                        <div class="text-muted small"><i class="fa fa-check-circle me-1"/> Total Paid</div>
+                                        <div class="fw-bold">
+                                            <field name="total_paid" nolabel="1" readonly="1"/>
+                                        </div>
+                                    </div>
+
+                                    <div class="border rounded-4 p-2 bg-white">
+                                        <div class="text-muted small"><i class="fa fa-file-text-o me-1"/> Balance Due</div>
+                                        <div class="fw-bold">
+                                            <field name="balance_due" nolabel="1" readonly="1"/>
+                                        </div>
+                                    </div>
+
+                                    <div class="border rounded-4 p-2 bg-white">
+                                        <div class="text-muted small"><i class="fa fa-balance-scale me-1"/> Net Balance</div>
+                                        <div class="fw-bold">
+                                            <field name="net_balance" nolabel="1" readonly="1"/>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    
+
+                    <!-- ✅ SINGLE NOTEBOOK -->
+                    <notebook class="mt-3">
+
+                        <!-- Order Lines -->
+                        <page string="📋 Order Lines" name="page_lines">
+                            <div class="border rounded-4 p-3 shadow-sm bg-white">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                                    <div class="fw-bold d-flex align-items-center gap-2">
+                                        <i class="fa fa-list-ul text-muted"/>
+                                        <span>Products</span>
+                                    </div>
+                                    <span class="badge rounded-pill bg-light border text-muted px-3 py-2">
+                                        <i class="fa fa-info-circle me-1"/>
+                                        Add products first, then go to Payments tab.
+                                    </span>
+                                </div>
+
+                                <field name="order_lines" nolabel="1">
+                                    <tree string="Products" editable="bottom" delete="false">
+                                        <field name="product_id" string="📦 Product" required="1"/>
+                                        <field name="available_stock" string="📊 Available" readonly="1"/>
+                                        <field name="quantity" string="🧮 Qty"/>
+                                        <field name="price_unit" string="💵 Unit Price"/>
+                                        <field name="subtotal" string="💰 Subtotal" sum="Total" readonly="1"/>
+                                    </tree>
+                                </field>
+
+                                <div class="text-muted mt-2">
+                                    <i class="fa fa-info-circle me-1"/>
+                                    Stock is shown for reference. Quantity updates will follow your stock rules in Python.
+                                </div>
+                            </div>
                         </page>
-                   
-                            <group>
-                                <field name="total_paid" string="Total Paid" readonly="1"/>
-                                <field name="balance_due" string="Balance Due" readonly="1"/>
-                            </group>
-                          
-                      
+
+                        <!-- Chatter -->
+                        <page string="💬 Chatter" name="page_chatter">
+                            <field name="message_follower_ids" widget="mail_followers"/>
+                            <field name="activity_ids" widget="mail_activity"/>
+                            <field name="message_ids" widget="mail_thread"/>
+                        </page>
+
                     </notebook>
+<!-- ✅ Payments Card (NOW above notebook) -->
+                    <div class="row g-3 mt-3">
+                        <div class="col-12">
+                            <div class="border rounded-4 p-3 shadow-sm bg-white">
+
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                                    <div class="fw-bold d-flex align-items-center gap-2">
+                                        <i class="fa fa-credit-card text-muted"/>
+                                        <span>Payments</span>
+                                    </div>
+
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="badge rounded-pill bg-light border text-muted px-3 py-2">
+                                            <i class="fa fa-money me-1"/> Total:
+                                            <field name="order_total" nolabel="1" readonly="1" class="ms-1"/>
+                                        </span>
+                                        <span class="badge rounded-pill bg-light border text-muted px-3 py-2">
+                                            <i class="fa fa-check-circle me-1"/> Paid:
+                                            <field name="total_paid" nolabel="1" readonly="1" class="ms-1"/>
+                                        </span>
+                                        <span class="badge rounded-pill bg-light border text-muted px-3 py-2">
+                                            <i class="fa fa-file-text-o me-1"/> Due:
+                                            <field name="balance_due" nolabel="1" readonly="1" class="ms-1"/>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-warning mb-3" role="alert">
+                                    <i class="fa fa-exclamation-triangle me-1"/>
+                                    Please complete product selection first. Then add one or more payment lines below.
+                                </div>
+
+                                <field name="payment_lines" nolabel="1"
+                                       context="{'default_customer_id': customer_id, 'default_date': order_date}">
+                                    <tree string="Payments" editable="bottom">
+                                        <field name="company_id" nolabel="1" readonly="1"/>
+                                        <field name="payment_method_id" string="💳 Method" required="1"/>
+                                        <field name="account_id" string="🏦 Account" readonly="1"/>
+                                        <field name="date" string="📅 Date" required="1"/>
+                                        <field name="amount" string="💰 Amount" required="1"/>
+                                    </tree>
+                                </field>
+
+                                <div class="text-muted mt-2">
+                                    <i class="fa fa-info-circle me-1"/>
+                                    Account is auto-filled from the selected payment method and cannot be changed.
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
                 </sheet>
             </form>
         </field>
     </record>
 
-
-    <!-- Sale Order Action -->
+    <!-- ===================================================== -->
+    <!-- 🚀 Action                                              -->
+    <!-- ===================================================== -->
     <record id="action_customer_idsale_order" model="ir.actions.act_window">
-        <field name="name">Customer Sale Orders</field>
+        <field name="name">🧾 Customer Sale Orders</field>
         <field name="type">ir.actions.act_window</field>
         <field name="res_model">idil.customer.sale.order</field>
         <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first Customer Sale Order
+            </p>
+            <p>
+                Select a <b>Customer</b> and add products manually, or optionally select a <b>Place Order</b> to auto-fill lines.
+            </p>
+        </field>
     </record>
-
 
 </odoo>
