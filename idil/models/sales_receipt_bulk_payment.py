@@ -129,14 +129,14 @@ class ReceiptBulkPayment(models.Model):
                 receipts = rec.env["idil.sales.receipt"].search(
                     [
                         ("salesperson_id", "=", rec.salesperson_id.id),
-                        ("payment_status", "=", "pending"),
+                        ("payment_status", "!=", "paid"),
                     ]
                 )
             elif rec.partner_type == "customer" and rec.customer_id:
                 receipts = rec.env["idil.sales.receipt"].search(
                     [
                         ("customer_id", "=", rec.customer_id.id),
-                        ("payment_status", "=", "pending"),
+                        ("payment_status", "!=", "paid"),
                     ]
                 )
             else:
@@ -150,12 +150,12 @@ class ReceiptBulkPayment(models.Model):
         if self.partner_type == "salesperson" and self.salesperson_id:
             domain = [
                 ("salesperson_id", "=", self.salesperson_id.id),
-                ("payment_status", "=", "pending"),
+                ("payment_status", "!=", "paid"),
             ]
         elif self.partner_type == "customer" and self.customer_id:
             domain = [
                 ("customer_id", "=", self.customer_id.id),
-                ("payment_status", "=", "pending"),
+                ("payment_status", "!=", "paid"),
             ]
         else:
             return
@@ -194,14 +194,14 @@ class ReceiptBulkPayment(models.Model):
                 receipts = rec.env["idil.sales.receipt"].search(
                     [
                         ("salesperson_id", "=", rec.salesperson_id.id),
-                        ("payment_status", "=", "pending"),
+                        ("payment_status", "!=", "paid"),
                     ]
                 )
             elif rec.partner_type == "customer" and rec.customer_id:
                 receipts = rec.env["idil.sales.receipt"].search(
                     [
                         ("customer_id", "=", rec.customer_id.id),
-                        ("payment_status", "=", "pending"),
+                        ("payment_status", "!=", "paid"),
                     ]
                 )
             else:
