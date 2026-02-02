@@ -73,7 +73,7 @@
                             <tree editable="bottom" decoration-success="payment_amount">
                                <field name="company_id" invisible="1"/>
                                 <field name="payment_date"/>
-                                 <field name="payment_method_id"/>
+                                <field name="payment_method_ids"/>
                                 <field name="payment_account_id"/>
                                 <field name="account_currency_id"/>
                                 <field name="currency_id"/>

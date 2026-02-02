@@ -57,7 +57,7 @@ class CustomerSaleOrder(models.Model):
         readonly=True,
     )
 
-    payment_method_id = fields.Many2one(
+    payment_method_ids = fields.Many2one(
         "idil.payment.method",
         string="Payment Method",
         tracking=True,
@@ -370,7 +370,7 @@ class CustomerSaleOrder(models.Model):
                         {
                             "order_id": order.id,
                             "sales_receipt_id": order.id,
-                            "payment_method_id": default_method.id,
+                            "payment_method_ids": default_method.id,
                             "amount": order.order_total,
                             "date": (
                                 fields.Date.to_date(order.order_date)
@@ -408,7 +408,7 @@ class CustomerSaleOrder(models.Model):
                     and p.account_id.currency_id != expected_currency
                 ):
                     raise ValidationError(
-                        f"Currency mismatch in payment method '{p.payment_method_id.name}'.\n"
+                        f"Currency mismatch in payment method '{p.payment_method_ids.name}'.\n"
                         f"Payment account currency is '{p.account_id.currency_id.name}', "
                         f"but Customer A/R currency is '{expected_currency.name}'."
                     )
@@ -580,7 +580,7 @@ class CustomerSaleOrder(models.Model):
                 BookingLine.create(
                     {
                         "transaction_booking_id": booking.id,
-                        "description": f"Payment - {p.payment_method_id.name} ({acc_type})",
+                        "description": f"Payment - {p.payment_method_ids.name} ({acc_type})",
                         "product_id": False,
                         "account_number": p.account_id.id,
                         "transaction_type": "dr",
@@ -592,7 +592,7 @@ class CustomerSaleOrder(models.Model):
                 BookingLine.create(
                     {
                         "transaction_booking_id": booking.id,
-                        "description": f"Payment applied to A/R - {p.payment_method_id.name}",
+                        "description": f"Payment applied to A/R - {p.payment_method_ids.name}",
                         "product_id": False,
                         "account_number": order.customer_id.account_receivable_id.id,
                         "transaction_type": "cr",
@@ -656,29 +656,29 @@ class CustomerSaleOrder(models.Model):
                 for order in self:
 
                     # 1.  Prevent changing payment_method from receivable → cash
-                    # ------------------------------------------------------------------
-                    if "payment_method" in vals and vals["payment_method"] in [
-                        "cash",
-                        "bank_transfer",
-                    ]:
-                        for order in self:
-                            if order.payment_method == "receivable":
-                                raise ValidationError(
-                                    "You cannot switch the payment method from "
-                                    "'Account Receivable' to 'Cash or bank'.\n"
-                                    "Receivable booking lines already exist for this order."
-                                )
-                    if (
-                        "payment_method" in vals
-                        and vals["payment_method"] == "receivable"
-                    ):
-                        for order in self:
-                            if order.payment_method in ["cash", "bank_transfer"]:
-                                raise ValidationError(
-                                    "You cannot switch the payment method from "
-                                    "'Cash or bank' to 'Account Receivable'.\n"
-                                    "Cash booking lines already exist for this order."
-                                )
+                    # # ------------------------------------------------------------------
+                    # if "payment_method" in vals and vals["payment_method"] in [
+                    #     "cash",
+                    #     "bank_transfer",
+                    # ]:
+                    #     for order in self:
+                    #         if order.payment_method == "receivable":
+                    #             raise ValidationError(
+                    #                 "You cannot switch the payment method from "
+                    #                 "'Account Receivable' to 'Cash or bank'.\n"
+                    #                 "Receivable booking lines already exist for this order."
+                    #             )
+                    # if (
+                    #     "payment_method" in vals
+                    #     and vals["payment_method"] == "receivable"
+                    # ):
+                    #     for order in self:
+                    #         if order.payment_method in ["cash", "bank_transfer"]:
+                    #             raise ValidationError(
+                    #                 "You cannot switch the payment method from "
+                    #                 "'Cash or bank' to 'Account Receivable'.\n"
+                    #                 "Cash booking lines already exist for this order."
+                    #             )
 
                     # Loop through the lines in the database before they are updated
                     for line in order.order_lines:
@@ -762,8 +762,7 @@ class CustomerSaleOrder(models.Model):
                                 "trx_date": fields.Date.context_today(self),
                                 "amount": order.order_total,
                                 "customer_id": order.customer_id.id,
-                                "payment_method": order.payment_method
-                                or "bank_transfer",
+                                "payment_method": "bank_transfer",
                                 "payment_status": "pending",
                             }
                         )
@@ -1131,7 +1130,7 @@ class CustomerSalePayment(models.Model):
         related="order_id.company_id", store=True, readonly=True
     )
 
-    payment_method_id = fields.Many2one(
+    payment_method_ids = fields.Many2one(
         "idil.payment.method",
         string="Payment Method",
         required=True,
@@ -1141,7 +1140,7 @@ class CustomerSalePayment(models.Model):
     account_id = fields.Many2one(
         "idil.chart.account",
         string="Account",
-        related="payment_method_id.account_id",
+        related="payment_method_ids.account_id",
         store=True,
         readonly=True,
     )
@@ -1152,11 +1151,11 @@ class CustomerSalePayment(models.Model):
         "idil.receipt.bulk.payment", index=True, ondelete="cascade"
     )
 
-    @api.onchange("payment_method_id")
+    @api.onchange("payment_method_ids")
     def _onchange_payment_method_id(self):
         for rec in self:
-            if rec.payment_method_id:
-                rec.account_id = rec.payment_method_id.account_id
+            if rec.payment_method_ids:
+                rec.account_id = rec.payment_method_ids.account_id
 
     @api.constrains("amount")
     def _check_amount(self):

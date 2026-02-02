@@ -107,6 +107,7 @@ class ReceiptBulkPayment(models.Model):
 
     @api.depends("payment_method_ids.payment_amount")
     def _compute_payment_methods_total(self):
+
         for rec in self:
             rec.payment_methods_total = sum(
                 l.payment_amount for l in rec.payment_method_ids
@@ -468,7 +469,6 @@ class ReceiptBulkPayment(models.Model):
                             {
                                 "sales_receipt_id": receipt.id,
                                 "bulk_receipt_payment_id": self.id,
-                                "payment_method_ids": [(4, method.id)],
                                 "transaction_booking_ids": [(4, trx_booking.id)],
                                 # Link detailed booking lines too (optional if your model uses it)
                                 "transaction_bookingline_ids": [
@@ -510,9 +510,7 @@ class ReceiptBulkPayment(models.Model):
                                     ),
                                     "customer_id": receipt.customer_id.id,
                                     "bulk_receipt_payment_id": self.id,
-                                    "payment_method_ids": [
-                                        (4, method.id)
-                                    ],  # ✅ correct Many2one
+                                    "payment_method_ids": method.payment_method_ids.id,  # ✅ correct Many2one
                                     "sales_payment_id": payment.id,
                                     "sales_receipt_id": receipt.id,
                                     "account_id": payment_account.id,
@@ -670,7 +668,7 @@ class ReceiptBulkPaymentMethod(models.Model):
         "idil.receipt.bulk.payment", string="Bulk Payment"
     )
 
-    payment_method_id = fields.Many2one(
+    payment_method_ids = fields.Many2one(
         "idil.payment.method",
         string="Payment Method",
         required=True,
@@ -680,17 +678,10 @@ class ReceiptBulkPaymentMethod(models.Model):
     payment_account_id = fields.Many2one(
         "idil.chart.account",
         string="Payment Account",
-        related="payment_method_id.account_id",
+        related="payment_method_ids.account_id",
         store=True,
         readonly=True,
     )
-
-    # payment_account_id = fields.Many2one(
-    #     "idil.chart.account",
-    #     string="Payment Account",
-    #     required=True,
-    #     domain=[("account_type", "in", ["cash", "bank_transfer", "sales_expense"])],
-    # )
 
     account_currency_id = fields.Many2one(
         related="payment_account_id.currency_id",

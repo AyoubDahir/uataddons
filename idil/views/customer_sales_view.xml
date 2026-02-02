@@ -313,7 +313,7 @@
                                        context="{'default_customer_id': customer_id, 'default_date': order_date}">
                                     <tree string="Payments" editable="bottom">
                                         <field name="company_id" nolabel="1" readonly="1"/>
-                                        <field name="payment_method_id" string="💳 Method" required="1"/>
+                                        <field name="payment_method_ids" string="💳 Method" required="1"/>
                                         <field name="account_id" string="🏦 Account" readonly="1"/>
                                         <field name="date" string="📅 Date" required="1"/>
                                         <field name="amount" string="💰 Amount" required="1"/>
