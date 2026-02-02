@@ -819,12 +819,7 @@ class CustomerSaleOrder(models.Model):
                             elif (
                                 line.transaction_type == "dr"
                                 and line.account_number.id
-                                == (
-                                    order.customer_id.account_receivable_id.id
-                                    if order.payment_method
-                                    not in ["cash", "bank_transfer"]
-                                    else order.account_number.id
-                                )
+                                == order.customer_id.account_receivable_id.id
                             ):
                                 updated_values["dr_amount"] = order_line.subtotal
                                 updated_values["cr_amount"] = 0
