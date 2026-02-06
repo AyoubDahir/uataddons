@@ -4,21 +4,30 @@
         <field name="model">idil.customer.place.order</field>
         <field name="arch" type="xml">
             <form string="Customer Place Order">
-           
                 <header>
-                     <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,cancel"/>
+                    <button name="action_view_barcode" string="Preview Barcode" type="object" class="btn-info" icon="fa-eye"/>
+                    <button name="%(action_report_production_barcode_customer)d" string="Print Barcode Labels" type="action" class="btn-primary" icon="fa-barcode"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,cancel"/>
                 </header>
                 <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                    </div>
                     <group>
-                        <field name="customer_id"/>
-                        <field name="order_date"/>
-                       
+                        <group>
+                            <field name="customer_id" options="{'no_create': True}" readonly="state != 'draft'"/>
+                        </group>
+                        <group>
+                            <field name="order_date" readonly="state != 'draft'"/>
+                        </group>
                     </group>
                     <notebook>
                         <page string="Order Lines">
-                            <field name="order_lines">
+                            <field name="order_lines" readonly="state != 'draft'">
                                 <tree editable="bottom">
-                                    <field name="product_id"/>
+                                    <field name="product_id" options="{'no_create': True}"/>
                                     <field name="quantity"/>
                                 </tree>
                             </field>
@@ -33,23 +42,42 @@
         <field name="name">idil.customer.place.order.tree</field>
         <field name="model">idil.customer.place.order</field>
         <field name="arch" type="xml">
-            <tree string="Customer Orders">
+            <tree string="Customer Orders" decoration-info="state == 'draft'" decoration-success="state == 'confirmed'">
+                <field name="name"/>
                 <field name="customer_id"/>
                 <field name="order_date"/>
-                <field name="state"/>
-                <field name="total_quantity"/>
+                <field name="total_quantity" sum="Total Qty"/>
+                <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'confirmed'"/>
             </tree>
         </field>
     </record>
 
-     <!-- Customer Place Order Action -->
+    <record id="view_customer_place_order_search" model="ir.ui.view">
+        <field name="name">idil.customer.place.order.search</field>
+        <field name="model">idil.customer.place.order</field>
+        <field name="arch" type="xml">
+            <search string="Search Customer Orders">
+                <field name="name"/>
+                <field name="customer_id"/>
+                <filter string="Draft" name="draft" domain="[('state', '=', 'draft')]"/>
+                <filter string="Confirmed" name="confirmed" domain="[('state', '=', 'confirmed')]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Customer" name="group_by_customer" context="{'group_by': 'customer_id'}"/>
+                    <filter string="Order Date" name="group_by_date" context="{'group_by': 'order_date'}"/>
+                    <filter string="Status" name="group_by_state" context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
     <record id="action_customer_place_order" model="ir.actions.act_window">
         <field name="name">Customer Place Orders</field>
         <field name="res_model">idil.customer.place.order</field>
         <field name="view_mode">tree,form</field>
-        <field name="target">current</field>
+        <field name="search_view_id" ref="view_customer_place_order_search"/>
+        <field name="context">{'search_default_draft': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Create your first customer order</p>
+        </field>
     </record>
-
-    <!-- Customer Place Order Menu -->
-  
 </odoo>
