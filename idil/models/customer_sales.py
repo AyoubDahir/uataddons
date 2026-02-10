@@ -256,6 +256,7 @@ class CustomerSaleOrder(models.Model):
                             "date": new_order.order_date,
                             "source_document": new_order.name,
                             "customer_id": new_order.customer_id.id,
+                            "customer_sale_order_id": new_order.id,  # ✅ NEW
                         }
                     )
 
@@ -863,13 +864,10 @@ class CustomerSaleOrder(models.Model):
                             # product.stock_quantity += line.quantity
 
                             # 2. Delete related product movement
-                            self.env["idil.product.movement"].search(
-                                [
-                                    ("product_id", "=", product.id),
-                                    ("source_document", "=", order.name),
-                                ]
-                            ).unlink()
 
+                            self.env["idil.product.movement"].search(
+                                [("customer_sale_order_id", "=", order.id)]
+                            ).unlink()
                             # 3. Delete related booking lines
                             booking_lines = self.env[
                                 "idil.transaction_bookingline"

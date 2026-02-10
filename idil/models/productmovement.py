@@ -52,6 +52,13 @@ class ProductMovement(models.Model):
         index=True,
         ondelete="cascade",
     )
+    customer_sale_order_id = fields.Many2one(
+        "idil.customer.sale.order",
+        string="Customer Sale Order",
+        ondelete="cascade",
+        index=True,
+        tracking=True,
+    )
 
     transaction_number = fields.Char(string="Transaction Number", tracking=True)
 

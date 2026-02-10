@@ -160,7 +160,7 @@ class BalanceSheetWizard(models.TransientModel):
         self.write({"line_ids": lines})
 
     def _compute_balance_sheet_data(self):
-        """Compute balance sheet structure + real Net Profit from Income Statement (4/5)"""
+        """Compute balance sheet structure + Net Profit with rounding + no zero accounts + no tiny negative assets"""
         Header = self.env["idil.chart.account.header"]
         SubHeader = self.env["idil.chart.account.subheader"]
         Account = self.env["idil.chart.account"]
@@ -172,6 +172,18 @@ class BalanceSheetWizard(models.TransientModel):
         total_assets = 0.0
         total_liabilities = 0.0
         total_equity = 0.0
+
+        # ----------------------------
+        # Settings for USD display
+        # ----------------------------
+        USD_ROUND = 0.01  # show 2 decimals
+        EPS_ASSET = (
+            0.05  # if asset is between -0.05 and 0 -> force to 0 (rounding drift)
+        )
+
+        def round_usd(x):
+            # stable rounding to 2 decimals
+            return round((x or 0.0) / USD_ROUND) * USD_ROUND
 
         headers = Header.search([], order="code")
 
@@ -185,7 +197,7 @@ class BalanceSheetWizard(models.TransientModel):
                 "name": header.name,
                 "code": header.code,
                 "subheaders": [],
-                "total": 0.0,  # DISPLAY total (already sign-correct)
+                "total": 0.0,  # display total
             }
 
             subheaders = SubHeader.search([("header_id", "=", header.id)], order="name")
@@ -194,7 +206,7 @@ class BalanceSheetWizard(models.TransientModel):
                 sub_dict = {
                     "name": subheader.name,
                     "accounts": [],
-                    "total": 0.0,  # DISPLAY subtotal
+                    "total": 0.0,
                 }
 
                 accounts = Account.search(
@@ -206,7 +218,7 @@ class BalanceSheetWizard(models.TransientModel):
                 )
 
                 for account in accounts:
-                    # Filter out clearing accounts
+                    # Skip clearing accounts if you want
                     if account.code in ["100994", "100998"]:
                         continue
 
@@ -214,9 +226,9 @@ class BalanceSheetWizard(models.TransientModel):
                         self.report_date, self.company_id.id
                     )
 
-                    signed = (dr_usd or 0.0) - (cr_usd or 0.0)  # dr-cr
+                    signed = (dr_usd or 0.0) - (cr_usd or 0.0)  # dr - cr
 
-                    # ✅ Correct display by nature:
+                    # Nature display:
                     # Assets: dr-cr
                     # Liabilities/Equity: cr-dr => -(dr-cr)
                     if header_type in ("2", "3"):
@@ -224,20 +236,37 @@ class BalanceSheetWizard(models.TransientModel):
                     else:
                         display_balance = signed
 
-                    if abs(display_balance) > 0.001:
-                        sub_dict["accounts"].append(
-                            {
-                                "code": account.code or "",
-                                "name": account.name or "",
-                                "balance": display_balance,  # <-- keep sign!
-                            }
-                        )
-                        sub_dict["total"] += display_balance
+                    # ✅ Round FIRST (important!)
+                    display_balance = round_usd(display_balance)
 
+                    # ✅ Fix tiny negative assets caused by FX conversion/rounding
+                    if (
+                        header_type == "1"
+                        and display_balance < 0
+                        and abs(display_balance) <= EPS_ASSET
+                    ):
+                        display_balance = 0.0
+
+                    # ✅ Do NOT show zero-balance accounts (after rounding)
+                    if abs(display_balance) < USD_ROUND:
+                        continue
+
+                    sub_dict["accounts"].append(
+                        {
+                            "code": account.code or "",
+                            "name": account.name or "",
+                            "balance": display_balance,
+                        }
+                    )
+                    sub_dict["total"] += display_balance
+
+                # ✅ only keep subheader if it has accounts after filtering
+                sub_dict["total"] = round_usd(sub_dict["total"])
                 if sub_dict["accounts"]:
                     header_dict["subheaders"].append(sub_dict)
                     header_dict["total"] += sub_dict["total"]
 
+            header_dict["total"] = round_usd(header_dict["total"])
             if header_dict["subheaders"]:
                 if header_type == "1":
                     assets_data.append(header_dict)
@@ -249,12 +278,44 @@ class BalanceSheetWizard(models.TransientModel):
                     equity_data.append(header_dict)
                     total_equity += header_dict["total"]
 
-        # ✅ Profit from Income Statement (headers 4/5) (profit positive, loss negative)
+        # ✅ Profit from Income Statement
         net_profit = self._compute_income_statement_net_profit()
+        net_profit = round_usd(net_profit)
 
-        # ✅ Standard BS:
-        # Assets should equal Liabilities + Equity + Current Profit
-        total_liab_equity = total_liabilities + total_equity + net_profit
+        total_assets = round_usd(total_assets)
+        total_liabilities = round_usd(total_liabilities)
+        total_equity = round_usd(total_equity)
+
+        # ✅ Standard equation
+        total_liab_equity = round_usd(total_liabilities + total_equity + net_profit)
+        fx_diff = round_usd(total_assets - total_liab_equity)
+
+        if abs(fx_diff) >= USD_ROUND:
+            # Add FX line inside Equity
+            fx_header = {
+                "name": "Foreign Exchange Revaluation",
+                "code": "FX",
+                "subheaders": [
+                    {
+                        "name": "Unrealized FX Gain/Loss",
+                        "accounts": [
+                            {
+                                "code": "FX",
+                                "name": "Foreign Exchange Gain/Loss (Unrealized)",
+                                "balance": fx_diff,
+                            }
+                        ],
+                        "total": fx_diff,
+                    }
+                ],
+                "total": fx_diff,
+            }
+
+            equity_data.append(fx_header)
+            total_equity = round_usd(total_equity + fx_diff)
+
+            # Recompute totals
+            total_liab_equity = round_usd(total_liabilities + total_equity + net_profit)
 
         return {
             "assets": assets_data,
@@ -269,7 +330,7 @@ class BalanceSheetWizard(models.TransientModel):
         }
 
     # def _compute_balance_sheet_data(self):
-    #     """Compute balance sheet structure"""
+    #     """Compute balance sheet structure + real Net Profit from Income Statement (4/5)"""
     #     Header = self.env["idil.chart.account.header"]
     #     SubHeader = self.env["idil.chart.account.subheader"]
     #     Account = self.env["idil.chart.account"]
@@ -282,27 +343,36 @@ class BalanceSheetWizard(models.TransientModel):
     #     total_liabilities = 0.0
     #     total_equity = 0.0
 
-    #     # Get all headers
     #     headers = Header.search([], order="code")
 
     #     for header in headers:
     #         if not header.code or header.code[0] not in ["1", "2", "3"]:
     #             continue
 
+    #         header_type = header.code[0]  # '1' assets, '2' liabilities, '3' equity
+
     #         header_dict = {
     #             "name": header.name,
     #             "code": header.code,
     #             "subheaders": [],
-    #             "total": 0.0,
+    #             "total": 0.0,  # DISPLAY total (already sign-correct)
     #         }
 
     #         subheaders = SubHeader.search([("header_id", "=", header.id)], order="name")
 
     #         for subheader in subheaders:
-    #             sub_dict = {"name": subheader.name, "accounts": [], "total": 0.0}
+    #             sub_dict = {
+    #                 "name": subheader.name,
+    #                 "accounts": [],
+    #                 "total": 0.0,  # DISPLAY subtotal
+    #             }
 
     #             accounts = Account.search(
-    #                 [("subheader_id", "=", subheader.id)], order="code"
+    #                 [
+    #                     ("subheader_id", "=", subheader.id),
+    #                     ("company_id", "=", self.company_id.id),
+    #                 ],
+    #                 order="code",
     #             )
 
     #             for account in accounts:
@@ -310,82 +380,62 @@ class BalanceSheetWizard(models.TransientModel):
     #                 if account.code in ["100994", "100998"]:
     #                     continue
 
-    #                 # Use helper to get USD balance properly
     #                 dr_usd, cr_usd = account.get_dr_cr_balance_usd(
     #                     self.report_date, self.company_id.id
     #                 )
-    #                 balance = dr_usd - cr_usd
 
-    #                 if abs(balance) > 0.001:
+    #                 signed = (dr_usd or 0.0) - (cr_usd or 0.0)  # dr-cr
+
+    #                 # ✅ Correct display by nature:
+    #                 # Assets: dr-cr
+    #                 # Liabilities/Equity: cr-dr => -(dr-cr)
+    #                 if header_type in ("2", "3"):
+    #                     display_balance = -signed
+    #                 else:
+    #                     display_balance = signed
+
+    #                 if abs(display_balance) > 0.001:
     #                     sub_dict["accounts"].append(
     #                         {
     #                             "code": account.code or "",
     #                             "name": account.name or "",
-    #                             "balance": abs(balance),
+    #                             "balance": display_balance,  # <-- keep sign!
     #                         }
     #                     )
-    #                     sub_dict["total"] += balance
+    #                     sub_dict["total"] += display_balance
 
     #             if sub_dict["accounts"]:
     #                 header_dict["subheaders"].append(sub_dict)
     #                 header_dict["total"] += sub_dict["total"]
 
     #         if header_dict["subheaders"]:
-    #             # The logic below assumes:
-    #             # Assets = Debit nature (Positive balance means Debit > Credit)
-    #             # Liabilities/Equity = Credit nature
-    #             # Ideally, we should normalize everything to Positive for display
-    #             # and handle the accounting equation logic in the Net Profit calc.
-
-    #             if header.code.startswith("1"):
+    #             if header_type == "1":
     #                 assets_data.append(header_dict)
     #                 total_assets += header_dict["total"]
-    #             elif header.code.startswith("2"):
+    #             elif header_type == "2":
     #                 liabilities_data.append(header_dict)
-    #                 total_liabilities += header_dict[
-    #                     "total"
-    #                 ]  # Likely negative if Cr > Dr
-    #             elif header.code.startswith("3"):
+    #                 total_liabilities += header_dict["total"]
+    #             elif header_type == "3":
     #                 equity_data.append(header_dict)
-    #                 total_equity += header_dict["total"]  # Likely negative if Cr > Dr
+    #                 total_equity += header_dict["total"]
 
-    #     # With convert_to_usd, balances are:
-    #     # Asset: Dr - Cr (Positive)
-    #     # Liab: Dr - Cr (Negative)
-    #     # Equity: Dr - Cr (Negative)
+    #     # ✅ Profit from Income Statement (headers 4/5) (profit positive, loss negative)
+    #     net_profit = self._compute_income_statement_net_profit()
 
-    #     # Net Profit in Balance Sheet = Assets - (Liabilities + Equity)
-    #     # Since Liab and Equity are negative numbers here (from Dr-Cr), we do:
-    #     # Net Profit = Total Assets + Total Liab + Total Equity
-    #     # Example: Assets=100, Liab=-40, Equity=-50. Net Profit = 100 + (-40) + (-50) = 10
-    #     # Wait, usually BS equation is Assets = Liab + Equity.
-    #     # So Assets - Liab - Equity = 0 (if balanced).
-    #     # Any difference is Net Profit/Loss (retained earnings for current period).
-
-    #     # Let's verify signs.
-    #     # If I have Revenue (Cr 100). Profit is 100.
-    #     # My Asset (Cash) increases by 100 (Dr 100).
-    #     # Assets = 100. Liab=0. Equity=0.
-    #     # sum(Assets) = 100. sum(Liab)=0. sum(Equity)=0.
-    #     # Calculation: 100 + 0 + 0 = 100. So Net Profit = 100. Correct.
-    #     # If Expense (Dr 20). Cash decreases (dist attribute: Cr 20).
-    #     # Assets = 80.
-    #     # Calculation: 80 + 0 + 0 = 80. Net Profit = 80. Correct.
-
-    #     net_profit = total_assets + total_liabilities + total_equity
+    #     # ✅ Standard BS:
+    #     # Assets should equal Liabilities + Equity + Current Profit
+    #     total_liab_equity = total_liabilities + total_equity + net_profit
 
     #     return {
     #         "assets": assets_data,
     #         "liabilities": liabilities_data,
     #         "equity": equity_data,
-    #         "total_assets": abs(total_assets),
-    #         "total_liabilities": abs(total_liabilities),
-    #         "total_equity": abs(total_equity),
+    #         "total_assets": total_assets,
+    #         "total_liabilities": total_liabilities,
+    #         "total_equity": total_equity,
     #         "net_profit": net_profit,
-    #         "total_liab_equity": abs(total_liabilities)
-    #         + abs(total_equity)
-    #         + net_profit,  # Display logic: |Liab| + |Eq| + Profit
-    #         "is_balanced": True,  # Calculated correctly it should inherently balance if all transaction lines are fetched
+    #         "total_liab_equity": total_liab_equity,
+    #         "is_balanced": abs(total_assets - total_liab_equity) < 0.01,
     #     }
 
     def _compute_income_statement_net_profit(self):
