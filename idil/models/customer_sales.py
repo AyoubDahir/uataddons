@@ -42,12 +42,16 @@ class CustomerSaleOrder(models.Model):
         default="confirmed",
     )
     # Currency fields
+
     currency_id = fields.Many2one(
         "res.currency",
-        string="Currency",
+        string="Currency for Exchange Rate",
         required=True,
-        default=lambda self: self.env.company.currency_id,
+        default=lambda self: self.env["res.currency"].search(
+            [("name", "=", "SL")], limit=1
+        ),
         readonly=True,
+        tracking=True,
     )
 
     rate = fields.Float(
