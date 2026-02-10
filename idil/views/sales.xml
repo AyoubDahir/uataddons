@@ -1,5 +1,77 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <record id="view_sale_order_tree" model="ir.ui.view">
+        <field name="name">idil.sale.order.tree</field>
+        <field name="model">idil.sale.order</field>
+        <field name="arch" type="xml">
+            <tree string="🧾 Sales Orders">
+                <field name="name"/>
+                <field name="order_date"/>
+                <field name="sales_person_id"/>
+                <field name="currency_id"/>
+                <field name="order_total"/>
+                <field name="total_due_usd"/>
+                <field name="state"/>
+            </tree>
+        </field>
+    </record>
+    
+    <record id="view_sale_order_kanban" model="ir.ui.view">
+            <field name="name">idil.sale.order.kanban</field>
+            <field name="model">idil.sale.order</field>
+            <field name="arch" type="xml">
+                <kanban string="🧾 Sales Orders" class="o_kanban_small_column">
+                    <field name="name"/>
+                    <field name="sales_person_id"/>
+                    <field name="order_date"/>
+                    <field name="order_total"/>
+                    <field name="total_due_usd"/>
+                    <field name="state"/>
+
+                    <templates>
+                        <t t-name="kanban-box">
+                            <div class="oe_kanban_global_click o_kanban_card shadow-sm rounded-3 p-3">
+
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <strong class="text-primary">
+                                        <t t-esc="record.name.value"/>
+                                    </strong>
+
+                                    <span class="badge bg-secondary">
+                                        <t t-esc="record.state.value"/>
+                                    </span>
+                                </div>
+
+                                <div class="mt-2 text-muted">
+                                    <i class="fa fa-user me-1"/>
+                                    <t t-esc="record.sales_person_id.value"/>
+                                </div>
+
+                                <div class="mt-1 text-muted">
+                                    <i class="fa fa-calendar me-1"/>
+                                    <t t-esc="record.order_date.value"/>
+                                </div>
+
+                                <div class="mt-3">
+                                    <div>
+                                        <strong>💰 FY:</strong>
+                                        <t t-esc="record.order_total.value"/>
+                                    </div>
+                                    <div class="mt-1">
+                                        <strong>💵 USD:</strong>
+                                        <t t-esc="record.total_due_usd.value"/>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+        
+
+
     <record id="view_sale_order_form" model="ir.ui.view">
     <field name="name">sale.order.form</field>
     <field name="model">idil.sale.order</field>
