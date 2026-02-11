@@ -628,6 +628,21 @@ class TransactionBookingline(models.Model):
         "idil.receipt.bulk.payment", index=True, ondelete="cascade"
     )
 
+    manufacturing_order_id = fields.Many2one(
+        "idil.manufacturing.order",
+        string="Manufacturing Order",
+        index=True,
+        ondelete="cascade",
+    ) 
+
+    manufacturing_order_line_id = fields.Many2one(
+        "idil.manufacturing.order.line",
+        string="Manufacturing Order Line",
+        index=True,
+        ondelete="cascade",
+    )
+
+
     @api.constrains("transaction_date")
     def _check_transaction_date_not_future(self):
         for rec in self:
