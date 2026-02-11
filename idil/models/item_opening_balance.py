@@ -16,6 +16,21 @@ class IdilItemOpeningBalance(models.Model):
 
     name = fields.Char(string="Reference", readonly=True, default="New")
 
+    source_warehouse_id = fields.Many2one(
+        "idil.warehouse",
+        string="🏬 Warehouse",
+        required=True,
+        tracking=True,
+    )
+
+    source_location_id = fields.Many2one(
+        "idil.warehouse.location",
+        string="📌 Location",
+        required=True,
+        tracking=True,
+        domain="[('warehouse_id', '=', source_warehouse_id), ('active', '=', True)]",
+    )
+
     date = fields.Date(string="Date", default=fields.Date.today, required=True)
     state = fields.Selection(
         [("draft", "Draft"), ("confirmed", "Confirmed")],
@@ -49,6 +64,48 @@ class IdilItemOpeningBalance(models.Model):
         store=True,
         readonly=True,
     )
+
+    @api.constrains("company_id", "source_warehouse_id", "source_location_id", "state")
+    def _check_unique_opening_balance_per_location(self):
+        """
+        Only ONE confirmed opening balance is allowed per Company + Warehouse + Location.
+        """
+        for rec in self:
+            if (
+                not rec.company_id
+                or not rec.source_warehouse_id
+                or not rec.source_location_id
+            ):
+                continue
+
+            # ✅ Apply rule only when confirmed (recommended)
+            if rec.state != "confirmed":
+                continue
+
+            domain = [
+                ("id", "!=", rec.id),
+                ("company_id", "=", rec.company_id.id),
+                ("source_warehouse_id", "=", rec.source_warehouse_id.id),
+                ("source_location_id", "=", rec.source_location_id.id),
+                ("state", "=", "confirmed"),
+            ]
+
+            exists = self.search_count(domain)
+            if exists:
+                raise ValidationError(
+                    _(
+                        "Opening Balance already exists for:\n"
+                        "Company: %(company)s\n"
+                        "Warehouse: %(wh)s\n"
+                        "Location: %(loc)s\n\n"
+                        "Only ONE confirmed Opening Balance is allowed per Warehouse/Location."
+                    )
+                    % {
+                        "company": rec.company_id.display_name,
+                        "wh": rec.source_warehouse_id.display_name,
+                        "loc": rec.source_location_id.display_name,
+                    }
+                )
 
     @api.depends("currency_id", "date", "company_id")
     def _compute_exchange_rate(self):
@@ -99,7 +156,7 @@ class IdilItemOpeningBalance(models.Model):
                     0,
                     {
                         "item_id": item.id,
-                        "quantity": 1000,
+                        "quantity": 25,
                         "cost_price": item.cost_price,
                     },
                 )
@@ -201,6 +258,7 @@ class IdilItemOpeningBalance(models.Model):
         try:
             with self.env.cr.savepoint():
                 self._validate_before_post()
+
                 TransactionBooking = self.env["idil.transaction_booking"]
                 TransactionSource = self.env["idil.transaction.source"]
                 ItemMovement = self.env["idil.item.movement"]
@@ -237,56 +295,18 @@ class IdilItemOpeningBalance(models.Model):
                     # Calculate amount in item's currency
                     amount = line.quantity * line.cost_price
 
-                    # Determine currencies - use Item's currency_id field
-                    item_currency = item.currency_id
+                    # Determine currencies (use account currency)
+                    item_currency = item.asset_account_id.currency_id
                     equity_currency = EquityAccount.currency_id
 
-                    # Convert amount to equity currency (USD) if needed
-                    if item_currency.id != equity_currency.id:
-                        if not self.rate or self.rate <= 0:
-                            raise ValidationError(
-                                "Exchange rate is required for currency conversion."
-                            )
-                        # Item is in local currency (e.g., SL), Equity is in USD
-                        if item_currency.name == "SL" and equity_currency.name == "USD":
-                            amount_for_equity = amount / self.rate
-                        elif item_currency.name == "USD" and equity_currency.name == "SL":
-                            amount_for_equity = amount * self.rate
-                        else:
-                            raise ValidationError(
-                                f"Unhandled conversion from {item_currency.name} to {equity_currency.name}."
-                            )
-                    else:
-                        amount_for_equity = amount
-
-                    # Find clearing accounts for currency exchange
-                    source_clearing_account = ChartAccount.search(
-                        [
-                            ("name", "=", "Exchange Clearing Account"),
-                            ("currency_id", "=", item_currency.id),
-                        ],
-                        limit=1,
-                    )
-                    target_clearing_account = ChartAccount.search(
-                        [
-                            ("name", "=", "Exchange Clearing Account"),
-                            ("currency_id", "=", equity_currency.id),
-                        ],
-                        limit=1,
-                    )
-                    if not source_clearing_account or not target_clearing_account:
-                        raise ValidationError(
-                            "Exchange Clearing Accounts must exist for both the item and equity account currencies."
-                        )
-
-                    # Create transaction booking
+                    # Create transaction booking (header)
                     trx = TransactionBooking.create(
                         {
                             "transaction_number": self.env["ir.sequence"].next_by_code(
                                 "idil.transaction_booking"
                             ),
                             "reffno": item.name,
-                            "rate": self.rate,
+                            "rate": self.rate or 1,
                             "item_opening_balance_id": self.id,
                             "trx_date": self.date,
                             "amount": amount,
@@ -298,10 +318,80 @@ class IdilItemOpeningBalance(models.Model):
                         }
                     )
 
-                    # Booking lines with currency exchange (4 lines like other opening balances)
-                    trx.booking_lines.create(
-                        [
-                            # 1. Debit Asset Account (local currency)
+                    booking_lines_vals = []
+
+                    # ✅ Case 1: SAME currency -> 2 lines only (NO clearing)
+                    if item_currency.id == equity_currency.id:
+                        booking_lines_vals = [
+                            # 1) DR Asset
+                            {
+                                "transaction_booking_id": trx.id,
+                                "item_opening_balance_id": self.id,
+                                "description": f"Opening Balance for {item.name}",
+                                "item_id": item.id,
+                                "account_number": item.asset_account_id.id,
+                                "transaction_type": "dr",
+                                "dr_amount": amount,
+                                "cr_amount": 0,
+                                "rate": self.rate or 1,
+                                "transaction_date": self.date,
+                            },
+                            # 2) CR Opening Balance / Equity
+                            {
+                                "transaction_booking_id": trx.id,
+                                "item_opening_balance_id": self.id,
+                                "description": f"Opening Balance for {item.name}",
+                                "item_id": item.id,
+                                "account_number": EquityAccount.id,
+                                "transaction_type": "cr",
+                                "dr_amount": 0,
+                                "cr_amount": amount,
+                                "rate": self.rate or 1,
+                                "transaction_date": self.date,
+                            },
+                        ]
+
+                    # ✅ Case 2: DIFFERENT currencies -> 4 lines with clearing
+                    else:
+                        if not self.rate or self.rate <= 0:
+                            raise ValidationError(
+                                "Exchange rate is required for currency conversion."
+                            )
+
+                        # Convert amount to equity currency
+                        if item_currency.name == "SL" and equity_currency.name == "USD":
+                            amount_for_equity = amount / self.rate
+                        elif (
+                            item_currency.name == "USD" and equity_currency.name == "SL"
+                        ):
+                            amount_for_equity = amount * self.rate
+                        else:
+                            raise ValidationError(
+                                f"Unhandled conversion from {item_currency.name} to {equity_currency.name}."
+                            )
+
+                        # Find clearing accounts for both currencies
+                        source_clearing_account = ChartAccount.search(
+                            [
+                                ("name", "=", "Exchange Clearing Account"),
+                                ("currency_id", "=", item_currency.id),
+                            ],
+                            limit=1,
+                        )
+                        target_clearing_account = ChartAccount.search(
+                            [
+                                ("name", "=", "Exchange Clearing Account"),
+                                ("currency_id", "=", equity_currency.id),
+                            ],
+                            limit=1,
+                        )
+                        if not source_clearing_account or not target_clearing_account:
+                            raise ValidationError(
+                                "Exchange Clearing Accounts must exist for both the item and equity account currencies."
+                            )
+
+                        booking_lines_vals = [
+                            # 1) DR Asset (item currency)
                             {
                                 "transaction_booking_id": trx.id,
                                 "item_opening_balance_id": self.id,
@@ -314,7 +404,7 @@ class IdilItemOpeningBalance(models.Model):
                                 "rate": self.rate,
                                 "transaction_date": self.date,
                             },
-                            # 2. Credit Source Clearing Account (local currency)
+                            # 2) CR Source Clearing (item currency)
                             {
                                 "transaction_booking_id": trx.id,
                                 "item_opening_balance_id": self.id,
@@ -327,7 +417,7 @@ class IdilItemOpeningBalance(models.Model):
                                 "rate": self.rate,
                                 "transaction_date": self.date,
                             },
-                            # 3. Debit Target Clearing Account (USD)
+                            # 3) DR Target Clearing (equity currency)
                             {
                                 "transaction_booking_id": trx.id,
                                 "item_opening_balance_id": self.id,
@@ -340,7 +430,7 @@ class IdilItemOpeningBalance(models.Model):
                                 "rate": self.rate,
                                 "transaction_date": self.date,
                             },
-                            # 4. Credit Opening Balance Account (USD)
+                            # 4) CR Opening Balance (equity currency)
                             {
                                 "transaction_booking_id": trx.id,
                                 "item_opening_balance_id": self.id,
@@ -354,7 +444,9 @@ class IdilItemOpeningBalance(models.Model):
                                 "transaction_date": self.date,
                             },
                         ]
-                    )
+
+                    # Create booking lines
+                    trx.booking_lines.create(booking_lines_vals)
 
                     # Create movement log
                     ItemMovement.create(
@@ -368,11 +460,14 @@ class IdilItemOpeningBalance(models.Model):
                             "destination": "Inventory",
                             "movement_type": "in",
                             "related_document": f"idil.item.opening.balance.line,{line.id}",
+                            "source_warehouse_id": self.source_warehouse_id.id,
+                            "source_location_id": self.source_location_id.id,
                         }
                     )
 
                 # Update state to confirmed
                 self.state = "confirmed"
+
         except Exception as e:
             logger.error(f"transaction failed: {str(e)}")
             raise ValidationError(f"Transaction failed: {str(e)}")
@@ -446,7 +541,6 @@ class IdilItemOpeningBalance(models.Model):
                 source = TransactionSource.search(
                     [("name", "=", "Inventory Opening Balance")], limit=1
                 )
-
                 if not source:
                     raise ValidationError(
                         "Transaction Source 'Inventory Opening Balance' not found."
@@ -458,58 +552,20 @@ class IdilItemOpeningBalance(models.Model):
                     # Update stock
                     item.quantity += line.quantity
 
-                    # Calculate amount in item's currency
+                    # Amount in item/account currency
                     amount = line.quantity * line.cost_price
 
-                    # Determine currencies - use Item's currency_id field
-                    item_currency = item.currency_id
+                    # ✅ Use SAME currency logic as confirm_opening_balance
+                    item_currency = item.asset_account_id.currency_id
                     equity_currency = EquityAccount.currency_id
 
-                    # Convert amount to equity currency (USD) if needed
-                    if item_currency.id != equity_currency.id:
-                        if not self.rate or self.rate <= 0:
-                            raise ValidationError(
-                                "Exchange rate is required for currency conversion."
-                            )
-                        # Item is in local currency (e.g., SL), Equity is in USD
-                        if item_currency.name == "SL" and equity_currency.name == "USD":
-                            amount_for_equity = amount / self.rate
-                        elif item_currency.name == "USD" and equity_currency.name == "SL":
-                            amount_for_equity = amount * self.rate
-                        else:
-                            raise ValidationError(
-                                f"Unhandled conversion from {item_currency.name} to {equity_currency.name}."
-                            )
-                    else:
-                        amount_for_equity = amount
-
-                    # Find clearing accounts for currency exchange
-                    source_clearing_account = ChartAccount.search(
-                        [
-                            ("name", "=", "Exchange Clearing Account"),
-                            ("currency_id", "=", item_currency.id),
-                        ],
-                        limit=1,
-                    )
-                    target_clearing_account = ChartAccount.search(
-                        [
-                            ("name", "=", "Exchange Clearing Account"),
-                            ("currency_id", "=", equity_currency.id),
-                        ],
-                        limit=1,
-                    )
-                    if not source_clearing_account or not target_clearing_account:
-                        raise ValidationError(
-                            "Exchange Clearing Accounts must exist for both the item and equity account currencies."
-                        )
-
-                    # Create booking
+                    # Create booking header
                     trx = TransactionBooking.create(
                         {
                             "transaction_number": self.env["ir.sequence"].next_by_code(
                                 "idil.transaction_booking"
                             ),
-                            "rate": self.rate,
+                            "rate": self.rate or 1,
                             "reffno": item.name,
                             "item_opening_balance_id": self.id,
                             "trx_date": self.date,
@@ -522,64 +578,135 @@ class IdilItemOpeningBalance(models.Model):
                         }
                     )
 
-                    # Booking lines with currency exchange (4 lines like other opening balances)
-                    trx.booking_lines.create(
-                        [
-                            # 1. Debit Asset Account (local currency)
-                            {
-                                "transaction_booking_id": trx.id,
-                                "item_opening_balance_id": self.id,
-                                "description": f"Opening Balance for {item.name}",
-                                "item_id": item.id,
-                                "account_number": item.asset_account_id.id,
-                                "transaction_type": "dr",
-                                "dr_amount": amount,
-                                "cr_amount": 0,
-                                "rate": self.rate,
-                                "transaction_date": self.date,
-                            },
-                            # 2. Credit Source Clearing Account (local currency)
-                            {
-                                "transaction_booking_id": trx.id,
-                                "item_opening_balance_id": self.id,
-                                "description": f"Opening Balance - Source Clearing for {item.name}",
-                                "item_id": item.id,
-                                "account_number": source_clearing_account.id,
-                                "transaction_type": "cr",
-                                "dr_amount": 0,
-                                "cr_amount": amount,
-                                "rate": self.rate,
-                                "transaction_date": self.date,
-                            },
-                            # 3. Debit Target Clearing Account (USD)
-                            {
-                                "transaction_booking_id": trx.id,
-                                "item_opening_balance_id": self.id,
-                                "description": f"Opening Balance - Target Clearing for {item.name}",
-                                "item_id": item.id,
-                                "account_number": target_clearing_account.id,
-                                "transaction_type": "dr",
-                                "dr_amount": amount_for_equity,
-                                "cr_amount": 0,
-                                "rate": self.rate,
-                                "transaction_date": self.date,
-                            },
-                            # 4. Credit Opening Balance Account (USD)
-                            {
-                                "transaction_booking_id": trx.id,
-                                "item_opening_balance_id": self.id,
-                                "description": f"Opening Balance for {item.name}",
-                                "item_id": item.id,
-                                "account_number": EquityAccount.id,
-                                "transaction_type": "cr",
-                                "cr_amount": amount_for_equity,
-                                "dr_amount": 0,
-                                "rate": self.rate,
-                                "transaction_date": self.date,
-                            },
-                        ]
-                    )
+                    # ✅ SAME currency -> 2 lines only
+                    if item_currency.id == equity_currency.id:
+                        trx.booking_lines.create(
+                            [
+                                # 1) DR Asset
+                                {
+                                    "transaction_booking_id": trx.id,
+                                    "item_opening_balance_id": self.id,
+                                    "description": f"Opening Balance for {item.name}",
+                                    "item_id": item.id,
+                                    "account_number": item.asset_account_id.id,
+                                    "transaction_type": "dr",
+                                    "dr_amount": amount,
+                                    "cr_amount": 0,
+                                    "rate": self.rate or 1,
+                                    "transaction_date": self.date,
+                                },
+                                # 2) CR Opening Balance / Equity
+                                {
+                                    "transaction_booking_id": trx.id,
+                                    "item_opening_balance_id": self.id,
+                                    "description": f"Opening Balance for {item.name}",
+                                    "item_id": item.id,
+                                    "account_number": EquityAccount.id,
+                                    "transaction_type": "cr",
+                                    "dr_amount": 0,
+                                    "cr_amount": amount,
+                                    "rate": self.rate or 1,
+                                    "transaction_date": self.date,
+                                },
+                            ]
+                        )
 
+                    # ✅ DIFFERENT currencies -> 4 lines with clearing
+                    else:
+                        if not self.rate or self.rate <= 0:
+                            raise ValidationError(
+                                "Exchange rate is required for currency conversion."
+                            )
+
+                        # Convert to equity currency
+                        if item_currency.name == "SL" and equity_currency.name == "USD":
+                            amount_for_equity = amount / self.rate
+                        elif (
+                            item_currency.name == "USD" and equity_currency.name == "SL"
+                        ):
+                            amount_for_equity = amount * self.rate
+                        else:
+                            raise ValidationError(
+                                f"Unhandled conversion from {item_currency.name} to {equity_currency.name}."
+                            )
+
+                        source_clearing_account = ChartAccount.search(
+                            [
+                                ("name", "=", "Exchange Clearing Account"),
+                                ("currency_id", "=", item_currency.id),
+                            ],
+                            limit=1,
+                        )
+                        target_clearing_account = ChartAccount.search(
+                            [
+                                ("name", "=", "Exchange Clearing Account"),
+                                ("currency_id", "=", equity_currency.id),
+                            ],
+                            limit=1,
+                        )
+                        if not source_clearing_account or not target_clearing_account:
+                            raise ValidationError(
+                                "Exchange Clearing Accounts must exist for both the item and equity account currencies."
+                            )
+
+                        trx.booking_lines.create(
+                            [
+                                # 1) DR Asset (item currency)
+                                {
+                                    "transaction_booking_id": trx.id,
+                                    "item_opening_balance_id": self.id,
+                                    "description": f"Opening Balance for {item.name}",
+                                    "item_id": item.id,
+                                    "account_number": item.asset_account_id.id,
+                                    "transaction_type": "dr",
+                                    "dr_amount": amount,
+                                    "cr_amount": 0,
+                                    "rate": self.rate,
+                                    "transaction_date": self.date,
+                                },
+                                # 2) CR Source Clearing (item currency)
+                                {
+                                    "transaction_booking_id": trx.id,
+                                    "item_opening_balance_id": self.id,
+                                    "description": f"Opening Balance - Source Clearing for {item.name}",
+                                    "item_id": item.id,
+                                    "account_number": source_clearing_account.id,
+                                    "transaction_type": "cr",
+                                    "dr_amount": 0,
+                                    "cr_amount": amount,
+                                    "rate": self.rate,
+                                    "transaction_date": self.date,
+                                },
+                                # 3) DR Target Clearing (equity currency)
+                                {
+                                    "transaction_booking_id": trx.id,
+                                    "item_opening_balance_id": self.id,
+                                    "description": f"Opening Balance - Target Clearing for {item.name}",
+                                    "item_id": item.id,
+                                    "account_number": target_clearing_account.id,
+                                    "transaction_type": "dr",
+                                    "dr_amount": amount_for_equity,
+                                    "cr_amount": 0,
+                                    "rate": self.rate,
+                                    "transaction_date": self.date,
+                                },
+                                # 4) CR Opening Balance (equity currency)
+                                {
+                                    "transaction_booking_id": trx.id,
+                                    "item_opening_balance_id": self.id,
+                                    "description": f"Opening Balance for {item.name}",
+                                    "item_id": item.id,
+                                    "account_number": EquityAccount.id,
+                                    "transaction_type": "cr",
+                                    "dr_amount": 0,
+                                    "cr_amount": amount_for_equity,
+                                    "rate": self.rate,
+                                    "transaction_date": self.date,
+                                },
+                            ]
+                        )
+
+                    # Movement
                     ItemMovement.create(
                         {
                             "item_id": item.id,
@@ -591,8 +718,11 @@ class IdilItemOpeningBalance(models.Model):
                             "destination": "Inventory",
                             "movement_type": "in",
                             "related_document": f"idil.item.opening.balance.line,{line.id}",
+                            "source_warehouse_id": self.source_warehouse_id.id,
+                            "source_location_id": self.source_location_id.id,
                         }
                     )
+
         except Exception as e:
             logger.error(f"transaction failed: {str(e)}")
             raise ValidationError(f"Transaction failed: {str(e)}")

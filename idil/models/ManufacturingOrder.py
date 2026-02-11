@@ -435,12 +435,6 @@ class ManufacturingOrder(models.Model):
                     f"Please update the BOM or the items before proceeding."
                 )
 
-    @api.onchange("bom_id")
-    def onchange_bom_id(self):
-        if self.bom_id:
-            # Assuming 'idil.bom' has a 'product_id' field that references the product
-            self.product_id = self.bom_id.product_id
-
     @api.onchange("product_qty")
     def _onchange_product_qty(self):
         if not self.bom_id or not self.product_qty:
@@ -528,108 +522,131 @@ class ManufacturingOrder(models.Model):
     def create(self, vals):
         try:
             with self.env.cr.savepoint():
-                _logger.info("Creating Manufacturing Order with values: %s", vals)
+                _logger.info("Creating MO (draft) with values: %s", vals)
 
-                # Check BOM and product setup
-                if "bom_id" in vals:
+                # Set product from BOM
+                if vals.get("bom_id"):
                     bom = self.env["idil.bom"].browse(vals["bom_id"])
                     if bom and bom.product_id:
                         vals["product_id"] = bom.product_id.id
-                        product = bom.product_id
-                        if (
-                            product.account_id
-                            and product.is_commissionable
-                            and not vals.get("commission_employee_id")
-                        ):
-                            raise ValidationError(
-                                "The product has a commission account but no employee is selected."
-                            )
 
-                # Set order reference if not provided
-                if "name" not in vals or not vals["name"]:
+                # Set reference if missing
+                if not vals.get("name"):
                     vals["name"] = self._generate_order_reference(vals)
 
-                # Set status to done
-                vals["status"] = "done"
+                # Force draft on create
+                vals["status"] = "draft"
 
-                # Create order
                 order = super(ManufacturingOrder, self).create(vals)
+                return order
+        except Exception as e:
+            _logger.error("MO create failed: %s", str(e))
+            raise ValidationError(f"MO create failed: {str(e)}")
 
-                # Ensure valid asset accounts
-                if not order.product_id.asset_account_id:
-                    raise ValidationError(
-                        f"The product '{order.product_id.name}' does not have a valid asset account."
-                    )
-                for line in order.manufacturing_order_line_ids:
-                    if not line.item_id.asset_account_id:
-                        raise ValidationError(
-                            f"The item '{line.item_id.name}' does not have a valid asset account."
-                        )
+    def action_confirm(self):
+        for order in self:
+            if order.status != "draft":
+                raise ValidationError("Only Draft orders can be confirmed.")
 
-                # Check if asset account balance is sufficient
-                for line in order.manufacturing_order_line_ids:
-                    item_account_balance = self._get_account_balance(
-                        line.item_id.asset_account_id.id
-                    )
-                    required_balance = line.cost_price * line.quantity
-                    if item_account_balance < required_balance:
-                        raise ValidationError(
-                            f"Insufficient balance in account for item '{line.item_id.name}'. "
-                            f"Required: {required_balance}, Available: {item_account_balance}"
-                        )
+            # ✅ run validations first
+            order.check_items_expiration()
 
-                # Create transaction booking record
-                transaction_booking = self.env["idil.transaction_booking"].create(
-                    {
-                        "transaction_number": self.env["ir.sequence"].next_by_code(
-                            "idil.transaction_booking"
-                        ),
-                        "reffno": order.name,
-                        "rate": order.rate,
-                        "manufacturing_order_id": order.id,
-                        "order_number": order.name,
-                        "amount": order.product_cost,
-                        "trx_date": order.scheduled_start_date,
-                        "payment_status": "paid",
-                    }
+            if order.rate <= 0:
+                raise ValidationError("Rate cannot be zero.")
+
+            if not order.product_id.asset_account_id:
+                raise ValidationError(
+                    f"The product '{order.product_id.name}' does not have a valid asset account."
                 )
 
-                # Create transaction booking lines individually
-                for line in order.manufacturing_order_line_ids:
-                    if order.rate <= 0:
-                        raise ValidationError("Rate cannot be zero")
+            if (
+                order.product_id.account_id
+                and order.product_id.is_commissionable
+                and not order.commission_employee_id
+            ):
+                raise ValidationError(
+                    "The product has a commission account but no employee is selected."
+                )
 
-                    cost_amount_usd = line.cost_price * line.quantity
-                    cost_amount_sos = cost_amount_usd * order.rate
-
-                    # Get clearing accounts
-                    source_clearing_account = self.env["idil.chart.account"].search(
-                        [
-                            ("name", "=", "Exchange Clearing Account"),
-                            (
-                                "currency_id",
-                                "=",
-                                line.item_id.asset_account_id.currency_id.id,
-                            ),
-                        ],
-                        limit=1,
-                    )
-                    target_clearing_account = self.env["idil.chart.account"].search(
-                        [
-                            ("name", "=", "Exchange Clearing Account"),
-                            (
-                                "currency_id",
-                                "=",
-                                order.product_id.asset_account_id.currency_id.id,
-                            ),
-                        ],
-                        limit=1,
+            for line in order.manufacturing_order_line_ids:
+                if not line.item_id.asset_account_id:
+                    raise ValidationError(
+                        f"The item '{line.item_id.name}' does not have a valid asset account."
                     )
 
-                    if not source_clearing_account or not target_clearing_account:
-                        raise ValidationError(
-                            "Exchange Clearing Account are required for currency conversion."
-                        )
+            # ✅ check balances
+            for line in order.manufacturing_order_line_ids:
+                available_qty = line.item_id.get_qty_in_location(
+                    warehouse_id=order.source_warehouse_id.id,
+                    location_id=order.source_location_id.id,
+                    as_of_date=(
+                        order.scheduled_start_date.date()
+                        if order.scheduled_start_date
+                        else None
+                    ),
+                )
+
+                if float_compare(available_qty, line.quantity, precision_digits=5) < 0:
+                    raise ValidationError(
+                        f"Insufficient stock for item '{line.item_id.name}' in "
+                        f"{order.source_warehouse_id.name}/{order.source_location_id.name}. "
+                        f"Available: {available_qty:.5f}, Required: {line.quantity:.5f}"
+                    )
+
+            # ✅ prevent double posting
+            if order.transaction_booking_id:
+                raise ValidationError("This MO is already posted/confirmed.")
+
+            # ✅ create booking header
+            booking = self.env["idil.transaction_booking"].create(
+                {
+                    "transaction_number": self.env["ir.sequence"].next_by_code(
+                        "idil.transaction_booking"
+                    ),
+                    "reffno": order.name,
+                    "rate": order.rate,
+                    "manufacturing_order_id": order.id,
+                    "order_number": order.name,
+                    "amount": order.product_cost,
+                    "trx_date": order.scheduled_start_date,
+                    "payment_status": "paid",
+                }
+            )
+            order.write({"transaction_booking_id": booking.id})
+
+            # ✅ create booking lines
+            for line in order.manufacturing_order_line_ids:
+                cost_amount_usd = line.cost_price * line.quantity
+                cost_amount_sos = cost_amount_usd * order.rate
+
+                source_clearing_account = self.env["idil.chart.account"].search(
+                    [
+                        ("name", "=", "Exchange Clearing Account"),
+                        (
+                            "currency_id",
+                            "=",
+                            line.item_id.asset_account_id.currency_id.id,
+                        ),
+                    ],
+                    limit=1,
+                )
+
+                target_clearing_account = self.env["idil.chart.account"].search(
+                    [
+                        ("name", "=", "Exchange Clearing Account"),
+                        (
+                            "currency_id",
+                            "=",
+                            order.product_id.asset_account_id.currency_id.id,
+                        ),
+                    ],
+                    limit=1,
+                )
+
+                if not source_clearing_account or not target_clearing_account:
+                    raise ValidationError(
+                        "Exchange Clearing Account are required for currency conversion."
+                    )
 
                 # DR Product Asset (SOS)
                 self.env["idil.transaction_bookingline"].create(
@@ -819,28 +836,84 @@ class ManufacturingOrder(models.Model):
                 }
             )
 
-                for line in order.manufacturing_order_line_ids:
-                    self.env["idil.item.movement"].create(
-                        {
-                            "item_id": line.item_id.id,
-                            "date": order.scheduled_start_date,
-                            "manufacturing_order_line_id": line.id,
-                            "manufacturing_order_id": order.id,
-                            "quantity": -line.quantity,  # consume from Inventory
-                            "source": "Inventory",
-                            "destination": "Manufacturing",
-                            "movement_type": "out",
-                            "related_document": f"idil.manufacturing.order.line,{line.id}",
-                            "transaction_number": order.name,
-                        }
-                    )
+            for line in order.manufacturing_order_line_ids:
+                self.env["idil.item.movement"].create(
+                    {
+                        "item_id": line.item_id.id,
+                        "date": order.scheduled_start_date,
+                        "manufacturing_order_line_id": line.id,
+                        "manufacturing_order_id": order.id,
+                        "quantity": -line.quantity,
+                        "source": "Inventory",
+                        "destination": "Manufacturing",
+                        "movement_type": "out",
+                        "related_document": f"idil.manufacturing.order.line,{line.id}",
+                        "transaction_number": order.name,
+                        "source_warehouse_id": order.source_warehouse_id.id,
+                        "source_location_id": order.source_location_id.id,
+                    }
+                )
 
-                return order
-        except Exception as e:
-            _logger.error(f"Create transaction failed: {str(e)}")
-            raise ValidationError(f"Transaction failed: {str(e)}")
+            # ✅ finally mark confirmed/done
+            order.write({"status": "done"})
 
-    @api.model
+    def action_reset_to_draft(self):
+        for order in self.exists():  # protects if record already deleted
+            if order.status == "draft":
+                continue
+
+            # 1) Block reset if commission has payments
+            commission = (
+                self.env["idil.commission"]
+                .sudo()
+                .search([("manufacturing_order_id", "=", order.id)], limit=1)
+            )
+            if commission and commission.commission_payment_ids:
+                raise ValidationError("Cannot reset: commission already has payments.")
+
+            # 2) Find related records (use searches by MO id, not relations)
+            Booking = self.env["idil.transaction_booking"].sudo()
+            BookingLine = self.env["idil.transaction_bookingline"].sudo()
+            ItemMove = self.env["idil.item.movement"].sudo()
+            ProductMove = self.env["idil.product.movement"].sudo()
+
+            booking = Booking.search(
+                [("manufacturing_order_id", "=", order.id)], limit=1
+            )
+
+            # 3) Break MO links FIRST (important)
+            order.sudo().write(
+                {
+                    "transaction_booking_id": False,
+                    "commission_id": False,
+                }
+            )
+
+            # 4) Delete booking lines then booking
+            if booking:
+                BookingLine.search(
+                    [("transaction_booking_id", "=", booking.id)]
+                ).unlink()
+                booking.unlink()
+
+            # 5) Delete movements
+            ItemMove.search([("manufacturing_order_id", "=", order.id)]).unlink()
+            ProductMove.search([("manufacturing_order_id", "=", order.id)]).unlink()
+
+            # 6) Delete commission (only if no payments)
+            if commission and not commission.commission_payment_ids:
+                commission.unlink()
+
+            # 7) Finally reset status
+            order.sudo().write({"status": "draft"})
+
+    def action_cancel(self):
+        for order in self:
+            if order.status != "draft":
+                raise ValidationError("Only Draft orders can be cancelled.")
+
+            order.write({"status": "cancelled"})
+
     def write(self, vals):
         try:
             with self.env.cr.savepoint():
@@ -1114,38 +1187,11 @@ class ManufacturingOrder(models.Model):
                                 "date": order.scheduled_start_date,
                             }
                         )
-                    else:
-                        if commission_amount > 0 and order.commission_employee_id:
-                            commission = self.env["idil.commission"].create(
-                                {
-                                    "manufacturing_order_id": order.id,
-                                    "employee_id": order.commission_employee_id.id,
-                                    "commission_amount": commission_amount,
-                                    "commission_paid": 0,
-                                    "payment_status": "pending",
-                                    "commission_remaining": commission_amount,
-                                    "date": order.scheduled_start_date,
-                                }
-                            )
-                            order.write({"commission_id": commission.id})
 
                     return res
         except Exception as e:
             _logger.error(f"Create transaction failed: {str(e)}")
             raise ValidationError(f"Transaction failed: {str(e)}")
-
-    def _get_account_balance(self, account_id):
-        """Calculate the balance for an account."""
-        self.env.cr.execute(
-            """
-                    SELECT COALESCE(SUM(dr_amount) - SUM(cr_amount), 0) as balance
-                    FROM idil_transaction_bookingline
-                    WHERE account_number = %s
-                """,
-            (account_id,),
-        )
-        result = self.env.cr.fetchone()
-        return result[0] if result else 0.0
 
     def _generate_order_reference(self, vals):
         bom_id = vals.get("bom_id", False)
@@ -1172,15 +1218,11 @@ class ManufacturingOrder(models.Model):
     def unlink(self):
         try:
             with self.env.cr.savepoint():
-                for order in self:
-                    # Step 1: Check if enough product stock exists to allow rollback
-                    if order.product_id.stock_quantity < order.product_qty:
-                        raise ValidationError(
-                            f"Cannot delete: Not enough stock to reverse manufacturing for product '{order.product_id.name}'. "
-                            f"Required: {order.product_qty}, Available: {order.product_id.stock_quantity}"
-                        )
-                    res = super(ManufacturingOrder, self).unlink()
-                return res
+
+                raise ValidationError(
+                    "Cannot delete:  Only cancelled operation is allowed. use cancel button instead."
+                )
+
         except Exception as e:
             _logger.error(f"Create transaction failed: {str(e)}")
             raise ValidationError(f"Transaction failed: {str(e)}")

@@ -355,6 +355,73 @@ class item(models.Model):
                     body=f"Item {record.name} needs reordering. Current stock: {record.quantity}"
                 )
 
+    def get_qty_in_location(self, warehouse_id, location_id, as_of_date=None):
+        self.ensure_one()
+        if not warehouse_id or not location_id:
+            return 0.0
+
+        params = [self.id, warehouse_id, location_id, warehouse_id, location_id]
+
+        date_sql = ""
+        if as_of_date:
+            date_sql = " AND date <= %s "
+            params.append(as_of_date)
+
+        # ✅ Count stock in this location from BOTH sides, depending on how records are stored
+        self.env.cr.execute(
+            f"""
+            SELECT COALESCE(SUM(
+                CASE
+                    -- IN: sometimes saved in destination, sometimes in source
+                    WHEN movement_type = 'in'
+                        AND (
+                            (destination_warehouse_id = %s AND destination_location_id = %s)
+                            OR
+                            (destination_warehouse_id IS NULL AND destination_location_id IS NULL
+                            AND source_warehouse_id = %s AND source_location_id = %s)
+                        )
+                    THEN quantity
+
+                    -- OUT: normally saved on source (quantity is negative in your design)
+                    WHEN movement_type = 'out'
+                        AND source_warehouse_id = %s AND source_location_id = %s
+                    THEN quantity
+
+                    -- INTERNAL: remove from source, add to destination (supports both sign styles)
+                    WHEN movement_type = 'internal'
+                        AND source_warehouse_id = %s AND source_location_id = %s
+                    THEN -ABS(quantity)
+
+                    WHEN movement_type = 'internal'
+                        AND destination_warehouse_id = %s AND destination_location_id = %s
+                    THEN ABS(quantity)
+
+                    ELSE 0
+                END
+            ), 0)
+            FROM idil_item_movement
+            WHERE item_id = %s
+            {date_sql}
+            """,
+            (
+                warehouse_id,
+                location_id,
+                warehouse_id,
+                location_id,
+                warehouse_id,
+                location_id,
+                warehouse_id,
+                location_id,
+                warehouse_id,
+                location_id,
+                self.id,
+                *([as_of_date] if as_of_date else []),
+            ),
+        )
+        (bal,) = self.env.cr.fetchone()
+
+        return round(bal or 0.0, 5)
+
 
 class ItemMovement(models.Model):
     _name = "idil.item.movement"
@@ -430,13 +497,6 @@ class ItemMovement(models.Model):
         help="Vendor associated with this movement if it originated from a purchase order",
     )
 
-    # product_id = fields.Many2one(
-    #     "my_product.product",
-    #     string="Product",
-    #     tracking=True,
-    #     help="Product associated with this movement if it relates to a manufacturing order",
-    # )
-
     transaction_number = fields.Char(string="Transaction Number", tracking=True)
 
     purchase_order_line_id = fields.Many2one(
@@ -510,47 +570,4 @@ class ItemMovement(models.Model):
             ):
                 raise ValidationError(
                     _("From and To cannot be the same warehouse/location.")
-                )
-
-    @api.constrains("item_id", "movement_type", "quantity", "date")
-    def _check_enough_stock_on_out(self):
-        """
-        Prevent negative stock for any OUT movement, evaluated as of the movement's date.
-        Uses your formula: IN + OUT (where OUT is stored negative).
-        """
-        precision = 5  # matches digits=(16,5)
-
-        for m in self:
-            if not m.item_id or m.movement_type != "out":
-                continue
-
-            # Stock balance as of this movement (including it)
-            self.env.cr.execute(
-                """
-                SELECT
-                    COALESCE(SUM(CASE WHEN movement_type = 'in'  THEN quantity ELSE 0 END), 0)
-                + COALESCE(SUM(CASE WHEN movement_type = 'out' THEN quantity ELSE 0 END), 0)
-                FROM idil_item_movement
-                WHERE item_id = %s
-                AND (date < %s OR (date = %s AND id <= %s))
-            """,
-                (m.item_id.id, m.date, m.date, m.id),
-            )
-            (resulting_balance,) = self.env.cr.fetchone()
-            resulting_balance = resulting_balance or 0.0
-
-            # Balance BEFORE this record = after - this movement qty
-            available_before = resulting_balance - (m.quantity or 0.0)
-
-            if float_compare(resulting_balance, 0.0, precision_digits=precision) < 0:
-                raise ValidationError(
-                    "Insufficient stock for item '{name}' as of {date}. "
-                    "Available: {avail:.5f} | Requested: {req:.5f} | "
-                    "Resulting Balance: {res:.5f}".format(
-                        name=m.item_id.name,
-                        date=m.date,
-                        avail=round(available_before, precision),
-                        req=round(m.quantity or 0.0, precision),
-                        res=round(resulting_balance, precision),
-                    )
                 )

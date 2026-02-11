@@ -453,9 +453,13 @@
                                                 <field name="movement_type" string="🔄 Type"/>
                                                 <field name="vendor_id" string="🏷️ Vendor"/>
                                                 <field name="quantity" string="📦 Qty" sum="Total"/>
+                                                <field name="source_warehouse_id" string="🏬 From Warehouse_" optional="show"/>
+                                                <field name="source_location_id" string="📤 From Location" optional="hide"/>
                                                 <field name="source_document" string="📄 Source"/>
                                                 <field name="sales_person_id" string="🧑‍💼 Salesperson"/>
                                                 <field name="customer_id" string="👤 Customer"/>
+                                                <field name="destination_warehouse_id" string="🏬 To Warehouse_" optional="Show"/>
+                                                <field name="destination_location_id" string="📥 To Location" optional="hide"/>
                                                 <field name="destination" string="📍 Destination"/>
                                                 <field name="employee_id" string="👷 Employee"/>
                                             </tree>

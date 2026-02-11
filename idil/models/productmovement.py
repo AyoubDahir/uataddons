@@ -1,4 +1,4 @@
-from odoo import models, fields
+from odoo import api, models, fields
 
 
 class ProductMovement(models.Model):
@@ -85,4 +85,24 @@ class ProductMovement(models.Model):
     employee_id = fields.Many2one("idil.employee", string="Employee", tracking=True)
     staff_sales_id = fields.Many2one(
         "idil.staff.sales", string="Staff Sales", help="Linked staff sales transaction"
+    )
+
+    source_warehouse_id = fields.Many2one(
+        "idil.warehouse", string="🏬 From Warehouse", tracking=True
+    )
+    source_location_id = fields.Many2one(
+        "idil.warehouse.location",
+        string="📤 From Location",
+        tracking=True,
+        domain="[('warehouse_id', '=', source_warehouse_id), ('active', '=', True)]",
+    )
+
+    destination_warehouse_id = fields.Many2one(
+        "idil.warehouse", string="🏬 To Warehouse", tracking=True
+    )
+    destination_location_id = fields.Many2one(
+        "idil.warehouse.location",
+        string="📥 To Location",
+        tracking=True,
+        domain="[('warehouse_id', '=', destination_warehouse_id), ('active', '=', True)]",
     )
