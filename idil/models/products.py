@@ -70,11 +70,11 @@ class Product(models.Model):
 
     cost = fields.Float(
         string="Cost",
-        compute="_compute_product_cost",
         digits=(16, 5),
         store=True,
-        help="Tip: Cost price currency is taken from the product’s Asset account currency. Wherever cost is used, currency will be derived from the asset account currency. This means the Asset account is the product’s main/reference account; other accounts can have any currency as needed.",
-        readonly=False,  # ✅ this is key to allow manual editing
+        readonly=False,
+        default=0.0,
+        help="Product average cost in Asset Account currency. Updated from Manufacturing Orders.",
     )
 
     sales_description = fields.Text(string="Sales Description")
@@ -224,6 +224,7 @@ class Product(models.Model):
         store=False,
         readonly=True,
     )
+
     # Actual cost from production
     # This is the weighted cost from production, not the BOM cost
     actual_cost = fields.Float(
@@ -579,14 +580,14 @@ class Product(models.Model):
                     }
                 }
 
-    @api.depends("bom_id", "bom_id.total_cost", "is_cost_manual_purchase")
-    def _compute_product_cost(self):
-        for product in self:
-            if product.is_cost_manual_purchase:
-                # Don't compute, leave manually entered value untouched
-                continue
-            if product.bom_id and product.bom_id.total_cost:
-                product.cost = product.bom_id.total_cost
+    # @api.depends("bom_id", "bom_id.total_cost", "is_cost_manual_purchase")
+    # def _compute_product_cost(self):
+    #     for product in self:
+    #         if product.is_cost_manual_purchase:
+    #             # Don't compute, leave manually entered value untouched
+    #             continue
+    #         if product.bom_id and product.bom_id.total_cost:
+    #             product.cost = product.bom_id.total_cost
 
     @api.model
     def create(self, vals):

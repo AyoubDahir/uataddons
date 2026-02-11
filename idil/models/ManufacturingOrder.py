@@ -6,6 +6,7 @@ from odoo.exceptions import ValidationError, UserError
 import logging
 
 from odoo.tools import float_round
+from odoo.tools.float_utils import float_compare
 
 _logger = logging.getLogger(__name__)
 
@@ -20,6 +21,22 @@ class ManufacturingOrder(models.Model):
     )
 
     name = fields.Char(string="Order Reference", tracking=True)
+
+    source_warehouse_id = fields.Many2one(
+        "idil.warehouse",
+        string="🏬 Warehouse",
+        required=True,
+        tracking=True,
+    )
+
+    source_location_id = fields.Many2one(
+        "idil.warehouse.location",
+        string="📌 Location",
+        required=True,
+        tracking=True,
+        domain="[('warehouse_id', '=', source_warehouse_id), ('active', '=', True)]",
+    )
+
     bom_id = fields.Many2one(
         "idil.bom",
         string="Bill of Materials",
@@ -83,7 +100,8 @@ class ManufacturingOrder(models.Model):
     commission_id = fields.Many2one(
         "idil.commission",
         string="Linked Commission",
-        ondelete="cascade",  # block deletion of commission if still linked here
+        help="Commission linked to this Manufacturing Order",
+        ondelete="set null",  # ✅ safe
     )
 
     # Commission fields
@@ -112,6 +130,154 @@ class ManufacturingOrder(models.Model):
         store=True,
         readonly=True,
     )
+
+    booking_id = fields.Many2one(
+        "idil.transaction_booking",
+        string="Journal Entry",
+        compute="_compute_booking_preview",
+        store=False,
+        readonly=True,
+    )
+
+    booking_line_ids = fields.One2many(
+        "idil.transaction_bookingline",
+        "manufacturing_order_id",
+        string="Journal Lines",
+        readonly=True,
+    )
+
+    journal_total_dr = fields.Float(
+        string="Total Debits",
+        compute="_compute_booking_preview",
+        store=False,
+        readonly=True,
+        digits=(16, 5),
+    )
+    journal_total_cr = fields.Float(
+        string="Total Credits",
+        compute="_compute_booking_preview",
+        store=False,
+        readonly=True,
+        digits=(16, 5),
+    )
+    journal_is_balanced = fields.Boolean(
+        string="Balanced",
+        compute="_compute_booking_preview",
+        store=False,
+        readonly=True,
+    )
+
+    journal_summary_html = fields.Html(
+        string="Journal Summary",
+        compute="_compute_journal_summary_html",
+        store=False,
+        readonly=True,
+    )
+
+    @api.depends("booking_line_ids.dr_amount", "booking_line_ids.cr_amount")
+    def _compute_booking_preview(self):
+        Booking = self.env["idil.transaction_booking"]
+        for o in self:
+            b = Booking.search(
+                [("manufacturing_order_id", "=", o.id)], order="id desc", limit=1
+            )
+            o.booking_id = b
+
+            if b:
+                dr = float(getattr(b, "debit_total", 0.0) or 0.0)
+                cr = float(getattr(b, "credit_total", 0.0) or 0.0)
+            else:
+                dr = sum(o.booking_line_ids.mapped("dr_amount")) or 0.0
+                cr = sum(o.booking_line_ids.mapped("cr_amount")) or 0.0
+
+            o.journal_total_dr = dr
+            o.journal_total_cr = cr
+            o.journal_is_balanced = abs(dr - cr) < 0.00001
+
+    @api.depends(
+        "booking_line_ids.account_number",
+        "booking_line_ids.dr_amount",
+        "booking_line_ids.cr_amount",
+    )
+    def _compute_journal_summary_html(self):
+        for o in self:
+            if not o.booking_line_ids:
+                o.journal_summary_html = (
+                    "<div class='text-muted'>No journal lines yet.</div>"
+                )
+                continue
+
+            grouped = {}
+            for ln in o.booking_line_ids:
+                acc = ln.account_number
+                if not acc:
+                    continue
+                key = acc.id
+                if key not in grouped:
+                    grouped[key] = {
+                        "code": getattr(acc, "code", "") or "",
+                        "name": acc.name or "",
+                        "currency": acc.currency_id.name or "",
+                        "dr": 0.0,
+                        "cr": 0.0,
+                    }
+                grouped[key]["dr"] += float(ln.dr_amount or 0.0)
+                grouped[key]["cr"] += float(ln.cr_amount or 0.0)
+
+            total_dr = sum(v["dr"] for v in grouped.values())
+            total_cr = sum(v["cr"] for v in grouped.values())
+            balanced = abs(total_dr - total_cr) < 0.00001
+
+            rows = []
+            for v in sorted(grouped.values(), key=lambda x: (x["code"], x["name"])):
+                rows.append(
+                    f"""
+                    <tr>
+                        <td style="white-space:nowrap;">{v["code"]}</td>
+                        <td>{v["name"]}</td>
+                        <td style="text-align:right;">{v["currency"]}</td>
+                        <td style="text-align:right;">{v["dr"]:,.5f}</td>
+                        <td style="text-align:right;">{v["cr"]:,.5f}</td>
+                    </tr>
+                    """
+                )
+
+            o.journal_summary_html = f"""
+            <div style="border:1px solid #e5e7eb; border-radius:12px; padding:12px; background:#fff;">
+            <div style="font-weight:700; margin-bottom:8px;">Accounting Entry Summary</div>
+
+            <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <th style="text-align:left; padding:6px;">Code</th>
+                    <th style="text-align:left; padding:6px;">Account</th>
+                    <th style="text-align:right; padding:6px;">Currency</th>
+                    <th style="text-align:right; padding:6px;">Dr</th>
+                    <th style="text-align:right; padding:6px;">Cr</th>
+                </tr>
+                </thead>
+                <tbody>
+                {''.join(rows)}
+                </tbody>
+                <tfoot>
+                <tr style="border-top:1px solid #e5e7eb;">
+                    <td colspan="3" style="padding:6px; font-weight:700;">Totals</td>
+                    <td style="padding:6px; text-align:right; font-weight:700;">{total_dr:,.5f}</td>
+                    <td style="padding:6px; text-align:right; font-weight:700;">{total_cr:,.5f}</td>
+                </tr>
+                </tfoot>
+            </table>
+
+            <div style="margin-top:10px; font-weight:700; color:{'#16a34a' if balanced else '#dc2626'};">
+                {'✔ Balanced' if balanced else '✖ Not Balanced'}
+            </div>
+            </div>
+            """
+
+    @api.onchange("source_warehouse_id")
+    def _onchange_source_warehouse_id(self):
+        for rec in self:
+            rec.source_location_id = False
 
     @api.constrains("scheduled_start_date")
     def _check_scheduled_start_date_not_future(self):
@@ -321,7 +487,7 @@ class ManufacturingOrder(models.Model):
     @api.depends("manufacturing_order_line_ids.row_total", "product_qty")
     def _compute_product_cost_total(self):
         for order in self:
-            self.check_items_expiration()
+            order.check_items_expiration()
             order.product_cost = sum(
                 line.row_total for line in order.manufacturing_order_line_ids
             )
@@ -465,188 +631,193 @@ class ManufacturingOrder(models.Model):
                             "Exchange Clearing Account are required for currency conversion."
                         )
 
-                    # Debit line for increasing product stock
-                    self.env["idil.transaction_bookingline"].create(
-                        {
-                            "transaction_booking_id": transaction_booking.id,
-                            "description": "Manufacturing Order Transaction - Debit",
-                            "item_id": line.item_id.id,
-                            "product_id": order.product_id.id,
-                            "account_number": order.product_id.asset_account_id.id,
-                            "transaction_type": "dr",
-                            "dr_amount": float(cost_amount_sos),
-                            "cr_amount": 0.0,
-                            "transaction_date": order.scheduled_start_date,
-                        }
-                    )
-
-                    # Credit target clearing account for currency adjustment
-                    self.env["idil.transaction_bookingline"].create(
-                        {
-                            "transaction_booking_id": transaction_booking.id,
-                            "description": "Manufacturing Order Transaction Exchange - Credit",
-                            "item_id": line.item_id.id,
-                            "product_id": order.product_id.id,
-                            "account_number": target_clearing_account.id,
-                            "transaction_type": "cr",
-                            "dr_amount": 0.0,
-                            "cr_amount": float(cost_amount_sos),
-                            "transaction_date": order.scheduled_start_date,
-                        }
-                    )
-
-                    # Debit source clearing account for currency adjustment
-                    self.env["idil.transaction_bookingline"].create(
-                        {
-                            "transaction_booking_id": transaction_booking.id,
-                            "description": "Manufacturing Order Transaction Exchange - Debit",
-                            "item_id": line.item_id.id,
-                            "product_id": order.product_id.id,
-                            "account_number": source_clearing_account.id,
-                            "transaction_type": "dr",
-                            "dr_amount": float(line.row_total),
-                            "cr_amount": 0.0,
-                            "transaction_date": order.scheduled_start_date,
-                        }
-                    )
-
-                    # Credit item asset account to decrease stock in USD
-                    self.env["idil.transaction_bookingline"].create(
-                        {
-                            "transaction_booking_id": transaction_booking.id,
-                            "description": "Manufacturing Order Transaction - Credit",
-                            "item_id": line.item_id.id,
-                            "product_id": order.product_id.id,
-                            "account_number": line.item_id.asset_account_id.id,
-                            "transaction_type": "cr",
-                            "dr_amount": 0.0,
-                            "cr_amount": float(line.row_total),
-                            "transaction_date": order.scheduled_start_date,
-                        }
-                    )
-                # Calculate commission amount for this order using the order and its lines
-                # commission_amount = self._calculate_commission_amount(order)
-
-                if order.commission_amount > 0:
-                    _logger.info(
-                        f"Creating commission booking lines for MO {order.name} amount: {order.commission_amount}"
-                    )
-                    # Validate accounts
-                    if not order.product_id.account_id:
-                        raise ValidationError(
-                            f"The product '{order.product_id.name}' does not have a valid commission account."
-                        )
-                    if not order.commission_employee_id.account_id:
-                        raise ValidationError(
-                            f"Commission employee '{order.commission_employee_id.name}' does not have a valid account."
-                        )
-                    if (
-                        order.product_id.account_id.currency_id
-                        != order.commission_employee_id.account_id.currency_id
-                    ):
-                        raise ValidationError(
-                            f"The currency for the product's account and the employee's commission account must be the same."
-                        )
-
-                    _logger.info(
-                        f"Transaction booking ID: {transaction_booking.id}, "
-                        f"Product commission account: {order.product_id.account_id.name} (ID: {order.product_id.account_id.id}), "
-                        f"Employee commission account: {order.commission_employee_id.account_id.name} (ID: {order.commission_employee_id.account_id.id}), "
-                        f"Commission Amount: {self.commission_amount}"
-                    )
-
-                    # Commission Expense (Debit)
-                    expense_line = self.env["idil.transaction_bookingline"].create(
-                        {
-                            "transaction_booking_id": transaction_booking.id,
-                            "description": "Commission Expense",
-                            "product_id": order.product_id.id,
-                            "account_number": order.product_id.account_id.id,
-                            "transaction_type": "dr",
-                            "dr_amount": float(order.commission_amount),
-                            "cr_amount": 0.0,
-                            "transaction_date": order.scheduled_start_date,
-                        }
-                    )
-                    _logger.info(
-                        f"Commission Expense booking line created: ID={expense_line.id}, "
-                        f"Account={order.product_id.account_id.name} (ID: {order.product_id.account_id.id}), "
-                        f"DR={self.commission_amount}, CR=0.0"
-                    )
-
-                    # Commission Liability (Credit)
-                    liability_line = self.env["idil.transaction_bookingline"].create(
-                        {
-                            "transaction_booking_id": transaction_booking.id,
-                            "description": "Commission Liability",
-                            "product_id": order.product_id.id,
-                            "account_number": order.commission_employee_id.account_id.id,
-                            "transaction_type": "cr",
-                            "dr_amount": 0.0,
-                            "cr_amount": float(order.commission_amount),
-                            "transaction_date": order.scheduled_start_date,
-                        }
-                    )
-                    _logger.info(
-                        f"Commission Liability booking line created: ID={liability_line.id}, "
-                        f"Account={order.commission_employee_id.account_id.name} (ID: {order.commission_employee_id.account_id.id}), "
-                        f"DR=0.0, CR={self.commission_amount}"
-                    )
-
-                if order.bom_id and order.bom_id.product_id:
-                    product = order.bom_id.product_id
-                    previous_qty = product.stock_quantity or 0.0
-                    previous_cost = product.actual_cost or 0.0
-                    new_qty = order.product_qty or 0.0
-                    new_total_cost = order.product_cost or 0.0
-
-                    # Update stock first
-                    total_qty = previous_qty + new_qty
-                    if total_qty > 0:
-                        # Weighted average cost calculation
-                        new_average_cost = (
-                            (previous_qty * previous_cost) + new_total_cost
-                        ) / total_qty
-                    else:
-                        new_average_cost = 0.0
-
-                    # Write both cost and actual_cost
-                    product.write(
-                        {
-                            # "stock_quantity": total_qty,
-                            "actual_cost": new_average_cost,
-                        }
-                    )
-
-                # Adjust stock levels for items used in manufacturing
-
-                # Create commission record and link it to manufacturing order
-                if order.commission_amount > 0:
-                    commission = self.env["idil.commission"].create(
-                        {
-                            "manufacturing_order_id": order.id,
-                            "employee_id": order.commission_employee_id.id,
-                            "commission_amount": order.commission_amount,
-                            "commission_paid": 0,
-                            "payment_status": "pending",
-                            "commission_remaining": order.commission_amount,
-                            "date": order.scheduled_start_date,
-                            "rate": order.rate,
-                        }
-                    )
-                    order.write({"commission_id": commission.id})
-
-                # Create product movement record
-                self.env["idil.product.movement"].create(
+                # DR Product Asset (SOS)
+                self.env["idil.transaction_bookingline"].create(
                     {
-                        "product_id": order.product_id.id,
-                        "movement_type": "in",
+                        "transaction_booking_id": booking.id,
                         "manufacturing_order_id": order.id,
-                        "quantity": order.product_qty,
-                        "date": order.scheduled_start_date,
-                        "source_document": order.name,
+                        "manufacturing_order_line_id": line.id,
+                        "description": "MO - Product Asset (DR)",
+                        "item_id": line.item_id.id,
+                        "product_id": order.product_id.id,
+                        "account_number": order.product_id.asset_account_id.id,
+                        "transaction_type": "dr",
+                        "dr_amount": float(cost_amount_sos),
+                        "cr_amount": 0.0,
+                        "transaction_date": order.scheduled_start_date,
                     }
                 )
+
+                # CR Target Clearing (SOS)
+                self.env["idil.transaction_bookingline"].create(
+                    {
+                        "transaction_booking_id": booking.id,
+                        "manufacturing_order_id": order.id,
+                        "manufacturing_order_line_id": line.id,
+                        "description": "MO - Target Clearing (CR)",
+                        "item_id": line.item_id.id,
+                        "product_id": order.product_id.id,
+                        "account_number": target_clearing_account.id,
+                        "transaction_type": "cr",
+                        "dr_amount": 0.0,
+                        "cr_amount": float(cost_amount_sos),
+                        "transaction_date": order.scheduled_start_date,
+                    }
+                )
+
+                # DR Source Clearing (USD)
+                self.env["idil.transaction_bookingline"].create(
+                    {
+                        "transaction_booking_id": booking.id,
+                        "manufacturing_order_id": order.id,
+                        "manufacturing_order_line_id": line.id,
+                        "description": "MO - Source Clearing (DR)",
+                        "item_id": line.item_id.id,
+                        "product_id": order.product_id.id,
+                        "account_number": source_clearing_account.id,
+                        "transaction_type": "dr",
+                        "dr_amount": float(line.row_total),
+                        "cr_amount": 0.0,
+                        "transaction_date": order.scheduled_start_date,
+                    }
+                )
+
+                # CR Item Asset (USD)
+                self.env["idil.transaction_bookingline"].create(
+                    {
+                        "transaction_booking_id": booking.id,
+                        "manufacturing_order_id": order.id,
+                        "manufacturing_order_line_id": line.id,
+                        "description": "MO - Item Asset (CR)",
+                        "item_id": line.item_id.id,
+                        "product_id": order.product_id.id,
+                        "account_number": line.item_id.asset_account_id.id,
+                        "transaction_type": "cr",
+                        "dr_amount": 0.0,
+                        "cr_amount": float(line.row_total),
+                        "transaction_date": order.scheduled_start_date,
+                    }
+                )
+
+            # ✅ commission booking lines + commission record
+            if order.commission_amount > 0:
+                if not order.product_id.account_id:
+                    raise ValidationError(
+                        f"Product '{order.product_id.name}' missing commission account."
+                    )
+                if not order.commission_employee_id.account_id:
+                    raise ValidationError(
+                        f"Employee '{order.commission_employee_id.name}' missing commission account."
+                    )
+
+                self.env["idil.transaction_bookingline"].create(
+                    {
+                        "transaction_booking_id": booking.id,
+                        "manufacturing_order_id": order.id,
+                        "manufacturing_order_line_id": line.id,
+                        "description": "Commission Expense",
+                        "product_id": order.product_id.id,
+                        "account_number": order.product_id.account_id.id,
+                        "transaction_type": "dr",
+                        "dr_amount": float(order.commission_amount),
+                        "cr_amount": 0.0,
+                        "transaction_date": order.scheduled_start_date,
+                    }
+                )
+
+                self.env["idil.transaction_bookingline"].create(
+                    {
+                        "transaction_booking_id": booking.id,
+                        "manufacturing_order_id": order.id,
+                        "manufacturing_order_line_id": line.id,
+                        "description": "Commission Liability",
+                        "product_id": order.product_id.id,
+                        "account_number": order.commission_employee_id.account_id.id,
+                        "transaction_type": "cr",
+                        "dr_amount": 0.0,
+                        "cr_amount": float(order.commission_amount),
+                        "transaction_date": order.scheduled_start_date,
+                    }
+                )
+
+                precision = order.currency_id.decimal_places or 2
+                amt = float_round(
+                    order.commission_amount or 0.0, precision_digits=precision
+                )
+                if abs(amt) < 10 ** (-(precision + 1)):
+                    amt = 0.0
+
+                commission = self.env["idil.commission"].create(
+                    {
+                        "manufacturing_order_id": order.id,
+                        "employee_id": order.commission_employee_id.id,
+                        "commission_amount": amt,
+                        "commission_paid": 0,
+                        "payment_status": "pending",
+                        "commission_remaining": amt,
+                        "date": order.scheduled_start_date,
+                        "rate": order.rate,
+                    }
+                )
+                order.write({"commission_id": commission.id})
+
+            # ✅ update product actual_cost (weighted avg)
+            if order.bom_id and order.bom_id.product_id:
+                product = order.bom_id.product_id
+                previous_qty = product.stock_quantity or 0.0
+                previous_cost = product.actual_cost or 0.0
+                new_qty = order.product_qty or 0.0
+                new_total_cost = order.product_cost or 0.0
+
+                total_qty = previous_qty + new_qty
+                new_average_cost = (
+                    ((previous_qty * previous_cost) + new_total_cost) / total_qty
+                    if total_qty
+                    else 0.0
+                )
+                product.write({"actual_cost": new_average_cost})
+
+            # ---------------------------------------------
+            # -----------------------------
+            # ✅ Update Product COST (moving average) on MO confirm
+            # (MO cost currency == Product currency, so NO FX)
+            # -----------------------------
+            product = order.product_id
+            produced_qty = float(order.product_qty or 0.0)
+
+            if product and produced_qty > 0:
+                # stock BEFORE adding MO product movement
+                prev_qty = float(
+                    product.stock_quantity or 0.0
+                )  # must be current stock now (before movement)
+                prev_cost = float(product.cost or 0.0)
+
+                # MO total cost (same currency as product)
+                mo_total_cost = float(order.product_cost or 0.0)
+                mo_unit_cost = mo_total_cost / produced_qty if produced_qty else 0.0
+
+                total_qty = prev_qty + produced_qty
+                new_avg_cost = (
+                    ((prev_qty * prev_cost) + (produced_qty * mo_unit_cost)) / total_qty
+                    if total_qty
+                    else 0.0
+                )
+
+                product.write({"cost": round(new_avg_cost, 5)})
+
+            # ✅ movements
+            self.env["idil.product.movement"].create(
+                {
+                    "product_id": order.product_id.id,
+                    "movement_type": "in",
+                    "manufacturing_order_id": order.id,
+                    "quantity": order.product_qty,
+                    "date": order.scheduled_start_date,
+                    "source_document": order.name,
+                    "source_warehouse_id": order.source_warehouse_id.id,
+                    "source_location_id": order.source_location_id.id,
+                }
+            )
 
                 for line in order.manufacturing_order_line_ids:
                     self.env["idil.item.movement"].create(
