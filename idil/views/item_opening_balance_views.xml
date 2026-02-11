@@ -20,6 +20,8 @@
 
           <group>
             <group>
+              <field name="source_warehouse_id"/>
+              <field name="source_location_id" />
               <field name="date"/>
               <field name="state" readonly="1"/>
                 <field name="currency_id"/>
