@@ -237,11 +237,20 @@
                                 sequence="1"
                                 action="action_view_product"/>
 
+                        <menuitem
+                                id="menu_product_cost_history"
+                                name="Product Cost History"
+                                parent="menu_idil_product_operations"
+                                action="action_product_cost_history"
+                                sequence="2"
+                        />
+
+
                         <menuitem id="menu_product_adjustment"
                                 name="⚙️ Product Adjustment"
                                 parent="menu_idil_product_operations"
                                 action="action_product_adjustment"
-                                sequence="2"/>
+                                sequence="3"/>
 
                 <menuitem id="menu_bom_root"
                         name="🧾 Bill Of Materials Management"

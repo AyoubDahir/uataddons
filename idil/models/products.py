@@ -235,6 +235,13 @@ class Product(models.Model):
         help="Actual cost calculated from accounting transactions (DR - CR) / stock_quantity",
     )
 
+    cost_history_ids = fields.One2many(
+        "idil.product.cost.history",
+        "product_id",
+        string="Cost History",
+        readonly=True,
+    )
+
     @api.depends("movement_ids.quantity", "movement_ids.movement_type")
     def _compute_stock_quantity(self):
         for product in self:

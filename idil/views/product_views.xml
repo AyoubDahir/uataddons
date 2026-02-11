@@ -469,6 +469,32 @@
                                 </div>
                             </page>
 
+
+                            <!-- Product Cost History -->
+                            <page string="📌 Cost History" name="page_cost_history">
+                                <div class="border rounded-4 p-3 shadow-sm bg-white">
+                                    <div class="fw-bold mb-2">
+                                        <i class="fa fa-money me-2 text-muted"/>
+                                        Product Cost History (MO)
+                                    </div>
+
+                                    <field name="cost_history_ids" nolabel="1">
+                                        <tree create="false" edit="false" delete="false" limit="200">
+                                            <field name="scheduled_date" string="📅 Date"/>
+                                            <field name="manufacturing_order_id" string="🏭 MO Ref"/>
+                                            <field name="produced_qty" string="📦 Qty"/>
+                                            <field name="unit_cost" string="💰 Unit Cost"/>
+                                            <field name="total_cost" string="🧾 Total Cost"/>
+                                            <field name="prev_qty" string="⬅ Prev Qty" optional="hide"/>
+                                            <field name="prev_cost" string="⬅ Prev Cost" optional="hide"/>
+                                            <field name="new_avg_cost" string="📌 New Avg Cost"/>
+                                            <field name="company_id" optional="hide"/>
+                                        </tree>
+                                    </field>
+
+                                </div>
+                            </page>
+
                         </notebook>
 
                     </sheet>

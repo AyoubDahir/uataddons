@@ -822,6 +822,23 @@ class ManufacturingOrder(models.Model):
 
                 product.write({"cost": round(new_avg_cost, 5)})
 
+            # ✅ store history
+            self.env["idil.product.cost.history"].create(
+                {
+                    "company_id": order.company_id.id,
+                    "manufacturing_order_id": order.id,
+                    "product_id": product.id,
+                    "scheduled_date": order.scheduled_start_date,
+                    "produced_qty": produced_qty,
+                    "unit_cost": round(mo_unit_cost, 5),
+                    "total_cost": round(mo_total_cost, 5),
+                    "prev_qty": round(prev_qty, 5),
+                    "prev_cost": round(prev_cost, 5),
+                    "new_avg_cost": round(new_avg_cost, 5),
+                    "note": order.name or "",
+                }
+            )
+
             # ✅ movements
             self.env["idil.product.movement"].create(
                 {

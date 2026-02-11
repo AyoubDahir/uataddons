@@ -77,7 +77,7 @@ from . import purchase_receive_wizard
 from . import warehouse_location
 from . import internaltransfer
 from . import BizcoreDbBackup
-
+from . import product_cost_history
 
 
 # from . import model_export_wizard
