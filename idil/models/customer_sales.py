@@ -377,11 +377,7 @@ class CustomerSaleOrder(models.Model):
                             "sales_receipt_id": order.id,
                             "payment_method_ids": default_method.id,
                             "amount": order.order_total,
-                            "date": (
-                                fields.Date.to_date(order.order_date)
-                                if order.order_date
-                                else fields.Date.context_today(self)
-                            ),
+                            "date": order.order_date,
                         }
                     )
 
@@ -488,7 +484,7 @@ class CustomerSaleOrder(models.Model):
                     "transaction_type": "dr",
                     "dr_amount": order.order_total,
                     "cr_amount": 0.0,
-                    "transaction_date": fields.Date.context_today(self),
+                    "transaction_date": order.order_date,
                 }
             )
 
@@ -543,7 +539,7 @@ class CustomerSaleOrder(models.Model):
                         "transaction_type": "dr",
                         "dr_amount": product_cost_amount,
                         "cr_amount": 0.0,
-                        "transaction_date": fields.Date.context_today(self),
+                        "transaction_date": order.order_date,
                     }
                 )
 
@@ -557,7 +553,7 @@ class CustomerSaleOrder(models.Model):
                         "transaction_type": "cr",
                         "dr_amount": 0.0,
                         "cr_amount": product_cost_amount,
-                        "transaction_date": fields.Date.context_today(self),
+                        "transaction_date": order.order_date,
                     }
                 )
 
@@ -571,7 +567,7 @@ class CustomerSaleOrder(models.Model):
                         "transaction_type": "cr",
                         "dr_amount": 0.0,
                         "cr_amount": line.subtotal,
-                        "transaction_date": fields.Date.context_today(self),
+                        "transaction_date": order.order_date,
                     }
                 )
 
@@ -591,7 +587,7 @@ class CustomerSaleOrder(models.Model):
                         "transaction_type": "dr",
                         "dr_amount": p.amount,
                         "cr_amount": 0.0,
-                        "transaction_date": fields.Date.context_today(self),
+                        "transaction_date": order.order_date,
                     }
                 )
                 BookingLine.create(
@@ -603,7 +599,7 @@ class CustomerSaleOrder(models.Model):
                         "transaction_type": "cr",
                         "dr_amount": 0.0,
                         "cr_amount": p.amount,
-                        "transaction_date": fields.Date.context_today(self),
+                        "transaction_date": order.order_date,
                     }
                 )
 
@@ -764,7 +760,7 @@ class CustomerSaleOrder(models.Model):
                     if booking:
                         booking.write(
                             {
-                                "trx_date": fields.Date.context_today(self),
+                                "trx_date": order.order_date,
                                 "amount": order.order_total,
                                 "customer_id": order.customer_id.id,
                                 "payment_method": "bank_transfer",
