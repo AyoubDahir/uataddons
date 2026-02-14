@@ -28,7 +28,7 @@
                             <field name="name" readonly="1" class="oe_inline"/>
                         </h2>
                         <span class="text-muted" style="margin-left:12px;">
-                            <field name="date" class="oe_inline" readonly="1"/>
+                            <field name="date" class="oe_inline" />
                         </span>
                     </div>
 
