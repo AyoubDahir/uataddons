@@ -35,7 +35,8 @@
         <field name="name">idil.customer.sale.order.kanban</field>
         <field name="model">idil.customer.sale.order</field>
         <field name="arch" type="xml">
-            <kanban default_group_by="customer_id" class="o_kanban_small_column">
+            <kanban default_group_by="customer_id" default_order="create_date desc" class="o_kanban_small_column">
+
                 <field name="name"/>
                 <field name="order_date"/>
                 <field name="customer_id"/>
