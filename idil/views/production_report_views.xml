@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- SQL View Actions and Views -->
+    <record id="view_production_report_tree" model="ir.ui.view">
+        <field name="name">idil.production.report.view.tree</field>
+        <field name="model">idil.production.report.view</field>
+        <field name="arch" type="xml">
+            <tree string="Production Analysis" create="false" edit="false" delete="false">
+                <field name="date"/>
+                <field name="manufacturing_order_id"/>
+                <field name="product_id"/>
+                <field name="status"/>
+                <field name="product_qty" sum="Total Qty"/>
+                <field name="bom_cost" sum="Total BOM"/>
+                <field name="extra_cost" sum="Total Extra"/>
+                <field name="commission_cost" sum="Total Comm"/>
+                <field name="total_cost" sum="Grand Total"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_production_report_graph" model="ir.ui.view">
+        <field name="name">idil.production.report.view.graph</field>
+        <field name="model">idil.production.report.view</field>
+        <field name="arch" type="xml">
+            <graph string="Production Analysis" type="bar" sample="1">
+                <field name="date" interval="day"/>
+                <field name="total_cost" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_production_report_pivot" model="ir.ui.view">
+        <field name="name">idil.production.report.view.pivot</field>
+        <field name="model">idil.production.report.view</field>
+        <field name="arch" type="xml">
+            <pivot string="Production Analysis" sample="1">
+                <field name="date" type="row" interval="day"/>
+                <field name="product_id" type="row"/>
+                <field name="total_cost" type="measure"/>
+                <field name="product_qty" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="action_production_report_daily_view" model="ir.actions.act_window">
+        <field name="name">Daily Summary</field>
+        <field name="res_model">idil.production.report.view</field>
+        <field name="view_mode">tree,graph,pivot</field>
+        <field name="context">{'group_by': ['date:day']}</field>
+    </record>
+
+    <record id="action_production_report_product_view" model="ir.actions.act_window">
+        <field name="name">Product Breakdown</field>
+        <field name="res_model">idil.production.report.view</field>
+        <field name="view_mode">pivot,graph,tree</field>
+        <field name="context">{'group_by': ['product_id']}</field>
+    </record>
+
+    <!-- Wizard View -->
+    <record id="view_production_report_wizard_form" model="ir.ui.view">
+        <field name="name">idil.production.report.wizard.form</field>
+        <field name="model">idil.production.report.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Daily Production Report">
+                <header>
+                    <button string="Refresh Data" type="object" name="action_refresh" class="oe_highlight"/>
+                    <button string="Print PDF" type="object" name="action_print_pdf" class="btn-secondary"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="date_from"/>
+                            <field name="date_to"/>
+                            <field name="company_id" invisible="1"/>
+                        </group>
+                        <group>
+                            <field name="product_ids" widget="many2many_tags"/>
+                            <field name="status_draft"/>
+                            <field name="status_confirmed"/>
+                            <field name="status_in_progress"/>
+                            <field name="status_done"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Executive Summary (KPIs)">
+                            <field name="kpi_html" readonly="1"/>
+                        </page>
+                        <page string="Included MOs (Audit)">
+                            <field name="order_ids" readonly="1">
+                                <tree>
+                                    <field name="name" string="MO Ref"/>
+                                    <field name="status" string="Status"/>
+                                    <field name="scheduled_start_date" string="Scheduled Date"/>
+                                    <field name="product_id" string="Product"/>
+                                    <field name="product_qty" string="Produced Qty" sum="Total Qty"/>
+                                    <field name="bom_grand_total" string="BOM Total (USD)" sum="Total BOM USD"/>
+                                    <field name="rate" string="Rate"/>
+                                    <field name="report_bom_sos" string="BOM SOS" sum="Total BOM SOS"/>
+                                    <field name="extra_cost_total" string="Extra Cost" sum="Total Extra"/>
+                                    <field name="commission_amount" string="Commission" sum="Total Comm"/>
+                                    <field name="report_total_sos" string="Total Cost (SOS)" sum="Grand Total SOS"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Comparisons">
+                            <field name="comparison_html" readonly="1"/>
+                        </page>
+                        <page string="Commission Analysis">
+                            <field name="commission_html" readonly="1"/>
+                        </page>
+                        <page string="TFG Analysis">
+                            <field name="tfg_html" readonly="1"/>
+                        </page>
+                        <page string="Accounting Summary">
+                            <field name="accounting_html" readonly="1"/>
+                        </page>
+                        <page string="Charts &amp; Trends">
+                            <field name="graphs_html" widget="html" readonly="1" nolabel="1"/>
+                            <field name="extra_kpi_html" invisible="1"/>
+                        </page>
+                        <page string="💡 AI Insights">
+                            <div class="alert alert-info" role="alert">
+                                Automated analysis based on your data.
+                            </div>
+                            <field name="insights_html" readonly="1"/>
+                        </page>
+                        <page string="Analysis &amp; Details">
+                            <div class="o_horizontal_separator">Drill Down</div>
+                            <div class="row mt16">
+                                <div class="col-6">
+                                    <button name="action_view_daily_summary" type="object" 
+                                        string="View Daily Summary Table" icon="fa-table" class="btn btn-outline-primary btn-block"/>
+                                </div>
+                                <div class="col-6">
+                                     <button name="action_view_product_breakdown" type="object" 
+                                        string="View Product Cost Breakdown" icon="fa-pie-chart" class="btn btn-outline-primary btn-block"/>
+                                </div>
+                            </div>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_production_report_wizard_window" model="ir.actions.act_window">
+        <field name="name">Daily Production Report</field>
+        <field name="res_model">idil.production.report.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">inline</field>
+        <field name="context">{}</field>
+    </record>
+
+</odoo>

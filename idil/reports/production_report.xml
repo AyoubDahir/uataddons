@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_report_production_daily" model="ir.actions.report">
+        <field name="name">Daily Production Report</field>
+        <field name="model">idil.production.report.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">idil.report_production_daily_template</field>
+        <field name="report_file">idil.report_production_daily_template</field>
+        <field name="print_report_name">'Daily Production Report - %s' % (object.date_from)</field>
+        <field name="binding_model_id" ref="model_idil_production_report_wizard"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_production_daily_template">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <div class="row mb-4">
+                            <div class="col-12 text-center">
+                                <h2>Daily Production Report</h2>
+                                <p>
+                                    <strong>Period:</strong> <span t-field="o.date_from"/> to <span t-field="o.date_to"/>
+                                    <br/>
+                                    <strong>Company:</strong> <span t-field="o.company_id.name"/>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- KPIs -->
+                        <div class="row mb-4">
+                             <div class="col-12">
+                                <h3>Executive Summary</h3>
+                                <div t-field="o.kpi_html"/>
+                             </div>
+                        </div>
+
+                        <!-- Insights -->
+                        <div class="row mb-4" t-if="o.insights_html">
+                             <div class="col-12">
+                                <h3>💡 AI Insights &amp; Recommendations</h3>
+                                <div t-field="o.insights_html" style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; border-left: 5px solid #17a2b8;"/>
+                             </div>
+                        </div>
+
+                        <!-- Detailed Tables -->
+                        <!-- Use o.env instead of request.env -->
+                        <t t-set="orders" t-value="o.env['idil.manufacturing.order'].search(o._get_domain(), order='scheduled_start_date asc')"/>
+                        
+                        <h3>Production Details</h3>
+                        <table class="table table-sm table-striped table-bordered">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Ref</th>
+                                    <th>Product</th>
+                                    <th class="text-right">Qty</th>
+                                    <th class="text-right">BOM Cost</th>
+                                    <th class="text-right">Extra Cost</th>
+                                    <th class="text-right">Comm.</th>
+                                    <th class="text-right">Total Cost</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="orders" t-as="mo">
+                                    <td><span t-field="mo.scheduled_start_date" t-options='{"widget": "date"}'/></td>
+                                    <td><span t-field="mo.name"/></td>
+                                    <td><span t-field="mo.product_id.name"/></td>
+                                    <td class="text-right"><span t-field="mo.product_qty"/></td>
+                                    <td class="text-right"><span t-field="mo.bom_grand_total"/></td>
+                                    <td class="text-right"><span t-field="mo.extra_cost_total"/></td>
+                                    <td class="text-right"><span t-field="mo.commission_amount"/></td>
+                                    <td class="text-right">
+                                        <span t-esc="mo.bom_grand_total + mo.extra_cost_total + mo.commission_amount" 
+                                              t-options='{"widget": "monetary", "display_currency": mo.currency_id}'/>
+                                    </td>
+                                </tr>
+                                <!-- Totals row -->
+                                <tr class="font-weight-bold">
+                                    <td colspan="3" class="text-right">Totals:</td>
+                                    <td class="text-right">
+                                        <span t-esc="sum(orders.mapped('product_qty'))" t-options='{"widget": "float", "precision": 2}'/>
+                                    </td>
+                                    <td class="text-right">
+                                        <span t-esc="sum(orders.mapped('bom_grand_total'))" t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                    </td>
+                                    <td class="text-right">
+                                        <span t-esc="sum(orders.mapped('extra_cost_total'))" t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                    </td>
+                                    <td class="text-right">
+                                        <span t-esc="sum(orders.mapped('commission_amount'))" t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                    </td>
+                                    <td class="text-right">
+                                         <span t-esc="sum(orders.mapped('bom_grand_total')) + sum(orders.mapped('extra_cost_total')) + sum(orders.mapped('commission_amount'))" t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <p class="text-muted text-right small">Generated by BizCore Production Intelligence</p>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

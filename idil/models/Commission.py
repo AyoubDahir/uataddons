@@ -265,30 +265,49 @@ class Commission(models.Model):
 
     @api.depends("commission_payment_ids.amount")
     def _compute_commission_paid(self):
-        for record in self:
-            record.commission_paid = sum(
-                payment.amount for payment in record.commission_payment_ids
-            )
+        for rec in self:
+            precision = rec.currency_id.decimal_places or 2
+            paid = sum(rec.commission_payment_ids.mapped("amount")) or 0.0
+            paid = float_round(paid, precision_digits=precision)
+            if abs(paid) < 10 ** (-(precision + 1)):
+                paid = 0.0
+            rec.commission_paid = paid
 
     @api.depends("commission_amount", "commission_paid")
     def _compute_commission_remaining(self):
-        for record in self:
-            record.commission_remaining = (
-                record.commission_amount - record.commission_paid
-            )
+        for rec in self:
+            precision = rec.currency_id.decimal_places or 2
+            remaining = (rec.commission_amount or 0.0) - (rec.commission_paid or 0.0)
+            remaining = float_round(remaining, precision_digits=precision)
+
+            # snap tiny noise to 0
+            if abs(remaining) < 10 ** (-(precision + 1)):
+                remaining = 0.0
+
+            rec.commission_remaining = remaining
 
     @api.depends("commission_amount", "commission_paid")
     def _compute_payment_status(self):
-        for record in self:
-            if record.commission_paid >= record.commission_amount:
-                record.payment_status = "paid"
-                record.is_paid = True
-            elif record.commission_paid > 0:
-                record.payment_status = "partial_paid"
-                record.is_paid = False
+        for rec in self:
+            precision = rec.currency_id.decimal_places or 2
+            if (
+                float_compare(
+                    rec.commission_paid,
+                    rec.commission_amount,
+                    precision_digits=precision,
+                )
+                >= 0
+            ):
+                rec.payment_status = "paid"
+                rec.is_paid = True
+            elif (
+                float_compare(rec.commission_paid, 0.0, precision_digits=precision) > 0
+            ):
+                rec.payment_status = "partial_paid"
+                rec.is_paid = False
             else:
-                record.payment_status = "pending"
-                record.is_paid = False
+                rec.payment_status = "pending"
+                rec.is_paid = False
 
     def _update_commission_status(self):
         self._compute_commission_paid()
@@ -356,9 +375,10 @@ class Commission(models.Model):
 
     def unlink(self):
         for rec in self:
-            if rec.manufacturing_order_id:
+            # block ONLY if there are payments
+            if rec.commission_payment_ids:
                 raise ValidationError(
-                    "You cannot delete this commission while it is still linked to a manufacturing order."
+                    "You cannot delete this commission because it has payment(s)."
                 )
         return super(Commission, self).unlink()
 

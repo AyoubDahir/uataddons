@@ -78,6 +78,8 @@ from . import warehouse_location
 from . import internaltransfer
 from . import BizcoreDbBackup
 from . import product_cost_history
+from . import ManufacturingCostType
+from . import ManufacturingOrderCostLine
 
 
 # from . import model_export_wizard
@@ -99,7 +101,7 @@ from . import report_pending_orders
 from . import report_customer_outstanding
 from . import report_production_profitability
 from . import production_profitability_wizard
-
+from . import production_report
 from . import report_vendor
 from . import report_balance_sheet
 from . import bank_reconciliation

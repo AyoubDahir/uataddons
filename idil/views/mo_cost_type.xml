@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <data>
+
+    <!-- ============================= -->
+    <!-- Views: MO Cost Type           -->
+    <!-- ============================= -->
+
+    <!-- Tree -->
+    <record id="view_idil_mo_cost_type_tree" model="ir.ui.view">
+      <field name="name">idil.mo.cost.type.tree</field>
+      <field name="model">idil.mo.cost.type</field>
+      <field name="arch" type="xml">
+        <tree string="MO Cost Types" default_order="name asc">
+          <field name="name"/>
+          <field name="currency_id"/>
+          <field name="expense_account_id"/>
+         </tree>
+      </field>
+    </record>
+
+    <!-- Form -->
+    <record id="view_idil_mo_cost_type_form" model="ir.ui.view">
+      <field name="name">idil.mo.cost.type.form</field>
+      <field name="model">idil.mo.cost.type</field>
+      <field name="arch" type="xml">
+        <form string="MO Cost Type">
+          <sheet>
+            <group>
+              <field name="name" required="1"/>
+              <field name="currency_id" required="1"/>
+              <field name="expense_account_id" required="1"
+                     domain="[('header_name','=','Expenses'), ('currency_id','=', currency_id)]"/>
+             </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- ============================= -->
+    <!-- Action                        -->
+    <!-- ============================= -->
+    <record id="action_idil_mo_cost_type" model="ir.actions.act_window">
+      <field name="name">MO Cost Types</field>
+      <field name="res_model">idil.mo.cost.type</field>
+      <field name="view_mode">tree,form</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+          Create MO cost types and link each to an expense account.
+        </p>
+      </field>
+    </record>
+
+  
+
+   
+
+  </data>
+</odoo>

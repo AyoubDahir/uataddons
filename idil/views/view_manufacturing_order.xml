@@ -3,14 +3,14 @@
     <!-- ===================================================== -->
     <!-- 🏭 Manufacturing Order | Form (Improved UI)            -->
     <!-- ===================================================== -->
-    <record id="view_form_manufacturing_order" model="ir.ui.view">
-        <field name="name">idil.manufacturing.order.form</field>
+  <record id="view_form_manufacturing_order" model="ir.ui.view">
+        <field name="name">idil.manufacturing.order.form.dashboard</field>
         <field name="model">idil.manufacturing.order</field>
         <field name="arch" type="xml">
             <form string="🏭 Manufacturing Order" class="o_form_full o_form_nosheet">
 
+                <!-- HEADER -->
                 <header>
-
                     <button name="action_confirm"
                             string="✅ Confirm"
                             type="object"
@@ -26,17 +26,21 @@
                             type="object"
                             class="btn-danger"/>
 
+                    <button name="action_open_extra_cost_wizard"
+                            type="object"
+                            string="➕ Extra Costs"
+                            class="btn-primary"/>
+
                     <span class="ms-2 badge rounded-pill bg-light border text-muted px-3 py-2">
                         <i class="fa fa-flag me-1"/>
                         Status:
                         <field name="status" widget="badge" readonly="1" class="ms-1"/>
                     </span>
-
                 </header>
 
                 <sheet>
 
-                    <!-- Title -->
+                    <!-- TITLE -->
                     <div class="oe_title">
                         <h1 class="mb-1">
                             <i class="fa fa-industry me-2 text-primary" role="img" aria-label="MO"/>
@@ -49,113 +53,122 @@
 
                         <div class="text-muted">
                             <i class="fa fa-info-circle me-1"/>
-                            Select source warehouse &amp; location, choose BOM, and confirm to validate material availability.
+                            Select Warehouse/Location, choose BOM, adjust quantities, then confirm to post inventory + accounting.
                         </div>
                     </div>
 
-                    <!-- ✅ 3 cards (horizontal) -->
+                    <!-- ✅ 3 CARDS ROW -->
                     <div class="row g-3 mt-3">
 
                         <!-- Source & Planning -->
-                        <div class="col-12 col-lg-5">
+                        <div class="col-12 col-lg-4">
                             <div class="border rounded-4 p-3 shadow-sm bg-white h-100">
-                                <div class="fw-bold mb-2 d-flex align-items-center gap-2 flex-wrap">
+                                <div class="fw-bold mb-2 d-flex align-items-center gap-2">
                                     <i class="fa fa-map-marker text-muted"/>
                                     <span>Source &amp; Planning</span>
                                 </div>
 
                                 <div class="d-grid gap-2">
 
-                                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                                        <span class="text-muted" style="width:24px; text-align:center;">
-                                            <i class="fa fa-home"/>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="fw-bold" style="min-width:150px;">
+                                            <i class="fa fa-home me-1 text-muted"/> Warehouse
                                         </span>
-                                        <span class="o_form_label mb-0" style="min-width:170px;">Source Warehouse</span>
-                                        <div class="flex-grow-1" style="min-width:260px;">
+                                        <div class="flex-grow-1">
                                             <field name="source_warehouse_id" nolabel="1"/>
                                         </div>
                                     </div>
 
-                                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                                        <span class="text-muted" style="width:24px; text-align:center;">
-                                            <i class="fa fa-location-arrow"/>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="fw-bold" style="min-width:150px;">
+                                            <i class="fa fa-location-arrow me-1 text-muted"/> Location
                                         </span>
-                                        <span class="o_form_label mb-0" style="min-width:170px;">Source Location</span>
-                                        <div class="flex-grow-1" style="min-width:260px;">
+                                        <div class="flex-grow-1">
                                             <field name="source_location_id" nolabel="1"/>
                                         </div>
                                     </div>
 
-                                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                                        <span class="text-muted" style="width:24px; text-align:center;">
-                                            <i class="fa fa-sitemap"/>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="fw-bold" style="min-width:150px;">
+                                            <i class="fa fa-sitemap me-1 text-muted"/> Bill of Materials
                                         </span>
-                                        <span class="o_form_label mb-0" style="min-width:170px;">BOM</span>
-                                        <div class="flex-grow-1" style="min-width:260px;">
+                                        <div class="flex-grow-1">
                                             <field name="bom_id" nolabel="1"/>
                                         </div>
                                     </div>
 
-                                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                                        <span class="text-muted" style="width:24px; text-align:center;">
-                                            <i class="fa fa-calendar"/>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="fw-bold" style="min-width:150px;">
+                                            <i class="fa fa-calendar me-1 text-muted"/> Start Date
                                         </span>
-                                        <span class="o_form_label mb-0" style="min-width:170px;">Scheduled Start</span>
-                                        <div class="flex-grow-1" style="min-width:260px;">
-                                            <field name="scheduled_start_date"
-                                                   nolabel="1"
-                                                   widget="date"
-                                                   options="{'datepicker': {'maxDate': context_today()}}"/>
+                                        <div class="flex-grow-1">
+                                            <field name="scheduled_start_date" nolabel="1"/>
                                         </div>
                                     </div>
 
                                 </div>
 
-                                <div class="alert alert-info mt-3 mb-0" role="alert">
+                                <div class="alert alert-info mt-3 mb-0">
                                     <i class="fa fa-lightbulb-o me-1"/>
-                                    Tip: Keep <b>Source Warehouse/Location</b> correct — stock availability is checked from here.
+                                    Stock validation will use the selected Warehouse/Location.
                                 </div>
-
                             </div>
                         </div>
 
                         <!-- Product Output -->
-                        <div class="col-12 col-lg-4">
+                        <div class="col-12 col-lg-5">
                             <div class="border rounded-4 p-3 shadow-sm bg-white h-100">
-                                <div class="fw-bold mb-2 d-flex align-items-center gap-2 flex-wrap">
+                                <div class="fw-bold mb-2 d-flex align-items-center gap-2">
                                     <i class="fa fa-cube text-muted"/>
                                     <span>Product Output</span>
                                 </div>
 
                                 <div class="d-grid gap-2">
 
-                                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                                        <span class="text-muted" style="width:24px; text-align:center;">
-                                            <i class="fa fa-cubes"/>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="fw-bold" style="min-width:170px;">
+                                            <i class="fa fa-cubes me-1 text-muted"/> Product
                                         </span>
-                                        <span class="o_form_label mb-0" style="min-width:160px;">Product</span>
-                                        <div class="flex-grow-1" style="min-width:220px;">
+                                        <div class="flex-grow-1">
                                             <field name="product_id" nolabel="1" readonly="1"/>
                                         </div>
                                     </div>
 
-                                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                                        <span class="text-muted" style="width:24px; text-align:center;">
-                                            <i class="fa fa-sort-numeric-asc"/>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="fw-bold" style="min-width:170px;">
+                                            <i class="fa fa-sort-numeric-asc me-1 text-muted"/> Product Quantity
                                         </span>
-                                        <span class="o_form_label mb-0" style="min-width:160px;">Product Qty</span>
-                                        <div class="flex-grow-1" style="min-width:220px;">
+                                        <div class="flex-grow-1">
                                             <field name="product_qty" nolabel="1"/>
                                         </div>
                                     </div>
 
-                                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                                        <span class="text-muted" style="width:24px; text-align:center;">
-                                            <i class="fa fa-money"/>
+                                    <hr class="my-2"/>
+
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="fw-bold" style="min-width:170px;">
+                                            <i class="fa fa-money me-1 text-muted"/> Product Cost Total
                                         </span>
-                                        <span class="o_form_label mb-0" style="min-width:160px;">Product Cost</span>
-                                        <div class="flex-grow-1" style="min-width:220px;">
+                                        <div class="flex-grow-1 text-end">
                                             <field name="product_cost" nolabel="1" readonly="1"/>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="fw-bold" style="min-width:170px;">
+                                            <i class="fa fa-plus-circle me-1 text-muted"/> Extra Cost Total
+                                        </span>
+                                        <div class="flex-grow-1 text-end">
+                                            <field name="extra_cost_total" nolabel="1" readonly="1"/>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="fw-bold" style="min-width:170px;">
+                                            <i class="fa fa-calculator me-1 text-muted"/> BOM Grand Total
+                                        </span>
+                                        <div class="flex-grow-1 text-end">
+                                            <field name="bom_grand_total" nolabel="1" readonly="1"/>
                                         </div>
                                     </div>
 
@@ -164,14 +177,13 @@
                                 <div class="mt-3">
                                     <span class="badge rounded-pill bg-light border text-muted px-3 py-2">
                                         <i class="fa fa-shield me-1"/>
-                                        Product is auto-loaded from BOM and kept readonly.
+                                        Product is taken from BOM (readonly).
                                     </span>
                                 </div>
-
                             </div>
                         </div>
 
-                        <!-- Finance & Commission -->
+                        <!-- Finance -->
                         <div class="col-12 col-lg-3">
                             <div class="border rounded-4 p-3 shadow-sm bg-white h-100">
                                 <div class="fw-bold mb-2 d-flex align-items-center gap-2">
@@ -181,108 +193,99 @@
 
                                 <div class="d-grid gap-2">
 
-                                    <div class="border rounded-4 p-2 bg-white">
-                                        <div class="text-muted small">
-                                            <i class="fa fa-user me-1"/> Commission Employee
-                                        </div>
-                                        <div class="fw-bold">
-                                            <field name="commission_employee_id" nolabel="1"/>
-                                        </div>
-                                    </div>
-
-                                    <div class="border rounded-4 p-2 bg-white">
-                                        <div class="text-muted small">
-                                            <i class="fa fa-check-circle me-1"/> Commission Amount
-                                        </div>
-                                        <div class="fw-bold">
-                                            <field name="commission_amount" nolabel="1" readonly="1"/>
-                                        </div>
-                                    </div>
-
-                                    <div class="border rounded-4 p-2 bg-white">
-                                        <div class="text-muted small">
-                                            <i class="fa fa-calculator me-1"/> BOM Grand Total
-                                        </div>
-                                        <div class="fw-bold">
-                                            <field name="bom_grand_total" nolabel="1" readonly="1"/>
-                                        </div>
-                                    </div>
-
-                                    <div class="border rounded-4 p-2 bg-white">
-                                        <div class="text-muted small">
-                                            <i class="fa fa-tag me-1"/> TFG Qty
-                                        </div>
-                                        <div class="fw-bold">
-                                            <field name="tfg_qty" nolabel="1" readonly="1"/>
-                                        </div>
-                                    </div>
-
-                                    <div class="border rounded-4 p-2 bg-white">
-                                        <div class="text-muted small">
-                                            <i class="fa fa-money me-1"/> Currency
-                                        </div>
-                                        <div class="fw-bold">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="fw-bold" style="min-width:140px;">
+                                            <i class="fa fa-money me-1 text-muted"/> Currency
+                                        </span>
+                                        <div class="flex-grow-1">
                                             <field name="currency_id" nolabel="1"/>
                                         </div>
                                     </div>
 
-                                    <div class="border rounded-4 p-2 bg-white">
-                                        <div class="text-muted small">
-                                            <i class="fa fa-exchange me-1"/> Rate
-                                        </div>
-                                        <div class="fw-bold">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="fw-bold" style="min-width:140px;">
+                                            <i class="fa fa-exchange me-1 text-muted"/> Exchange Rate
+                                        </span>
+                                        <div class="flex-grow-1">
                                             <field name="rate" nolabel="1"/>
+                                        </div>
+                                    </div>
+
+                                    <hr class="my-2"/>
+
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="fw-bold" style="min-width:140px;">
+                                            <i class="fa fa-user me-1 text-muted"/> Commission Employee
+                                        </span>
+                                        <div class="flex-grow-1">
+                                            <field name="commission_employee_id" nolabel="1"/>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="fw-bold" style="min-width:140px;">
+                                            <i class="fa fa-check-circle me-1 text-muted"/> Commission Amount
+                                        </span>
+                                        <div class="flex-grow-1 text-end">
+                                            <field name="commission_amount" nolabel="1" readonly="1"/>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="fw-bold" style="min-width:140px;">
+                                            <i class="fa fa-tag me-1 text-muted"/> TFG Qty
+                                        </span>
+                                        <div class="flex-grow-1 text-end">
+                                            <field name="tfg_qty" nolabel="1" readonly="1"/>
                                         </div>
                                     </div>
 
                                 </div>
 
+                                <div class="text-muted small mt-2">
+                                    <i class="fa fa-info-circle me-1"/>
+                                    Rate uses currency rate on or before scheduled date.
+                                </div>
                             </div>
                         </div>
 
                     </div>
 
-
-                       <!-- ✅ Journal Summary (DISPLAY ONLY, NO NEW MODEL) -->
-                <div class="row g-3 mt-3" visible="status == 'done'">
-                    <div class="col-12">
-                        <field name="journal_summary_html" nolabel="1" readonly="1"/>
+                    <!-- ✅ Journal Summary (display-only) -->
+                    <div class="row g-3 mt-3">
+                        <div class="col-12">
+                            <div class="border rounded-4 p-3 shadow-sm bg-white">
+                                <div class="fw-bold mb-2 d-flex align-items-center gap-2">
+                                    <i class="fa fa-book text-muted"/>
+                                    <span>Accounting Entry Summary</span>
+                                </div>
+                                <field name="journal_summary_html" nolabel="1" readonly="1"/>
+                            </div>
+                        </div>
                     </div>
-                </div>
-
-
-
-
-
-
-
-
-
-
-
-
 
                     <!-- ✅ Notebook -->
                     <notebook class="mt-3">
 
-                        <page string="🧾 Manufacturing Order Lines" name="page_lines">
+                        <!-- Lines -->
+                        <page string="🧾 Materials" name="page_lines">
                             <div class="border rounded-4 p-3 shadow-sm bg-white">
 
                                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
                                     <div class="fw-bold d-flex align-items-center gap-2">
                                         <i class="fa fa-list-ul text-muted"/>
-                                        <span>Materials</span>
+                                        <span>Manufacturing Order Lines</span>
                                     </div>
 
                                     <span class="badge rounded-pill bg-light border text-muted px-3 py-2">
                                         <i class="fa fa-info-circle me-1"/>
-                                        Tip: Confirm will validate availability per item in selected Warehouse/Location.
+                                        Confirm validates stock from selected Warehouse/Location.
                                     </span>
                                 </div>
 
                                 <div class="alert alert-warning mb-3" role="alert">
                                     <i class="fa fa-exclamation-triangle me-1"/>
-                                    If stock shows “0” but you believe it exists, check movements are recorded with the same Warehouse/Location fields.
+                                    If stock shows “0” but exists, verify movements were posted with the same Warehouse/Location.
                                 </div>
 
                                 <field name="manufacturing_order_line_ids"
@@ -308,6 +311,41 @@
                             </div>
                         </page>
 
+                        <!-- Extra Costs -->
+                        <page string="➕ Extra Costs" name="page_extra_costs">
+                            <div class="border rounded-4 p-3 shadow-sm bg-white">
+
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                                    <div class="fw-bold d-flex align-items-center gap-2">
+                                        <i class="fa fa-plus-circle text-muted"/>
+                                        <span>Extra Costs</span>
+                                    </div>
+
+                                    <span class="badge rounded-pill bg-light border text-muted px-3 py-2">
+                                        <i class="fa fa-calculator me-1"/>
+                                        Total: <field name="extra_cost_total" nolabel="1" readonly="1"/>
+                                    </span>
+                                </div>
+
+                                <field name="extra_cost_line_ids" nolabel="1">
+                                    <tree editable="bottom">
+                                        <field name="cost_type_id"/>
+                                        <field name="employee_id"/>
+                                        <field name="description"/>
+                                        <field name="currency_id" readonly="1"/>
+                                        <field name="expense_account_id" readonly="1"/>
+                                        <field name="amount" sum="Total"/>
+                                    </tree>
+                                </field>
+
+                                <div class="text-muted mt-2">
+                                    <i class="fa fa-info-circle me-1"/>
+                                    Extra costs can be added from the “➕ Extra Costs” button (wizard) or directly here.
+                                </div>
+
+                            </div>
+                        </page>
+
                         <!-- Chatter -->
                         <page string="💬 Chatter" name="page_chatter">
                             <field name="message_follower_ids" widget="mail_followers"/>
@@ -321,6 +359,8 @@
             </form>
         </field>
     </record>
+
+
     <!-- Manufacturing Order Tree View -->
     <record id="view_tree_manufacturing_order" model="ir.ui.view">
         <field name="name">idil.manufacturing.order.tree</field>
@@ -369,6 +409,69 @@
             </kanban>
         </field>
     </record>
+
+    <record id="view_idil_mo_add_extra_cost_wizard_form" model="ir.ui.view">
+    <field name="name">idil.mo.add.extra.cost.wizard.form</field>
+    <field name="model">idil.mo.add.extra.cost.wizard</field>
+    <field name="arch" type="xml">
+        <form string="➕ Add Extra Costs" class="o_form_full">
+            <sheet>
+
+                <!-- Header area -->
+                <div class="border rounded-4 p-3 shadow-sm bg-white mb-3">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <div class="fw-bold" style="font-size:16px;">
+                                <i class="fa fa-plus-circle text-primary me-1"/>
+                                Add Extra Costs to Manufacturing Order
+                            </div>
+                            <div class="text-muted small">
+                                Add labor/vendor/service costs to improve product costing accuracy.
+                            </div>
+                        </div>
+
+                        <span class="badge rounded-pill bg-light border text-muted px-3 py-2">
+                            <i class="fa fa-hashtag me-1"/>
+                            <field name="manufacturing_order_id" nolabel="1" readonly="1"/>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Lines -->
+                <div class="border rounded-4 p-3 shadow-sm bg-white">
+                    <div class="fw-bold mb-2 d-flex align-items-center gap-2">
+                        <i class="fa fa-list text-muted"/>
+                        <span>Extra Cost Lines</span>
+                    </div>
+
+                    <field name="line_ids" nolabel="1" options="{'editable':'bottom'}">
+                        <tree editable="bottom">
+                            <field name="cost_type_id" required="1"/>
+                            <field name="employee_id"/>
+                             
+                            <field name="description"/>
+                            <field name="currency_id" readonly="1"/>
+                            <field name="expense_account_id" readonly="1"/>
+                            <field name="amount" sum="Total"/>
+                        </tree>
+                    </field>
+
+                    <div class="text-muted mt-2 small">
+                        <i class="fa fa-info-circle me-1"/>
+                        Tip: Choose either Employee OR Partner/Vendor depending on the cost type.
+                    </div>
+                </div>
+
+            </sheet>
+
+            <footer>
+                <button string="Apply" type="object" name="action_apply" class="btn-primary"/>
+                <button string="Cancel" class="btn-secondary" special="cancel"/>
+            </footer>
+        </form>
+    </field>
+</record>
+
 
     <!-- Action to Open Manufacturing Order View -->
     <record id="action_manufacturing_orders" model="ir.actions.act_window">

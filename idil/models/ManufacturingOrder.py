@@ -174,6 +174,38 @@ class ManufacturingOrder(models.Model):
         readonly=True,
     )
 
+    extra_cost_line_ids = fields.One2many(
+        "idil.manufacturing.order.cost.line",
+        "manufacturing_order_id",
+        string="Extra Costs",
+    )
+
+    extra_cost_total = fields.Float(
+        string="Extra Cost Total",
+        digits=(16, 5),
+        compute="_compute_extra_cost_total",
+        store=True,
+        readonly=True,
+    )
+
+    def action_open_extra_cost_wizard(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Add Extra Costs",
+            "res_model": "idil.mo.add.extra.cost.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "default_manufacturing_order_id": self.id,
+            },
+        }
+
+    @api.depends("extra_cost_line_ids.amount")
+    def _compute_extra_cost_total(self):
+        for o in self:
+            o.extra_cost_total = sum(o.extra_cost_line_ids.mapped("amount")) or 0.0
+
     @api.depends("booking_line_ids.dr_amount", "booking_line_ids.cr_amount")
     def _compute_booking_preview(self):
         Booking = self.env["idil.transaction_booking"]
@@ -590,7 +622,7 @@ class ManufacturingOrder(models.Model):
                     raise ValidationError(
                         f"Insufficient stock for item '{line.item_id.name}' in "
                         f"{order.source_warehouse_id.name}/{order.source_location_id.name}. "
-                        f"Available: {available_qty:.5f}, Required: {line.quantity:.5f}"
+                        f"Available: {available_qty:.5f}, Required: {line.quantity:.5f}, Date: {order.scheduled_start_date}."
                     )
 
             # ✅ prevent double posting
@@ -1353,3 +1385,89 @@ class ManufacturingOrderLine(models.Model):
     def _compute_row_total(self):
         for line in self:
             line.row_total = line.quantity * line.cost_price
+
+
+class MoAddExtraCostWizard(models.TransientModel):
+    _name = "idil.mo.add.extra.cost.wizard"
+    _description = "MO Add Extra Costs Wizard"
+
+    manufacturing_order_id = fields.Many2one(
+        "idil.manufacturing.order",
+        string="Manufacturing Order",
+        required=True,
+        readonly=True,
+    )
+
+    line_ids = fields.One2many(
+        "idil.mo.add.extra.cost.wizard.line",
+        "wizard_id",
+        string="Extra Cost Lines",
+    )
+
+    def action_apply(self):
+        self.ensure_one()
+        mo = self.manufacturing_order_id
+
+        if mo.status != "draft":
+            raise ValidationError("You can add extra costs only in Draft MO.")
+
+        commands = []
+        for ln in self.line_ids:
+            if (ln.amount or 0.0) <= 0:
+                continue
+            commands.append(
+                (
+                    0,
+                    0,
+                    {
+                        "cost_type_id": ln.cost_type_id.id,
+                        "description": ln.description or ln.cost_type_id.name,
+                        "amount": ln.amount,
+                        "employee_id": ln.employee_id.id,
+                    },
+                )
+            )
+
+        if commands:
+            mo.write({"extra_cost_line_ids": commands})
+
+        # product_cost will recompute automatically because depends includes extra_cost_line_ids.amount
+        return {"type": "ir.actions.act_window_close"}
+
+
+class MoAddExtraCostWizardLine(models.TransientModel):
+    _name = "idil.mo.add.extra.cost.wizard.line"
+    _description = "MO Add Extra Cost Wizard Line"
+
+    wizard_id = fields.Many2one(
+        "idil.mo.add.extra.cost.wizard",
+        required=True,
+        ondelete="cascade",
+    )
+
+    cost_type_id = fields.Many2one(
+        "idil.mo.cost.type",
+        string="Cost Type",
+        required=True,
+    )
+
+    employee_id = fields.Many2one("idil.employee", string="Employee")
+
+    currency_id = fields.Many2one(
+        related="cost_type_id.currency_id",
+        readonly=True,
+    )
+
+    expense_account_id = fields.Many2one(
+        related="cost_type_id.expense_account_id",
+        readonly=True,
+    )
+
+    description = fields.Char(string="Description")
+    amount = fields.Float(string="Amount", digits=(16, 5), required=True, default=0.0)
+
+    @api.onchange("cost_type_id")
+    def _onchange_cost_type(self):
+        for r in self:
+            if r.cost_type_id and not r.description:
+                r.description = r.cost_type_id.name

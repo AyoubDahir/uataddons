@@ -245,12 +245,18 @@
                                 sequence="2"
                         />
 
+                         <menuitem id="menu_idil_mo_cost_type"
+                                name="MO Cost Types"
+                                parent="menu_idil_product_operations"
+                                action="action_idil_mo_cost_type"
+                                sequence="3"/>
+
 
                         <menuitem id="menu_product_adjustment"
                                 name="⚙️ Product Adjustment"
                                 parent="menu_idil_product_operations"
                                 action="action_product_adjustment"
-                                sequence="3"/>
+                                sequence="4"/>
 
                 <menuitem id="menu_bom_root"
                         name="🧾 Bill Of Materials Management"
@@ -736,6 +742,12 @@
                   parent="FinancialReports"
                   action="action_view_production_profitability_wizard"
                   sequence="25"/>
+
+    <menuitem id="menu_daily_production_report"
+              name="🏭 Daily Production Report"
+              parent="FinancialReports"
+              action="action_production_report_wizard_window"
+              sequence="26"/>
 
    <menuitem
         id="menu_daily_sales_report"
