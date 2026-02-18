@@ -5,7 +5,7 @@ from odoo.tools.float_utils import float_compare
 
 
 class SalesReceipt(models.Model):
-    _name = "idil.sales.receipt" 
+    _name = "idil.sales.receipt"
     _description = "Sales Receipt"
     _order = "id desc"
 
@@ -425,8 +425,33 @@ class SalesReceipt(models.Model):
         try:
             with self.env.cr.savepoint():
                 messages = []
+
                 for receipt in self:
-                    # Block deletion if linked to sales order
+
+                    # ❌ Block delete if opening balance receipt
+                    if (
+                        receipt.sales_opening_balance_id
+                        or receipt.customer_opening_balance_id
+                    ):
+                        raise UserError(
+                            "⚠️ You cannot delete a sales receipt that was created from an opening balance."
+                        )
+
+                    # ✅ Allow delete if linked Customer Sale Order is Draft
+                    if (
+                        receipt.cusotmer_sale_order_id
+                        and receipt.cusotmer_sale_order_id.state == "draft"
+                    ):
+                        continue
+
+                    # ✅ Allow delete if linked Sale Order is Draft (optional)
+                    if (
+                        receipt.sales_order_id
+                        and receipt.sales_order_id.state == "draft"
+                    ):
+                        continue
+
+                    # ❌ Otherwise block deletion
                     if receipt.sales_order_id and receipt.sales_order_id.exists():
                         order_name = (
                             receipt.sales_order_id.display_name
@@ -435,7 +460,6 @@ class SalesReceipt(models.Model):
                         )
                         messages.append(f"- Sales Order: {order_name}")
 
-                    # Block deletion if linked to customer sale order
                     if (
                         receipt.cusotmer_sale_order_id
                         and receipt.cusotmer_sale_order_id.exists()
@@ -447,31 +471,20 @@ class SalesReceipt(models.Model):
                         )
                         messages.append(f"- Customer Sale Order: {order_name}")
 
-                    # Block deletion if linked to any opening balance
-                    if (
-                        receipt.sales_opening_balance_id
-                        or receipt.customer_opening_balance_id
-                    ):
-                        raise UserError(
-                            "⚠️ You cannot delete a sales receipt that was created from an opening balance."
-                        )
-
                 if messages:
                     detail = "\n".join(messages)
                     raise UserError(
                         f"""⚠️ Deletion Not Allowed!
 
-                        This sales receipt is linked to the following source(s):
-                        {detail}
+                                This sales receipt is linked to the following source(s):
+                                {detail}
 
-                        To maintain proper financial and audit records, you cannot delete a sales receipt directly.
-                        If you wish to remove this transaction, please delete the parent record instead.
-
-                        Do not attempt to delete sales receipts directly.
-                        Thank you for your understanding and cooperation."""
+                                Receipts can only be deleted if the parent Sales Order is in Draft status.
+                                To maintain proper financial and audit records, you cannot delete this receipt directly."""
                     )
 
                 return super(SalesReceipt, self).unlink()
+
         except Exception as e:
             logger.error(f"transaction failed: {str(e)}")
             raise ValidationError(f"Transaction failed: {str(e)}")

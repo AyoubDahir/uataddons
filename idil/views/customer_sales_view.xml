@@ -29,6 +29,165 @@
     </record>
 
     <!-- ===================================================== -->
+    <!-- 🧾 Customer Sale Order | Kanban                        -->
+    <!-- ===================================================== -->
+    <record id="view_customer_sale_order_kanban" model="ir.ui.view">
+        <field name="name">idil.customer.sale.order.kanban</field>
+        <field name="model">idil.customer.sale.order</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state" class="o_kanban_small_column">
+                <field name="name"/>
+                <field name="order_date"/>
+                <field name="customer_id"/>
+                <field name="order_total"/>
+                <field name="total_paid"/>
+                <field name="balance_due"/>
+                <field name="net_balance"/>
+                <field name="currency_id"/>
+                <field name="rate"/>
+                <field name="state"/>
+
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_card oe_kanban_global_click shadow-sm rounded-4 p-3">
+
+                            <!-- Header -->
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="fw-bold fs-6">
+                                        <i class="fa fa-hashtag me-1 text-muted"/>
+                                        <t t-esc="record.name.value"/>
+                                    </div>
+                                    <div class="text-muted small mt-1">
+                                        <i class="fa fa-user me-1"/>
+                                        <t t-esc="record.customer_id.value and record.customer_id.value[1]"/>
+                                    </div>
+                                </div>
+
+                                <!-- Status Badge -->
+                                <div>
+                                    <span class="badge rounded-pill px-3 py-2"
+                                        t-att-class="
+                                            record.state.value == 'draft' and 'bg-warning text-dark' or
+                                            record.state.value == 'confirmed' and 'bg-success' or
+                                            record.state.value == 'cancel' and 'bg-danger' or
+                                            'bg-secondary'
+                                        ">
+                                        <i class="fa fa-flag me-1"/>
+                                        <t t-esc="record.state.value"/>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <hr class="my-2"/>
+
+                            <!-- Date + Currency -->
+                            <div class="d-flex justify-content-between text-muted small">
+                                <div>
+                                    <i class="fa fa-calendar me-1"/>
+                                    <t t-esc="record.order_date.value"/>
+                                </div>
+                                <div>
+                                    <i class="fa fa-exchange me-1"/>
+                                    <t t-esc="record.currency_id.value and record.currency_id.value[1]"/>
+                                    <span class="ms-1">|</span>
+                                    <span class="ms-1">Rate:</span>
+                                    <t t-esc="record.rate.value"/>
+                                </div>
+                            </div>
+
+                            <!-- Totals Boxes -->
+                            <div class="row g-2 mt-2">
+                                <div class="col-6">
+                                    <div class="border rounded-4 p-2 bg-light">
+                                        <div class="text-muted small">
+                                            <i class="fa fa-money me-1"/> Total
+                                        </div>
+                                        <div class="fw-bold">
+                                            <t t-esc="record.order_total.value"/>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-6">
+                                    <div class="border rounded-4 p-2 bg-light">
+                                        <div class="text-muted small">
+                                            <i class="fa fa-check-circle me-1"/> Paid
+                                        </div>
+                                        <div class="fw-bold">
+                                            <t t-esc="record.total_paid.value"/>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-6">
+                                    <div class="border rounded-4 p-2 bg-light">
+                                        <div class="text-muted small">
+                                            <i class="fa fa-file-text-o me-1"/> Due
+                                        </div>
+                                        <div class="fw-bold">
+                                            <t t-esc="record.balance_due.value"/>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-6">
+                                    <div class="border rounded-4 p-2 bg-light">
+                                        <div class="text-muted small">
+                                            <i class="fa fa-balance-scale me-1"/> Net
+                                        </div>
+                                        <div class="fw-bold">
+                                            <t t-esc="record.net_balance.value"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Footer -->
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <span class="badge rounded-pill bg-light border text-muted px-3 py-2">
+                                    <i class="fa fa-shopping-bag me-1"/>
+                                    Sale Order
+                                </span>
+
+                                <div class="text-muted small">
+                                    <i class="fa fa-arrow-right me-1"/>
+                                    Open
+                                </div>
+                            </div>
+
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+
+
+
+    <record id="view_customer_sale_order_search" model="ir.ui.view">
+        <field name="name">idil.customer.sale.order.search</field>
+        <field name="model">idil.customer.sale.order</field>
+        <field name="arch" type="xml">
+            <search string="Search Customer Sale Orders">
+
+                <field name="name"/>
+                <field name="customer_id"/>
+                <field name="state"/>
+
+                <separator/>
+
+                <filter string="Draft" name="draft" domain="[('state','=','draft')]"/>
+                <filter string="Confirmed" name="confirmed" domain="[('state','=','confirmed')]"/>
+    
+            </search>
+        </field>
+    </record>
+
+
+
+    <!-- ===================================================== -->
     <!-- 🧾 Customer Sale Order | Form                           -->
     <!-- ===================================================== -->
     <record id="view_customer_sale_order_form" model="ir.ui.view">
@@ -38,6 +197,28 @@
             <form string="🧾 Customer Sale Order" class="o_form_full o_form_nosheet">
 
                 <header>
+
+                    <button name="action_confirm"
+                                string="✅ Confirm"
+                                type="object"
+                                class="btn-primary"
+                                />
+                            
+
+                    <button name="action_reset_to_draft"
+                            string="🔄 Reset To Draft"
+                            type="object"
+                            class="btn-info"
+                        />
+
+                     
+                    <button name="action_cancel"
+                        string="⛔ Cancel"
+                        type="object"
+                        class="btn-danger"
+                         />
+
+
                     <span class="ms-2 badge rounded-pill bg-light border text-muted px-3 py-2">
                         <i class="fa fa-flag me-1"/>
                         Status:
@@ -269,15 +450,32 @@
                             </div>
                         </page>
 
-                        <!-- Chatter -->
-                        <page string="💬 Chatter" name="page_chatter">
-                            <field name="message_follower_ids" widget="mail_followers"/>
-                            <field name="activity_ids" widget="mail_activity"/>
-                            <field name="message_ids" widget="mail_thread"/>
-                        </page>
+                        <page string="💬 Audit" name="Audit">
+                            <group string="Audit">
+                                
+                                <group string="Confirmed">
+                                    <field name="confirmed_by" readonly="1"/>
+                                    <field name="confirmed_date" readonly="1"/>
+                                </group>
+                                
+                                <group string="Reset">
+                                    <field name="reset_to_draft_by" readonly="1"/>
+                                    <field name="reset_to_draft_date" readonly="1"/>
+                                </group>
+                                   
+                                <group string="Cancelled">
+                                    <field name="cancelled_by" readonly="1"/>
+                                    <field name="cancelled_date" readonly="1"/>
+                                </group>
+                                
 
+                                
+                               
+                                
+                            </group>
+                        </page>
                     </notebook>
-<!-- ✅ Payments Card (NOW above notebook) -->
+                    <!-- ✅ Payments Card (NOW above notebook) -->
                     <div class="row g-3 mt-3">
                         <div class="col-12">
                             <div class="border rounded-4 p-3 shadow-sm bg-white">
@@ -340,7 +538,7 @@
         <field name="name">🧾 Customer Sale Orders</field>
         <field name="type">ir.actions.act_window</field>
         <field name="res_model">idil.customer.sale.order</field>
-        <field name="view_mode">tree,form</field>
+        <field name="view_mode">kanban,tree,form</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 Create your first Customer Sale Order
@@ -349,6 +547,12 @@
                 Select a <b>Customer</b> and add products manually, or optionally select a <b>Place Order</b> to auto-fill lines.
             </p>
         </field>
+        
+        <field name="domain">[('state','!=','cancel')]</field>
+ 
+
+        <field name="search_view_id" ref="view_customer_sale_order_search"/>
+
     </record>
 
 </odoo>

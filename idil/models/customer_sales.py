@@ -1,3 +1,4 @@
+from cmath import e
 import re
 
 from odoo import models, fields, api
@@ -39,7 +40,7 @@ class CustomerSaleOrder(models.Model):
     )
     state = fields.Selection(
         [("draft", "Draft"), ("confirmed", "Confirmed"), ("cancel", "Cancelled")],
-        default="confirmed",
+        default="draft",
     )
     # Currency fields
 
@@ -105,13 +106,112 @@ class CustomerSaleOrder(models.Model):
         tracking=True,
     )
 
-    @api.constrains("order_lines", "customer_opening_balance_id")
-    def _check_has_lines(self):
+    cancelled_by = fields.Many2one(
+        "res.users", string="Cancelled By", readonly=True, tracking=True
+    )
+    cancelled_date = fields.Datetime(
+        string="Cancelled Date", readonly=True, tracking=True
+    )
+
+    reset_to_draft_by = fields.Many2one(
+        "res.users", string="Reset To Draft By", readonly=True, tracking=True
+    )
+    reset_to_draft_date = fields.Datetime(
+        string="Reset To Draft Date", readonly=True, tracking=True
+    )
+
+    confirmed_by = fields.Many2one(
+        "res.users", string="Confirmed By", readonly=True, tracking=True
+    )
+    confirmed_date = fields.Datetime(
+        string="Confirmed Date", readonly=True, tracking=True
+    )
+
+    def action_reset_to_draft(self):
+        Receipt = self.env["idil.sales.receipt"].sudo()
+        Booking = self.env["idil.transaction_booking"].sudo()
+        BookingLine = self.env["idil.transaction_bookingline"].sudo()
+        Movement = self.env["idil.product.movement"].sudo()
+        PaymentLine = self.env["idil.customer.sale.payment"].sudo()
+
         for order in self:
-            if order.customer_opening_balance_id:
-                continue
-            if not order.order_lines:
-                raise ValidationError(_("You must add at least one order line."))
+            # 1) Block reset if any money paid
+            receipt = Receipt.search(
+                [("cusotmer_sale_order_id", "=", order.id)], limit=1
+            )
+            if receipt and (receipt.paid_amount or 0.0) > 0:
+                raise ValidationError(
+                    api._("❌ You cannot reset '%s' because it has paid amount: %s")
+                    % (order.name, receipt.paid_amount)
+                )
+
+            # 2) ✅ Make SO Draft FIRST (so receipt unlink is allowed)
+            #    Use context to bypass "must have lines" constraint during reset
+            order.with_context(skip_has_lines_check=True).write({"state": "draft"})
+            order.write(
+                {
+                    "reset_to_draft_by": self.env.user.id,
+                    "reset_to_draft_date": fields.Datetime.now(),
+                }
+            )
+
+            # 3) Delete payment legs first (clean)
+            PaymentLine.search([("order_id", "=", order.id)]).unlink()
+
+            # 4) Unlink product movements
+            Movement.search([("customer_sale_order_id", "=", order.id)]).unlink()
+
+            # 5) Unlink booking lines + booking header
+            booking = Booking.search(
+                [("cusotmer_sale_order_id", "=", order.id)], limit=1
+            )
+            if booking:
+                BookingLine.search(
+                    [("transaction_booking_id", "=", booking.id)]
+                ).unlink()
+                booking.unlink()
+
+            # 6) Unlink receipt (now allowed because SO is draft)
+            if receipt:
+                receipt.unlink()
+
+            # 7) Release linked place order
+            if order.customer_place_order_id:
+                order.customer_place_order_id.write(
+                    {"state": "draft", "sale_order_id": False}
+                )
+            else:
+                po = (
+                    self.env["idil.customer.place.order"]
+                    .sudo()
+                    .search([("sale_order_id", "=", order.id)], limit=1)
+                )
+                if po:
+                    po.write({"state": "draft", "sale_order_id": False})
+
+            # chatter log
+            try:
+                order.message_post(
+                    body=_("🔄 Reset to Draft: receipt/booking/movements deleted.")
+                )
+            except Exception:
+                pass
+
+        return True
+
+    def action_cancel(self):
+        for order in self:
+            if order.state != "draft":
+                raise ValidationError(api._("Only Draft orders can be cancelled."))
+
+            order.write(
+                {
+                    "state": "cancel",
+                    "cancelled_by": self.env.user.id,
+                    "cancelled_date": fields.Datetime.now(),
+                }
+            )
+        return True
 
     # Automatically populate order lines from the place order when customer_place_order_id is selected
     @api.onchange("customer_place_order_id")
@@ -231,6 +331,70 @@ class CustomerSaleOrder(models.Model):
 
             order.rate = rate_rec.rate or 0.0
 
+    def action_confirm(self):
+        for order in self:
+            if order.customer_opening_balance_id:
+                # opening balance flow should not confirm like normal sale
+                order.write({"state": "confirmed"})
+                continue
+
+            if not order.order_lines:
+                raise ValidationError(api._("You must add at least one order line."))
+
+            if not order.customer_id.account_receivable_id:
+                raise ValidationError(
+                    api._("The Customer does not have a receivable account.")
+                )
+
+            if order.rate <= 0:
+                raise ValidationError(
+                    api._("Please insert a valid exchange rate greater than 0.")
+                )
+
+            for line in order.order_lines:
+                if not line.product_id:
+                    continue
+                self.env["idil.product.movement"].sudo().create(
+                    {
+                        "product_id": line.product_id.id,
+                        "movement_type": "out",
+                        "quantity": line.quantity * -1,
+                        "date": order.order_date,
+                        "source_document": order.name,
+                        "customer_id": order.customer_id.id,
+                        "customer_sale_order_id": order.id,
+                    }
+                )
+
+            # ✅ build receipt/booking/payment legs
+            order.sync_sale_financials()
+
+            # ✅ confirm place order + link back
+            if order.customer_place_order_id:
+                order.customer_place_order_id.write(
+                    {
+                        "state": "confirmed",
+                        "sale_order_id": order.id,
+                    }
+                )
+
+            order.write(
+                {
+                    "state": "confirmed",
+                    "confirmed_by": self.env.user.id,
+                    "confirmed_date": fields.Datetime.now(),
+                }
+            )
+
+            try:
+                order.message_post(
+                    body=api._("✅ Order confirmed and financials synced.")
+                )
+            except Exception:
+                pass
+
+        return True
+
     @api.model
     def create(self, vals):
         try:
@@ -244,34 +408,6 @@ class CustomerSaleOrder(models.Model):
 
                 # Proceed with creating the SaleOrder with the updated vals
                 new_order = super(CustomerSaleOrder, self).create(vals)
-                # ✅ confirm the linked place order, if any
-
-                # Step 3: Create product movements for each order line
-                for line in new_order.order_lines:
-                    self.env["idil.product.movement"].create(
-                        {
-                            "product_id": line.product_id.id,
-                            "movement_type": "out",
-                            "quantity": line.quantity * -1,
-                            "date": new_order.order_date,
-                            "source_document": new_order.name,
-                            "customer_id": new_order.customer_id.id,
-                            "customer_sale_order_id": new_order.id,  # ✅ NEW
-                        }
-                    )
-
-                # Step 4: Book accounting entries for the new order
-                new_order.sync_sale_financials()
-
-                # ✅ If this sale order came from a Customer Place Order, confirm it and link back
-                if new_order.customer_place_order_id:
-                    new_order.customer_place_order_id.write(
-                        {
-                            "state": "confirmed",  # or "converted" if you later rename
-                            "sale_order_id": new_order.id,
-                        }
-                    )
-
                 return new_order
         except Exception as e:
             _logger.error(f"Create transaction failed: {str(e)}")
@@ -304,13 +440,15 @@ class CustomerSaleOrder(models.Model):
 
     def sync_sale_financials(self):
         """
-        Flow (ordered as you requested):
-        1) If you want default payment leg AND no payment lines:
-            - get PayMethod
-            - create Payment leg
-        2) Create/Update Booking (header) then rebuild BookingLines
-        3) Create/Update Receipt
-        4) Link payment legs to receipt (sales_receipt_id)
+        ✅ Correct & stable flow for your models:
+
+        1) Validate
+        2) Create/Update Receipt FIRST  (idil.sales.receipt)
+        3) OPTIONAL: Auto-create default Payment line SECOND (idil.customer.sale.payment) linked to receipt
+        4) Recompute totals after payment creation
+        5) Create/Update Booking (idil.transaction_booking) + rebuild ALL booking lines
+        6) Update Receipt again with final totals/status
+        7) Ensure all payment lines are linked to the receipt (sales_receipt_id)
         """
 
         PayMethod = self.env["idil.payment.method"]
@@ -324,7 +462,7 @@ class CustomerSaleOrder(models.Model):
                 continue
 
             # -----------------------------
-            # Validations
+            # 1) Validations
             # -----------------------------
             if not order.customer_id.account_receivable_id:
                 raise ValidationError(
@@ -341,32 +479,70 @@ class CustomerSaleOrder(models.Model):
 
             expected_currency = order.customer_id.account_receivable_id.currency_id
 
-            # ---------------------------------------------------------
-            # 1) OPTIONAL: Auto-create ONE default payment leg if none exist
-            # IMPORTANT: This will make every order paid automatically if you leave it enabled.
-            # If you want A/R by default, set AUTO_CREATE_DEFAULT_PAYMENT = False.
-            # ---------------------------------------------------------
+            # Compute initial totals (before auto payment)
+            total_paid = sum(order.payment_lines.mapped("amount")) or 0.0
+            remaining = max(order.order_total - total_paid, 0.0)
+
+            if float_compare(total_paid, order.order_total, precision_digits=5) > 0:
+                raise ValidationError(
+                    "The total paid amount cannot exceed the order total."
+                )
+
+            if float_compare(total_paid, 0.0, precision_digits=5) <= 0:
+                receipt_status = "pending"
+            elif float_compare(remaining, 0.0, precision_digits=5) <= 0:
+                receipt_status = "paid"
+            else:
+                receipt_status = "partial"
+
+            # -----------------------------
+            # 2) Create/Update Receipt FIRST
+            # -----------------------------
+            receipt = Receipt.search(
+                [("cusotmer_sale_order_id", "=", order.id)], limit=1
+            )
+
+            receipt_vals = {
+                "cusotmer_sale_order_id": order.id,
+                "receipt_date": order.order_date,
+                "due_amount": order.order_total,
+                "paid_amount": total_paid,
+                "remaining_amount": remaining,
+                "customer_id": order.customer_id.id,
+            }
+            if "payment_status" in Receipt._fields:
+                receipt_vals["payment_status"] = receipt_status
+            elif "state" in Receipt._fields:
+                receipt_vals["state"] = receipt_status
+
+            if receipt:
+                receipt.write(receipt_vals)
+            else:
+                receipt = Receipt.create(receipt_vals)
+
+            # -----------------------------
+            # 3) OPTIONAL: Auto-create default payment SECOND (linked to receipt)
+            # -----------------------------
             AUTO_CREATE_DEFAULT_PAYMENT = (
-                False  # <<< set True only if you really want auto full cash/bank
+                False  # ✅ set True only if you want auto full cash/bank
             )
 
             if AUTO_CREATE_DEFAULT_PAYMENT and not order.payment_lines:
-                # DO NOT domain-search on account_id.account_type (it fails in your env)
                 methods = PayMethod.search(
                     [("company_id", "=", order.company_id.id), ("active", "=", True)]
                 )
 
-                # choose cash first then bank using python filtering
                 default_method = False
                 for m in methods:
-                    acc = m.account_id
-                    if acc and acc.account_type == "cash":
+                    if m.account_id and m.account_id.account_type == "cash":
                         default_method = m
                         break
                 if not default_method:
                     for m in methods:
-                        acc = m.account_id
-                        if acc and acc.account_type == "bank_transfer":
+                        if (
+                            m.account_id
+                            and m.account_id.account_type == "bank_transfer"
+                        ):
                             default_method = m
                             break
 
@@ -374,15 +550,19 @@ class CustomerSaleOrder(models.Model):
                     Payment.create(
                         {
                             "order_id": order.id,
-                            "sales_receipt_id": order.id,
+                            "sales_receipt_id": receipt.id,  # ✅ correct (receipt exists now)
                             "payment_method_ids": default_method.id,
                             "amount": order.order_total,
-                            "date": order.order_date,
+                            "date": (
+                                fields.Date.to_date(order.order_date)
+                                if order.order_date
+                                else fields.Date.today()
+                            ),
                         }
                     )
 
             # -----------------------------
-            # Totals & Overpayment
+            # 4) Recompute totals after any payment creation
             # -----------------------------
             total_paid = sum(order.payment_lines.mapped("amount")) or 0.0
             remaining = max(order.order_total - total_paid, 0.0)
@@ -392,7 +572,6 @@ class CustomerSaleOrder(models.Model):
                     "The total paid amount cannot exceed the order total."
                 )
 
-            # status
             if float_compare(total_paid, 0.0, precision_digits=5) <= 0:
                 receipt_status = "pending"
             elif float_compare(remaining, 0.0, precision_digits=5) <= 0:
@@ -400,7 +579,7 @@ class CustomerSaleOrder(models.Model):
             else:
                 receipt_status = "partial"
 
-            # Validate payment accounts currency ONLY if payment lines exist
+            # Validate payment accounts + currency
             for p in order.payment_lines:
                 if not p.account_id:
                     raise ValidationError("Payment line is missing an account.")
@@ -415,7 +594,7 @@ class CustomerSaleOrder(models.Model):
                     )
 
             # -----------------------------
-            # 2) Create/Update Booking FIRST (as you requested)
+            # 5) Create/Update Booking + rebuild all booking lines
             # -----------------------------
             trx_source = self.env["idil.transaction.source"].search(
                 [("name", "=", "Customer Sales Order")], limit=1
@@ -423,7 +602,7 @@ class CustomerSaleOrder(models.Model):
             if not trx_source:
                 raise UserError("Transaction source 'Customer Sales Order' not found.")
 
-            # header payment method label using safe python loop
+            # Header payment method label
             header_payment_method = "receivable"
             found_bank = False
             found_cash = False
@@ -454,7 +633,6 @@ class CustomerSaleOrder(models.Model):
                         "amount": order.order_total,
                     }
                 )
-                # rebuild lines
                 BookingLine.search(
                     [("transaction_booking_id", "=", booking.id)]
                 ).unlink()
@@ -474,7 +652,7 @@ class CustomerSaleOrder(models.Model):
                     }
                 )
 
-            # ---- Booking line A: DR Customer A/R (full)
+            # DR A/R (FULL order total)
             BookingLine.create(
                 {
                     "transaction_booking_id": booking.id,
@@ -488,7 +666,7 @@ class CustomerSaleOrder(models.Model):
                 }
             )
 
-            # ---- Product lines: DR COGS, CR Inventory, CR Income
+            # Product lines: DR COGS, CR Inventory, CR Income
             for line in order.order_lines:
                 product = line.product_id
 
@@ -571,11 +749,10 @@ class CustomerSaleOrder(models.Model):
                     }
                 )
 
-            # ---- Payment legs: DR payment account / CR A/R (only if payment lines exist)
+            # Payment legs: DR cash/bank, CR A/R (only if payments exist)
             for p in order.payment_lines:
                 if float_compare(p.amount, 0.0, precision_digits=5) <= 0:
                     continue
-
                 acc_type = p.account_id.account_type if p.account_id else "N/A"
 
                 BookingLine.create(
@@ -604,38 +781,36 @@ class CustomerSaleOrder(models.Model):
                 )
 
             # -----------------------------
-            # 3) Create/Update Receipt LAST (as you requested)
+            # 6) Update Receipt again with FINAL totals/status
             # -----------------------------
-            receipt = Receipt.search(
-                [("cusotmer_sale_order_id", "=", order.id)], limit=1
+            receipt.write(
+                {
+                    "paid_amount": total_paid,
+                    "remaining_amount": remaining,
+                    **(
+                        {"payment_status": receipt_status}
+                        if "payment_status" in Receipt._fields
+                        else {}
+                    ),
+                    **(
+                        {"state": receipt_status}
+                        if (
+                            "payment_status" not in Receipt._fields
+                            and "state" in Receipt._fields
+                        )
+                        else {}
+                    ),
+                }
             )
 
-            receipt_vals = {
-                "cusotmer_sale_order_id": order.id,
-                "receipt_date": order.order_date,
-                "due_amount": order.order_total,
-                "paid_amount": total_paid,
-                "remaining_amount": remaining,
-                "customer_id": order.customer_id.id,
-            }
-            if "payment_status" in Receipt._fields:
-                receipt_vals["payment_status"] = receipt_status
-            elif "state" in Receipt._fields:
-                receipt_vals["state"] = receipt_status
-
-            if receipt:
-                receipt.write(receipt_vals)
-            else:
-                receipt = Receipt.create(receipt_vals)
-
             # -----------------------------
-            # 4) Link payment legs to receipt (customer sales payment management)
+            # 7) Ensure all payment lines are linked to receipt
             # -----------------------------
             for p in order.payment_lines:
                 if p.sales_receipt_id != receipt:
                     p.write({"sales_receipt_id": receipt.id})
 
-            # Optional log
+            # Optional chatter log
             try:
                 order.message_post(
                     body=(
@@ -655,32 +830,6 @@ class CustomerSaleOrder(models.Model):
             # Start transaction
             with self.env.cr.savepoint():
                 for order in self:
-
-                    # 1.  Prevent changing payment_method from receivable → cash
-                    # # ------------------------------------------------------------------
-                    # if "payment_method" in vals and vals["payment_method"] in [
-                    #     "cash",
-                    #     "bank_transfer",
-                    # ]:
-                    #     for order in self:
-                    #         if order.payment_method == "receivable":
-                    #             raise ValidationError(
-                    #                 "You cannot switch the payment method from "
-                    #                 "'Account Receivable' to 'Cash or bank'.\n"
-                    #                 "Receivable booking lines already exist for this order."
-                    #             )
-                    # if (
-                    #     "payment_method" in vals
-                    #     and vals["payment_method"] == "receivable"
-                    # ):
-                    #     for order in self:
-                    #         if order.payment_method in ["cash", "bank_transfer"]:
-                    #             raise ValidationError(
-                    #                 "You cannot switch the payment method from "
-                    #                 "'Cash or bank' to 'Account Receivable'.\n"
-                    #                 "Cash booking lines already exist for this order."
-                    #             )
-
                     # Loop through the lines in the database before they are updated
                     for line in order.order_lines:
                         if not line.product_id:
