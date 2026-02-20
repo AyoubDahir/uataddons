@@ -188,6 +188,43 @@ class ManufacturingOrder(models.Model):
         readonly=True,
     )
 
+    def _locked_fields_when_confirmed(self):
+        """
+        Header/Main fields you want to freeze after draft.
+        Keep this list only for 'main' fields (not lines/operations).
+        """
+        return {
+            "company_id",
+            "name",
+            "source_warehouse_id",
+            "source_location_id",
+            "bom_id",
+            "product_id",
+            "product_qty",
+            "scheduled_start_date",
+            "currency_id",
+            "rate",
+            "commission_employee_id",
+            # add/remove based on your need:
+            # "extra_cost_line_ids",  # if you also want to block extra cost edits
+        }
+
+    def write(self, vals):
+        for order in self:
+            # allow status changes (workflow buttons) but block editing header fields
+            if order.status != "draft":
+                locked = order._locked_fields_when_confirmed()
+                attempted = set(vals.keys()) & locked
+
+                if attempted:
+                    raise ValidationError(
+                        "You cannot modify Manufacturing Order main fields when the status is "
+                        f"'{order.status}'. Allowed only in Draft.\n\n"
+                        f"Blocked fields: {', '.join(sorted(attempted))}"
+                    )
+
+        return super().write(vals)
+
     def action_open_extra_cost_wizard(self):
         self.ensure_one()
         return {
@@ -907,54 +944,146 @@ class ManufacturingOrder(models.Model):
             order.write({"status": "done"})
 
     def action_reset_to_draft(self):
-        for order in self.exists():  # protects if record already deleted
+        for order in self.exists():
             if order.status == "draft":
-                continue
+                raise ValidationError("Order is already in draft state.")
 
-            # 1) Block reset if commission has payments
-            commission = (
-                self.env["idil.commission"]
-                .sudo()
-                .search([("manufacturing_order_id", "=", order.id)], limit=1)
-            )
-            if commission and commission.commission_payment_ids:
-                raise ValidationError("Cannot reset: commission already has payments.")
-
-            # 2) Find related records (use searches by MO id, not relations)
+            Commission = self.env["idil.commission"].sudo()
             Booking = self.env["idil.transaction_booking"].sudo()
             BookingLine = self.env["idil.transaction_bookingline"].sudo()
             ItemMove = self.env["idil.item.movement"].sudo()
             ProductMove = self.env["idil.product.movement"].sudo()
 
-            booking = Booking.search(
+            # ✅ bypass write() lock
+            mo = order.with_context(allow_mo_reset=True).sudo()
+
+            # 1) Commission (block if paid)
+            commission = Commission.search(
                 [("manufacturing_order_id", "=", order.id)], limit=1
             )
+            if commission and commission.commission_payment_ids:
+                raise ValidationError("Cannot reset: commission already has payments.")
 
-            # 3) Break MO links FIRST (important)
-            order.sudo().write(
+            # 2) Collect ALL bookings (main + duplicates)
+            bookings = Booking.search(
+                [("manufacturing_order_id", "=", order.id)]
+            ).sudo()
+            if order.transaction_booking_id:
+                bookings |= order.transaction_booking_id.sudo()
+            bookings = bookings.exists()
+
+            # -------------------------------------------------
+            # ✅ CLEAN ORDER (your requested order)
+            # -------------------------------------------------
+
+            # A) Delete commission first (only if no payments)
+            if commission:
+                commission.unlink()
+
+            # B) Delete booking lines (for ALL bookings)
+            if bookings:
+                lines = BookingLine.search(
+                    [("transaction_booking_id", "in", bookings.ids)]
+                ).sudo()
+                # fallback if your FK is booking_id in some environments
+                if "booking_id" in BookingLine._fields:
+                    lines |= BookingLine.search(
+                        [("booking_id", "in", bookings.ids)]
+                    ).sudo()
+                lines.unlink()
+
+            # C) Delete bookings (one by one = easier to catch restriction problems)
+            for b in bookings:
+                b = b.sudo().exists()
+                if not b:
+                    continue
+                # If booking has state restrictions, force to draft if field exists
+                if "state" in b._fields:
+                    try:
+                        b.write({"state": "draft"})
+                    except Exception:
+                        pass
+                b.unlink()
+
+            # D) Delete item movements
+            ItemMove.search([("manufacturing_order_id", "=", order.id)]).sudo().unlink()
+
+            # E) Delete product movements
+            ProductMove.search(
+                [("manufacturing_order_id", "=", order.id)]
+            ).sudo().unlink()
+
+            # F) Delete extra costs (clean all)
+            if order.extra_cost_line_ids:
+                order.extra_cost_line_ids.sudo().unlink()
+
+            # -------------------------------------------------
+            # ✅ RE-VALIDATE: if anything remains -> STOP (no draft)
+            # -------------------------------------------------
+            remaining = []
+
+            # commission remaining
+            rem_comm = Commission.search(
+                [("manufacturing_order_id", "=", order.id)]
+            ).sudo()
+            if rem_comm:
+                remaining.append(f"Commission still exists: {rem_comm.ids}")
+
+            # bookings remaining
+            rem_bookings = Booking.search(
+                [("manufacturing_order_id", "=", order.id)]
+            ).sudo()
+            if rem_bookings:
+                remaining.append(f"Bookings still exist: {rem_bookings.ids}")
+
+            # booking lines remaining (check via remaining bookings, and via MO link too)
+            if rem_bookings:
+                rem_lines = BookingLine.search(
+                    [("transaction_booking_id", "in", rem_bookings.ids)]
+                ).sudo()
+                if "booking_id" in BookingLine._fields:
+                    rem_lines |= BookingLine.search(
+                        [("booking_id", "in", rem_bookings.ids)]
+                    ).sudo()
+                if rem_lines:
+                    remaining.append(f"Booking lines still exist: {rem_lines.ids}")
+
+            # movements remaining
+            rem_item_moves = ItemMove.search(
+                [("manufacturing_order_id", "=", order.id)]
+            ).sudo()
+            if rem_item_moves:
+                remaining.append(f"Item movements still exist: {rem_item_moves.ids}")
+
+            rem_prod_moves = ProductMove.search(
+                [("manufacturing_order_id", "=", order.id)]
+            ).sudo()
+            if rem_prod_moves:
+                remaining.append(f"Product movements still exist: {rem_prod_moves.ids}")
+
+            # extra costs remaining
+            if order.extra_cost_line_ids.sudo().exists():
+                remaining.append(
+                    f"Extra cost lines still exist: {order.extra_cost_line_ids.ids}"
+                )
+
+            if remaining:
+                raise ValidationError(
+                    "Reset FAILED because some linked records could not be deleted.\n"
+                    + "\n".join(remaining)
+                    + "\n\nCheck: those records may be protected by ondelete='restrict' or custom unlink validations."
+                )
+
+            # -------------------------------------------------
+            # ✅ Only now reset MO fields + status
+            # -------------------------------------------------
+            mo.write(
                 {
                     "transaction_booking_id": False,
                     "commission_id": False,
+                    "status": "draft",
                 }
             )
-
-            # 4) Delete booking lines then booking
-            if booking:
-                BookingLine.search(
-                    [("transaction_booking_id", "=", booking.id)]
-                ).unlink()
-                booking.unlink()
-
-            # 5) Delete movements
-            ItemMove.search([("manufacturing_order_id", "=", order.id)]).unlink()
-            ProductMove.search([("manufacturing_order_id", "=", order.id)]).unlink()
-
-            # 6) Delete commission (only if no payments)
-            if commission and not commission.commission_payment_ids:
-                commission.unlink()
-
-            # 7) Finally reset status
-            order.sudo().write({"status": "draft"})
 
     def action_cancel(self):
         for order in self:
@@ -962,285 +1091,6 @@ class ManufacturingOrder(models.Model):
                 raise ValidationError("Only Draft orders can be cancelled.")
 
             order.write({"status": "cancelled"})
-
-    def write(self, vals):
-        try:
-            with self.env.cr.savepoint():
-                for order in self:
-                    # Prevent changing BOM or Product after creation
-                    if "bom_id" in vals and vals["bom_id"] != order.bom_id.id:
-                        raise ValidationError(
-                            "You are not allowed to modify the Bill of Materials (BOM) after the order is created. If you need to change it, please delete and recreate the manufacturing order."
-                        )
-
-                    if (
-                        "product_id" in vals
-                        and vals["product_id"] != order.product_id.id
-                    ):
-                        raise ValidationError(
-                            "You are not allowed to modify the Product after the order is created. If you need to change it, please delete and recreate the manufacturing order."
-                        )
-
-                    # ... continue your write logic below as before
-                    # Store old values for diff calculation
-                    old_product_qty = order.product_qty
-                    old_lines = {
-                        l.id: l.quantity for l in order.manufacturing_order_line_ids
-                    }
-                    old_item_ids = {
-                        l.id: l.item_id.id for l in order.manufacturing_order_line_ids
-                    }
-
-                    # --- 1. Apply changes ---
-                    res = super(ManufacturingOrder, order).write(vals)
-
-                    # --- 3. Adjust Item Stock and Movement ---
-                    for line in order.manufacturing_order_line_ids:
-                        old_qty = old_lines.get(line.id, 0.0)
-                        new_qty = line.quantity
-                        item = line.item_id
-                        qty_diff = new_qty - old_qty
-
-                        # Adjust or create movement
-                        movement = self.env["idil.item.movement"].search(
-                            [
-                                (
-                                    "related_document",
-                                    "=",
-                                    f"idil.manufacturing.order.line,{line.id}",
-                                )
-                            ],
-                            limit=1,
-                        )
-                        if movement:
-                            movement.write(
-                                {
-                                    "quantity": -new_qty,
-                                    "date": order.scheduled_start_date,
-                                }
-                            )
-
-                    # --- 4. Adjust Product Movement ---
-                    product_movement = self.env["idil.product.movement"].search(
-                        [("manufacturing_order_id", "=", order.id)], limit=1
-                    )
-                    if product_movement:
-                        product_movement.write(
-                            {
-                                "quantity": order.product_qty,
-                                "date": order.scheduled_start_date,
-                                "source_document": order.name,
-                            }
-                        )
-
-                    # --- 5. Adjust Booking and Booking Lines ---
-                    # Find booking
-                    booking = self.env["idil.transaction_booking"].search(
-                        [("manufacturing_order_id", "=", order.id)], limit=1
-                    )
-                    if booking:
-                        # Update booking amount
-                        booking.write(
-                            {
-                                "amount": float(order.product_cost),
-                                "trx_date": order.scheduled_start_date,
-                            }
-                        )
-
-                        # --- Loop each MO line ---
-                        for line in order.manufacturing_order_line_ids:
-                            cost_usd = line.cost_price * line.quantity
-                            cost_sos = cost_usd * (order.rate or 1.0)
-
-                            # 1. Product asset account (Debit)
-                            bl = self.env["idil.transaction_bookingline"].search(
-                                [
-                                    ("transaction_booking_id", "=", booking.id),
-                                    ("item_id", "=", line.item_id.id),
-                                    (
-                                        "account_number",
-                                        "=",
-                                        order.product_id.asset_account_id.id,
-                                    ),
-                                    ("transaction_type", "=", "dr"),
-                                ],
-                                limit=1,
-                            )
-                            if bl:
-                                bl.write(
-                                    {
-                                        "dr_amount": float(cost_sos),
-                                        "cr_amount": 0.0,
-                                        "transaction_date": order.scheduled_start_date,
-                                    }
-                                )
-                            # (Optionally create if missing)
-
-                            # 2. Target clearing account (Credit)
-                            target_clearing_account = self.env[
-                                "idil.chart.account"
-                            ].search(
-                                [
-                                    ("name", "=", "Exchange Clearing Account"),
-                                    (
-                                        "currency_id",
-                                        "=",
-                                        order.product_id.asset_account_id.currency_id.id,
-                                    ),
-                                ],
-                                limit=1,
-                            )
-                            if target_clearing_account:
-                                bl = self.env["idil.transaction_bookingline"].search(
-                                    [
-                                        ("transaction_booking_id", "=", booking.id),
-                                        ("item_id", "=", line.item_id.id),
-                                        (
-                                            "account_number",
-                                            "=",
-                                            target_clearing_account.id,
-                                        ),
-                                        ("transaction_type", "=", "cr"),
-                                    ],
-                                    limit=1,
-                                )
-                                if bl:
-                                    bl.write(
-                                        {
-                                            "dr_amount": 0.0,
-                                            "cr_amount": float(cost_sos),
-                                            "transaction_date": order.scheduled_start_date,
-                                        }
-                                    )
-
-                            # 3. Source clearing account (Debit)
-                            source_clearing_account = self.env[
-                                "idil.chart.account"
-                            ].search(
-                                [
-                                    ("name", "=", "Exchange Clearing Account"),
-                                    (
-                                        "currency_id",
-                                        "=",
-                                        line.item_id.asset_account_id.currency_id.id,
-                                    ),
-                                ],
-                                limit=1,
-                            )
-                            if source_clearing_account:
-                                bl = self.env["idil.transaction_bookingline"].search(
-                                    [
-                                        ("transaction_booking_id", "=", booking.id),
-                                        ("item_id", "=", line.item_id.id),
-                                        (
-                                            "account_number",
-                                            "=",
-                                            source_clearing_account.id,
-                                        ),
-                                        ("transaction_type", "=", "dr"),
-                                    ],
-                                    limit=1,
-                                )
-                                if bl:
-                                    bl.write(
-                                        {
-                                            "dr_amount": float(line.row_total),
-                                            "cr_amount": 0.0,
-                                            "transaction_date": order.scheduled_start_date,
-                                        }
-                                    )
-
-                            # 4. Item asset account (Credit)
-                            bl = self.env["idil.transaction_bookingline"].search(
-                                [
-                                    ("transaction_booking_id", "=", booking.id),
-                                    ("item_id", "=", line.item_id.id),
-                                    (
-                                        "account_number",
-                                        "=",
-                                        line.item_id.asset_account_id.id,
-                                    ),
-                                    ("transaction_type", "=", "cr"),
-                                ],
-                                limit=1,
-                            )
-                            if bl:
-                                bl.write(
-                                    {
-                                        "dr_amount": 0.0,
-                                        "cr_amount": float(line.row_total),
-                                        "transaction_date": order.scheduled_start_date,
-                                    }
-                                )
-
-                        # --- Commission (if any) ---
-                        if order.commission_amount > 0:
-                            # Commission expense (Debit)
-                            bl = self.env["idil.transaction_bookingline"].search(
-                                [
-                                    ("transaction_booking_id", "=", booking.id),
-                                    ("product_id", "=", order.product_id.id),
-                                    (
-                                        "account_number",
-                                        "=",
-                                        order.product_id.account_id.id,
-                                    ),
-                                    ("transaction_type", "=", "dr"),
-                                ],
-                                limit=1,
-                            )
-                            if bl:
-                                bl.write(
-                                    {
-                                        "dr_amount": float(order.commission_amount),
-                                        "cr_amount": 0.0,
-                                        "transaction_date": order.scheduled_start_date,
-                                    }
-                                )
-
-                            # Commission liability (Credit)
-                            bl = self.env["idil.transaction_bookingline"].search(
-                                [
-                                    ("transaction_booking_id", "=", booking.id),
-                                    ("product_id", "=", order.product_id.id),
-                                    (
-                                        "account_number",
-                                        "=",
-                                        order.commission_employee_id.account_id.id,
-                                    ),
-                                    ("transaction_type", "=", "cr"),
-                                ],
-                                limit=1,
-                            )
-                            if bl:
-                                bl.write(
-                                    {
-                                        "dr_amount": 0.0,
-                                        "cr_amount": float(order.commission_amount),
-                                        "transaction_date": order.scheduled_start_date,
-                                    }
-                                )
-
-                        # ... handle exchange/currency booking lines if needed
-
-                    # --- 6. Adjust Commission Record and Lines ---
-                    commission_amount = order._calculate_commission_amount(order)
-                    commission = self.env["idil.commission"].search(
-                        [("manufacturing_order_id", "=", order.id)], limit=1
-                    )
-                    if commission:
-                        commission.write(
-                            {
-                                "commission_amount": commission_amount,
-                                "commission_remaining": commission_amount,  # reset if business logic says so
-                                "date": order.scheduled_start_date,
-                            }
-                        )
-
-                    return res
-        except Exception as e:
-            _logger.error(f"Create transaction failed: {str(e)}")
-            raise ValidationError(f"Transaction failed: {str(e)}")
 
     def _generate_order_reference(self, vals):
         bom_id = vals.get("bom_id", False)
@@ -1361,11 +1211,6 @@ class ManufacturingOrderLine(models.Model):
         except Exception as e:
             _logger.error(f"transaction failed: {str(e)}")
             raise ValidationError(f"Transaction failed: {str(e)}")
-
-    def write(self, vals):
-        result = super(ManufacturingOrderLine, self).write(vals)
-        self._check_min_order_qty()
-        return result
 
     def _check_min_order_qty(self):
         for line in self:

@@ -480,6 +480,7 @@
         <field name="view_mode">kanban,tree,form</field>
         <field name="view_id" ref="view_tree_manufacturing_order"/>
         <field name="context">{'group_by': ['scheduled_start_date:month', 'scheduled_start_date:day']}</field>
+        <field name="domain">[('status','!=','cancelled')]</field>
 
     </record>
 
