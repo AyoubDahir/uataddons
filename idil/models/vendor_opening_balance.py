@@ -18,7 +18,7 @@ class VendorOpeningBalance(models.Model):
         string="Opening Date", default=fields.Date.context_today, required=True
     )
     state = fields.Selection(
-        [("draft", "Draft"), ("posted", "Posted"), ("cancel", "Cancelled")],
+        [("draft", "Draft"), ("confirmed", "Confirmed"), ("cancel", "Cancelled")],
         string="Status",
         default="draft",
         readonly=True,
@@ -93,9 +93,9 @@ class VendorOpeningBalance(models.Model):
                     )
                 record = super().create(vals)
 
-                if record.state == "posted":
+                if record.state == "confirmed":
                     raise ValidationError(
-                        "This opening balance has already been posted."
+                        "This opening balance has already been confirmed."
                     )
                 if not record.line_ids:
                     raise ValidationError("Add at least one vendor line.")
@@ -229,30 +229,31 @@ class VendorOpeningBalance(models.Model):
 
                     # Create clearing lines if needed (conversion)
                     if vendor_currency.name != "USD":
-                        # Credit source clearing account (local)
+                        # ✅ DR target clearing account (Vendor currency e.g. SL) = vendor amount
                         self.env["idil.transaction_bookingline"].create(
                             {
                                 "transaction_booking_id": transaction_booking.id,
                                 "vendor_opening_balance_id": line.id,
-                                "account_number": source_clearing_account.id,
+                                "account_number": target_clearing_account.id,  # vendor currency clearing
                                 "transaction_type": "cr",
-                                "dr_amount": 0.0,
+                                "dr_amount": 0.0,  # SL amount
                                 "cr_amount": cost_amount_usd,
                                 "transaction_date": record.date,
-                                "description": f"Opening Balance Clearing Source Account ({vendor_currency.name}) for {line.vendor_id.name}",
+                                "description": f"Exchange Clearing ({vendor_currency.name}) for {line.vendor_id.name}",
                             }
                         )
-                        # Debit target clearing account (USD)
+
+                        # ✅ CR source clearing account (USD) = USD converted amount
                         self.env["idil.transaction_bookingline"].create(
                             {
                                 "transaction_booking_id": transaction_booking.id,
                                 "vendor_opening_balance_id": line.id,
-                                "account_number": target_clearing_account.id,
+                                "account_number": source_clearing_account.id,  # USD clearing
                                 "transaction_type": "dr",
                                 "dr_amount": line.amount,
-                                "cr_amount": 0.0,
+                                "cr_amount": 0,  # USD amount
                                 "transaction_date": record.date,
-                                "description": f"Opening Balance Clearing (USD) for {line.vendor_id.name}",
+                                "description": f"Exchange Clearing (USD) for {line.vendor_id.name}",
                             }
                         )
 
@@ -302,7 +303,7 @@ class VendorOpeningBalance(models.Model):
                     )
                     line.vendor_id.opening_balance += line.amount
 
-                record.state = "posted"
+                record.state = "confirmed"
                 return record
         except Exception as e:
             _logger.error(f"transaction failed: {str(e)}")
@@ -435,31 +436,33 @@ class VendorOpeningBalance(models.Model):
                             booking.booking_lines.unlink()
 
                         # (Re)Create booking lines
+                        # Create clearing lines if needed (conversion)
                         if vendor_currency.name != "USD":
-                            # Credit source clearing account (local)
+                            # ✅ DR target clearing account (Vendor currency e.g. SL) = vendor amount
                             self.env["idil.transaction_bookingline"].create(
                                 {
                                     "transaction_booking_id": booking.id,
                                     "vendor_opening_balance_id": line.id,
-                                    "account_number": source_clearing_account.id,
+                                    "account_number": target_clearing_account.id,  # vendor currency clearing
                                     "transaction_type": "cr",
-                                    "dr_amount": 0.0,
+                                    "dr_amount": 0.0,  # SL amount
                                     "cr_amount": cost_amount_usd,
                                     "transaction_date": record.date,
-                                    "description": f"Opening Balance Clearing Source Account ({vendor_currency.name}) for {line.vendor_id.name}",
+                                    "description": f"Exchange Clearing ({vendor_currency.name}) for {line.vendor_id.name}",
                                 }
                             )
-                            # Debit target clearing account (USD)
+
+                            # ✅ CR source clearing account (USD) = USD converted amount
                             self.env["idil.transaction_bookingline"].create(
                                 {
                                     "transaction_booking_id": booking.id,
                                     "vendor_opening_balance_id": line.id,
-                                    "account_number": target_clearing_account.id,
+                                    "account_number": source_clearing_account.id,  # USD clearing
                                     "transaction_type": "dr",
                                     "dr_amount": line.amount,
-                                    "cr_amount": 0.0,
+                                    "cr_amount": 0,  # USD amount
                                     "transaction_date": record.date,
-                                    "description": f"Opening Balance Clearing (USD) for {line.vendor_id.name}",
+                                    "description": f"Exchange Clearing (USD) for {line.vendor_id.name}",
                                 }
                             )
 
@@ -517,7 +520,7 @@ class VendorOpeningBalance(models.Model):
         try:
             with self.env.cr.savepoint():
                 for record in self:
-                    if record.state == "posted":
+                    if record.state == "confirmed":
                         # If you want to block unlink after posting, uncomment:
                         # raise ValidationError("You cannot delete a posted opening balance. Cancel it first.")
 
