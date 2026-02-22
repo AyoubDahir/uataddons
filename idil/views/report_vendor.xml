@@ -335,17 +335,6 @@
     </template>
 
     <!-- Adding to Financial Reports -->
-    <menuitem id="menu_vendor_report_wizard_fin"
-              name="📊 Vendor Intelligence Analytics"
-              parent="idil.FinancialReports"
-              action="action_vendor_report_wizard"
-              sequence="45"/>
-
-    <!-- Adding to Procurement/Vendors -->
-    <menuitem id="menu_vendor_report_wizard_proc"
-              name="📊 Vendor Intelligence Analytics"
-              parent="menu_procurement_vendors"
-              action="action_vendor_report_wizard"
-              sequence="10"/>
+  
 
 </odoo>
