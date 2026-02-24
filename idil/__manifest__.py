@@ -141,10 +141,8 @@
         "reports/report_daily_sales.xml",
         "views/customer_sales_report_views.xml",
         # "views/model_export_wizard.xml",
-        "views/menu_hr.xml",
         "views/view_all_sales.xml",
         "views/report_kitchen_quantity.xml",
-        "views/menu.xml",
         "views/inventory_dashboard.xml",
         "views/sales_dashboard.xml",
         "views/sales_commission.xml",
@@ -173,5 +171,7 @@
         "views/cfo_pack_wizard_view.xml",
         "views/report_productprofitability.xml",
         "views/eod.xml",
+        "views/menu_hr.xml",
+        "views/menu.xml",
     ],
 }
