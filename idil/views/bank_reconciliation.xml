@@ -145,16 +145,6 @@
         </field>
     </record>
 
-    <!-- Menu Item -->
-    <menuitem id="menu_bank_reconciliation"
-              name="Bank Reconciliation"
-              parent="idil.menu_idil_accounting"
-              sequence="50"/>
 
-    <menuitem id="menu_bank_statement"
-              name="Bank Statements"
-              parent="menu_bank_reconciliation"
-              action="action_bank_statement"
-              sequence="10"/>
 
 </odoo>
