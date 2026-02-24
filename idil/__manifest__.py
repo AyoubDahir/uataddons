@@ -144,6 +144,7 @@
         "views/menu_hr.xml",
         "views/view_all_sales.xml",
         "views/report_kitchen_quantity.xml",
+        "views/menu.xml",
         "views/inventory_dashboard.xml",
         "views/sales_dashboard.xml",
         "views/sales_commission.xml",
@@ -169,7 +170,8 @@
         "reports/sale_invoice_report.xml",
         "views/payment_method.xml",
         "views/product_cost_history_views.xml",
-        "views/menu.xml",
-        "views/sales_dashboard.xml",
+        "views/cfo_pack_wizard_view.xml",
+        "views/report_productprofitability.xml",
+        "views/eod.xml",
     ],
 }
