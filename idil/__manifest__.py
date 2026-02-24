@@ -111,7 +111,6 @@
         "views/idil_balance_sheet_report.xml",
         "views/sale_return.xml",
         "views/stock_adjustment_views.xml",
-        "views/balance_sheet.xml",
         # "views/inventory_dashboard.xml",
         "views/customer_sales_view.xml",
         "views/report_account_statements.xml",
@@ -171,5 +170,6 @@
         "views/payment_method.xml",
         "views/product_cost_history_views.xml",
         "views/menu.xml",
+        "views/sales_dashboard.xml",
     ],
 }
