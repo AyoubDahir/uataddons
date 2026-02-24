@@ -813,11 +813,11 @@
               action="action_sales_commission_payable"
               sequence="20"/>
 
-<menuitem id="menu_idil_sales_dashboard"
+<!-- <menuitem id="menu_idil_sales_dashboard"
               name="📊 Sales Dashboard"
               parent="menu_sales"
               action="action_idil_sales_dashboard"
-              sequence="0"/>
+              sequence="0"/> -->
 
     <menuitem id="menu_sales_discount_root"
               name="🏷️ Discounts"
