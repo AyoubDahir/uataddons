@@ -236,7 +236,7 @@
                                 parent="menu_idil_product_operations"
                                 sequence="1"
                                 action="action_view_product"/>
-
+                        
                         <menuitem
                                 id="menu_product_cost_history"
                                 name="Product Cost History"
@@ -431,7 +431,7 @@
                                 parent="menu_journal_entry_main"
                                 action="action_recurring_journal_entry"
                                 sequence="4"/>
-
+                        
                         <menuitem id="menu_idil_payment_method"
                                 name="Payment Methods"
                                 parent="menu_journal_entry_main"
@@ -634,7 +634,7 @@
             action="action_customer_sales_report_wizard"
             sequence="1"/>
 
-   <!-- <menuitem id="menu_product_profitability_report_root"
+   <menuitem id="menu_product_profitability_report_root"
             name="📦 Product Reports"
             parent="OtherReports"
             sequence="13"/>
@@ -646,14 +646,22 @@
                         sequence="1"/>
 
 
-        <menuitem id="action_production_profitability_wizard"
-                name="📈 Product Profitability Report Wizard"
-                parent="menu_product_profitability_report_root"
-                action="action_product_profitability_report_wizard"
-                sequence="1"/> -->
+      
 
 
 
+
+  <menuitem id="menu_vendor_report_wizard_fin"
+              name="📊 Vendor Intelligence Analytics"
+              parent="OtherReports"
+              sequence="45"/>
+
+    <!-- Adding to Procurement/Vendors -->
+    <menuitem id="menu_vendor_report_wizard_proc"
+              name="📊 Vendor Intelligence Analytics"
+              parent="menu_vendor_report_wizard_fin"
+              action="action_vendor_report_wizard"
+              sequence="10"/>
 
 
 
@@ -727,20 +735,20 @@
 
  <menuitem id="menu_cashflow_report"
               name="💧 Cash Flow Statement"
-              parent="idil.FinancialReports"
+              parent="FinancialReports"
               action="action_cashflow_report_wizard"
               sequence="40"/>
 
     <menuitem id="menu_cashflow_report_advanced"
                name="📊 Advanced Cash Flow"
-               parent="idil.FinancialReports"
+               parent="FinancialReports"
                action="action_report_cash_flow_advanced_wizard"
                sequence="41"/>
 
                <menuitem id="menu_report_production_profitability"
                   name="Production Profitability"
                   parent="FinancialReports"
-                  action="action_view_production_profitability_wizard"
+               action="action_view_production_profitability_wizard"
                   sequence="25"/>
 
     <menuitem id="menu_daily_production_report"
@@ -752,7 +760,7 @@
    <menuitem
         id="menu_daily_sales_report"
         name="📅 Daily Sales Report"
-        parent="idil.FinancialReports"
+        parent="FinancialReports"
         action="action_daily_sales_report_wizard"
         sequence="30"/>
 
