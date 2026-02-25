@@ -168,7 +168,6 @@
         "reports/sale_invoice_report.xml",
         "views/payment_method.xml",
         "views/product_cost_history_views.xml",
-        "views/eod.xml",
         "views/menu_hr.xml",
         "views/menu.xml",
     ],
