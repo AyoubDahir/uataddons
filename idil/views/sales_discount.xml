@@ -154,21 +154,6 @@
 
     <!-- Menus -->
     
-    <menuitem id="menu_sales_discount_root" 
-              name="Discounts" 
-              parent="menu_sales" 
-              sequence="55"/>
-
-    <menuitem id="menu_sales_discount_all" 
-              name="All Discounts" 
-              parent="menu_sales_discount_root" 
-              action="action_sales_discount" 
-              sequence="10"/>
-
-    <menuitem id="menu_sales_discount_payable" 
-              name="Processable Now" 
-              parent="menu_sales_discount_root" 
-              action="action_sales_discount_payable" 
-              sequence="20"/>
+  
 
 </odoo>
