@@ -24,448 +24,395 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
         "idil.sales.sales_personnel", string="Sales Person", required=True
     )
 
-    # def generate_pdf_report(self):
-    #     company = self.env.company
-    #     buffer = io.BytesIO()
-    #     doc = SimpleDocTemplate(
-    #         buffer,
-    #         pagesize=landscape(letter),
-    #         rightMargin=30,
-    #         leftMargin=30,
-    #         topMargin=40,
-    #         bottomMargin=30,
-    #     )
-    #     elements = []
+    def _should_convert_to_usd(self):
+        # Your exact rule: salesperson linked A/R currency is USD => show report in USD
+        ar_currency = self.salesperson_id.account_receivable_id.currency_id
+        return bool(ar_currency and ar_currency.name == "USD")
 
-    #     styles = getSampleStyleSheet()
-    #     header_style = ParagraphStyle(
-    #         name="Header",
-    #         parent=styles["Title"],
-    #         fontSize=18,
-    #         textColor=colors.HexColor("#B6862D"),
-    #         alignment=1,
-    #     )
-    #     subtitle_style = ParagraphStyle(
-    #         name="Subtitle", parent=styles["Normal"], fontSize=12, alignment=1
-    #     )
-    #     left_align_style = ParagraphStyle(
-    #         name="LeftAlign", parent=styles["Normal"], fontSize=12, alignment=0
-    #     )
+    def _prepare_report_data(self):
+        self.ensure_one()
+        if not self.salesperson_id:
+            return {}
+        company = self.env.company
+        company_currency = company.currency_id
+        usd_currency = self.env.ref("base.USD")
 
-    #     logo = (
-    #         Image(io.BytesIO(base64.b64decode(company.logo)), width=120, height=60)
-    #         if company.logo
-    #         else Paragraph("<b>No Logo Available</b>", header_style)
-    #     )
-    #     elements += [
-    #         logo,
-    #         Spacer(1, 12),
-    #         Paragraph(f"<b>{company.name.upper()}</b>", header_style),
-    #         Spacer(1, 6),
-    #         Paragraph(
-    #             f"{company.partner_id.city or ''}, {company.partner_id.country_id.name or ''}<br/>"
-    #             f"Phone: {company.partner_id.phone or 'N/A'}<br/>"
-    #             f"Email: {company.partner_id.email or 'N/A'}<br/>"
-    #             f"Web: {company.website or 'N/A'}",
-    #             subtitle_style,
-    #         ),
-    #         Spacer(1, 20),
-    #         Paragraph(
-    #             f"<b>Date from:</b> {self.start_date.strftime('%d/%m/%Y')}<br/>"
-    #             f"<b>Date to:</b> {self.end_date.strftime('%d/%m/%Y')}",
-    #             left_align_style,
-    #         ),
-    #         Spacer(1, 12),
-    #         Paragraph(
-    #             f"<b>Sales Person Name:</b> {self.salesperson_id.name}",
-    #             left_align_style,
-    #         ),
-    #         Spacer(1, 12),
-    #     ]
+        convert_to_usd = self._should_convert_to_usd()
+        report_currency = usd_currency if convert_to_usd else company_currency
+        salesperson_currency = (
+            self.salesperson_id.account_receivable_id.currency_id
+            if self.salesperson_id.account_receivable_id
+            and self.salesperson_id.account_receivable_id.currency_id
+            else company_currency
+        )
 
-    #     # -------------------------
-    #     # Opening balance from opening-balance receipt (if any)
-    #     # -------------------------
-    #     self.env.cr.execute(
-    #         """
-    #         SELECT remaining_amount
-    #         FROM idil_sales_receipt
-    #         WHERE salesperson_id = %s
-    #           AND sales_opening_balance_id IS NOT NULL
-    #         ORDER BY id ASC
-    #         LIMIT 1
-    #         """,
-    #         (self.salesperson_id.id,),
-    #     )
-    #     opening_balance_result = self.env.cr.fetchone()
-    #     opening_balance = opening_balance_result[0] if opening_balance_result else 0.0
+        def money(amount, from_currency, date):
+            amount = float(amount or 0.0)
+            if not convert_to_usd:
+                return amount
+            if not from_currency or from_currency == report_currency:
+                return amount
+            return from_currency._convert(amount, report_currency, company, date)
 
-    #     # -------------------------
-    #     # PREVIOUS BALANCE before start_date
-    #     # -------------------------
-    #     # previous_sales_before
-    #     self.env.cr.execute(
-    #         """
-    #         SELECT
-    #             COALESCE(SUM(
-    #                 (
-    #                   (COALESCE(sol.quantity,0)
-    #                   - COALESCE(sol.discount_quantity,0)
-    #                   - COALESCE(srl.returned_quantity,0)) * COALESCE(sol.price_unit,0)
-    #                 )
-    #                 - (
-    #                   (
-    #                     (COALESCE(sol.quantity,0)
-    #                     - COALESCE(sol.discount_quantity,0)
-    #                     - COALESCE(srl.returned_quantity,0)) * COALESCE(sol.price_unit,0)
-    #                   ) * COALESCE(p.commission,0)
-    #                 )
-    #             ), 0) AS sales_minus_commission_before
-    #         FROM idil_salesperson_place_order spo
-    #         INNER JOIN idil_sale_order so
-    #                 ON so.sales_person_id = spo.salesperson_id
-    #                AND so.salesperson_order_id = spo.id
-    #         INNER JOIN idil_sale_order_line sol ON sol.order_id = so.id
-    #         INNER JOIN my_product_product p    ON p.id = sol.product_id
-    #         LEFT JOIN  idil_sale_return sr
-    #                 ON sr.salesperson_id = spo.salesperson_id
-    #                AND sr.sale_order_id  = so.id
-    #         LEFT JOIN  idil_sale_return_line srl
-    #                 ON srl.return_id = sr.id
-    #                AND srl.product_id = p.id
-    #         WHERE spo.state = 'confirmed'
-    #           AND spo.salesperson_id = %s
-    #           AND DATE(so.order_date) < %s
-    #         """,
-    #         (self.salesperson_id.id, self.start_date),
-    #     )
-    #     previous_sales_before = self.env.cr.fetchone()[0] or 0.0
+        # 1. Opening Balance
+        self.env.cr.execute(
+            """
+            SELECT l.amount, ob.date
+            FROM idil_sales_opening_balance_line l
+            JOIN idil_sales_opening_balance ob ON ob.id = l.opening_balance_id
+            WHERE ob.state != 'cancel'
+              AND l.sales_person_id = %s
+            ORDER BY ob.date ASC
+            LIMIT 1
+            """,
+            (self.salesperson_id.id,),
+        )
+        ob_row = self.env.cr.fetchone()
+        opening_balance = float(ob_row[0]) if ob_row else 0.0
+        opening_date = ob_row[1] if ob_row else self.start_date
+        opening_balance_rep = money(opening_balance, company_currency, opening_date)
 
-    #     # previous_paid_before (by ACTUAL payment_date)
-    #     self.env.cr.execute(
-    #         """
-    #         SELECT COALESCE(SUM(p.paid_amount), 0)
-    #         FROM idil_sales_payment p
-    #         INNER JOIN idil_sales_receipt r ON r.id = p.sales_receipt_id
-    #         WHERE r.salesperson_id = %s
-    #           AND DATE(p.payment_date) < %s
-    #         """,
-    #         (self.salesperson_id.id, self.start_date),
-    #     )
-    #     previous_paid_before = self.env.cr.fetchone()[0] or 0.0
+        # 2. Previous Balance
+        self.env.cr.execute(
+            """
+                 SELECT
+                    DATE(so.order_date) AS day,
+                    so.currency_id AS so_currency_id,
 
-    #     previous_balance = previous_sales_before - previous_paid_before
+                    /* Lacag: qty (after discount & return depending on flag) * price */
+                    COALESCE(SUM(
+                        (
+                            (
+                                COALESCE(sol.quantity, 0)
+                                - (CASE
+                                        WHEN COALESCE(p.is_quantity_discount, TRUE)
+                                        THEN COALESCE(sol.discount_quantity, 0)
+                                        ELSE 0
+                                END)
+                                - COALESCE(srl.returned_quantity, 0)
+                            ) * COALESCE(sol.price_unit, 0)
+                        )
+                    ), 0) AS lacag_sum,
 
-    #     # -------------------------
-    #     # SALES inside [start_date, end_date]
-    #     # -------------------------
-    #     self.env.cr.execute(
-    #         """
-    #         SELECT
-    #             DATE(so.order_date) AS order_day,
-    #             p.name,
-    #             sol.quantity,
-    #             (((COALESCE(sol.quantity, 0)) - (COALESCE(srl.returned_quantity, 0))) * (p.discount / 100)) AS celis_tos,
-    #             COALESCE(srl.returned_quantity, 0) AS celis,
-    #             (COALESCE(sol.quantity, 0)
-    #               - (((COALESCE(sol.quantity, 0)) - (COALESCE(srl.returned_quantity, 0))) * (p.discount / 100))
-    #               - COALESCE(srl.returned_quantity, 0)) AS net,
-    #             COALESCE(sol.price_unit, 0) AS qiime,
-    #             ((COALESCE(sol.quantity, 0)
-    #               - (((COALESCE(sol.quantity, 0)) - (COALESCE(srl.returned_quantity, 0))) * (p.discount / 100))
-    #               - COALESCE(srl.returned_quantity, 0)) * COALESCE(sol.price_unit, 0)) AS lacag,
-    #             (COALESCE(sol.commission, 0) * 100) AS per,
-    #             (((COALESCE(sol.quantity, 0)
-    #               - (((COALESCE(sol.quantity, 0)) - (COALESCE(srl.returned_quantity, 0))) * (p.discount / 100))
-    #               - COALESCE(srl.returned_quantity, 0)) * COALESCE(sol.price_unit, 0)) * COALESCE(sol.commission, 0)) AS comm
-    #         FROM idil_salesperson_place_order spo
-    #         INNER JOIN idil_sale_order so
-    #                 ON so.sales_person_id = spo.salesperson_id
-    #                AND so.salesperson_order_id = spo.id
-    #         INNER JOIN idil_sale_order_line sol ON sol.order_id = so.id
-    #         INNER JOIN my_product_product p    ON sol.product_id = p.id
-    #         LEFT JOIN  idil_sale_return sr
-    #                 ON sr.salesperson_id = spo.salesperson_id
-    #                AND sr.sale_order_id  = so.id
-    #         LEFT JOIN  idil_sale_return_line srl
-    #                 ON srl.return_id = sr.id
-    #                AND srl.product_id = p.id
-    #         WHERE spo.state = 'confirmed'
-    #           AND spo.salesperson_id = %s
-    #           AND DATE(so.order_date) BETWEEN %s AND %s
-    #         ORDER BY so.id, sol.id
-    #         """,
-    #         (self.salesperson_id.id, self.start_date, self.end_date),
-    #     )
-    #     sales_rows = self.env.cr.fetchall()
-    #     sales_by_day = defaultdict(list)
-    #     for r in sales_rows:
-    #         order_day = r[0]
-    #         sales_by_day[order_day].append(r)
+                    /* Commission: only if product is commissionable */
+                    COALESCE(SUM(
+                        (
+                            (
+                                COALESCE(sol.quantity, 0)
+                                - (CASE
+                                        WHEN COALESCE(p.is_quantity_discount, TRUE)
+                                        THEN COALESCE(sol.discount_quantity, 0)
+                                        ELSE 0
+                                END)
+                                - COALESCE(srl.returned_quantity, 0)
+                            )  * COALESCE(sol.price_unit, 0)
+                        ) * (CASE
+                                WHEN COALESCE(p.is_sales_commissionable, TRUE)
+                                THEN COALESCE(p.commission, 0)
+                                ELSE 0
+                        END)
+                    ), 0) AS comm_sum
 
-    #     # -------------------------
-    #     # PAYMENTS inside [start_date, end_date] by ACTUAL payment_date
-    #     # -------------------------
-    #     self.env.cr.execute(
-    #         """
-    #         SELECT DATE(p.payment_date) AS paid_day, SUM(COALESCE(p.paid_amount,0)) AS total_paid
-    #         FROM idil_sales_payment p
-    #         INNER JOIN idil_sales_receipt r ON r.id = p.sales_receipt_id
-    #         WHERE r.salesperson_id = %s
-    #           AND DATE(p.payment_date) BETWEEN %s AND %s
-    #         GROUP BY DATE(p.payment_date)
-    #         """,
-    #         (self.salesperson_id.id, self.start_date, self.end_date),
-    #     )
-    #     paid_by_day = defaultdict(float)
-    #     for d, amt in self.env.cr.fetchall() or []:
-    #         paid_by_day[d] = float(amt or 0.0)
+                FROM idil_salesperson_place_order spo
+                INNER JOIN idil_sale_order so
+                        ON so.sales_person_id = spo.salesperson_id
+                    AND so.salesperson_order_id = spo.id
+                INNER JOIN idil_sale_order_line sol ON sol.order_id = so.id
+                INNER JOIN my_product_product p    ON p.id = sol.product_id
+                LEFT JOIN  idil_sale_return sr
+                        ON sr.salesperson_id = spo.salesperson_id
+                    AND sr.sale_order_id  = so.id
+                LEFT JOIN  idil_sale_return_line srl
+                        ON srl.return_id = sr.id
+                    AND srl.product_id = p.id
 
-    #     # Union of days that have sales or payments
-    #     all_days = sorted(set(sales_by_day.keys()) | set(paid_by_day.keys()))
+                WHERE spo.state = 'confirmed'
+                AND spo.salesperson_id = %s
+                AND DATE(so.order_date) < %s
 
-    #     # -------------------------
-    #     # Build table with running Outstanding + daily & cumulative Lacag/Commission
-    #     # -------------------------
-    #     headers = [
-    #         "Date",
-    #         "Product",
-    #         "Cadad",
-    #         "Celis Tos",
-    #         "Celis",
-    #         "Net",
-    #         "Qiime",
-    #         "Lacag",
-    #         "Per %",
-    #         "Commission",
-    #         "Balance",
-    #     ]
-    #     data = [headers]
+                GROUP BY DATE(so.order_date), so.currency_id
+            """,
+            (self.salesperson_id.id, self.start_date),
+        )
+        previous_sales_net_rep = 0.0
+        for day, so_currency_id, lacag_sum, comm_sum in self.env.cr.fetchall() or []:
+            so_cur = (
+                self.env["res.currency"].browse(int(so_currency_id))
+                if so_currency_id
+                else company_currency
+            )
+            net = float(lacag_sum or 0.0) - float(comm_sum or 0.0)
+            previous_sales_net_rep += money(net, so_cur, day)
 
-    #     total_lacag = total_commission = total_paid = total_balance = 0.0
-    #     highlight_rows, merged_rows = [], []
+        self.env.cr.execute(
+            """
+            SELECT
+                DATE(p.payment_date) AS day,
+                COALESCE(r.currency_id, 0) AS receipt_currency_id,
+                COALESCE(SUM(COALESCE(p.paid_amount,0)),0) AS paid_sum
+            FROM idil_sales_payment p
+            INNER JOIN idil_sales_receipt r ON r.id = p.sales_receipt_id
+            WHERE r.salesperson_id = %s
+              AND DATE(p.payment_date) < %s
+            GROUP BY DATE(p.payment_date), COALESCE(r.currency_id, 0)
+            """,
+            (self.salesperson_id.id, self.start_date),
+        )
+        previous_paid_rep = 0.0
+        for day, rcid, paid_sum in self.env.cr.fetchall() or []:
+            pay_cur = (
+                self.env["res.currency"].browse(int(rcid)) if rcid else company_currency
+            )
+            previous_paid_rep += money(float(paid_sum or 0.0), pay_cur, day)
 
-    #     # Starting outstanding at beginning of the range
-    #     cumulative_outstanding = opening_balance + previous_balance
+        previous_balance_rep = previous_sales_net_rep - previous_paid_rep
 
-    #     # NEW: running totals to show on the Outstanding line
-    #     running_lacag = 0.0
-    #     running_commission = 0.0
+        # 3. Current Period Sales
+        self.env.cr.execute(
+            """
+           SELECT
+                    DATE(so.order_date) AS order_day,
+                    so.currency_id AS so_currency_id,
+                    p.name,
+                    sol.quantity,
 
-    #     for day in all_days:
-    #         daily_rows = sales_by_day.get(day, [])
-    #         subtotal_lacag = subtotal_commission = subtotal_balance = 0.0
+                    /* Celis Tos (discount qty) only if Discountible */
+                    (
+                    CASE
+                        WHEN COALESCE(p.is_quantity_discount, TRUE)
+                        THEN (((COALESCE(sol.quantity, 0)) - COALESCE(srl.returned_quantity, 0)) * (COALESCE(p.discount,0) / 100))
+                        ELSE 0
+                    END
+                    ) AS celis_tos,
 
-    #         for r in daily_rows:
-    #             # r: 0 day, 1 product, 2 qty, 3 celis_tos, 4 celis, 5 net, 6 qiime, 7 lacag, 8 per, 9 comm
-    #             product, cadad, celis_tos, celis, net, qiime, lacag, per, comm = r[1:10]
-    #             balance = lacag - comm
-    #             data.append(
-    #                 [
-    #                     day.strftime("%d/%m/%Y"),
-    #                     product,
-    #                     f"{cadad:.2f}",
-    #                     f"{celis_tos:.2f}",
-    #                     f"{celis:.2f}",
-    #                     f"{net:.2f}",
-    #                     f"{qiime:,.2f}",
-    #                     f"{lacag:,.2f}",
-    #                     f"{per:.2f}%",
-    #                     f"{comm:,.2f}",
-    #                     f"{balance:,.2f}",
-    #                 ]
-    #             )
-    #             subtotal_lacag += lacag
-    #             subtotal_commission += comm
-    #             subtotal_balance += balance
+                    COALESCE(srl.returned_quantity, 0) AS celis,
 
-    #         paid_today = paid_by_day.get(day, 0.0)
-    #         day_total = subtotal_balance - paid_today
+                    /* Net qty: discount applied only if Discountible */
+                    (
+                    COALESCE(sol.quantity, 0)
+                    - (
+                        CASE
+                            WHEN COALESCE(p.is_quantity_discount, TRUE)
+                            THEN (((COALESCE(sol.quantity, 0)) - COALESCE(srl.returned_quantity, 0)) * (COALESCE(p.discount,0) / 100))
+                            ELSE 0
+                        END
+                        )
+                    - COALESCE(srl.returned_quantity, 0)
+                    ) AS net,
 
-    #         # --- Subtotal row: show today's Lacag & Commission totals too
-    #         row = [""] * 11
-    #         row[0] = f"Subtotal {day.strftime('%d/%m/%Y')}"
-    #         row[7] = f"{subtotal_lacag:,.2f}"  # Lacag (col 8)
-    #         row[9] = f"{subtotal_commission:,.2f}"  # Commission (col 10)
-    #         row[-1] = f"{subtotal_balance:,.2f}"  # Balance
-    #         data.append(row)
-    #         idx = len(data) - 1
-    #         highlight_rows.append(idx)
-    #         merged_rows.append(idx)
+                    COALESCE(sol.price_unit, 0) AS qiime,
 
-    #         # --- Paid row (balance-only)
-    #         row = [""] * 11
-    #         row[0] = f"Paid {day.strftime('%d/%m/%Y')}"
-    #         row[-1] = f"{paid_today:,.2f}"
-    #         data.append(row)
-    #         idx = len(data) - 1
-    #         highlight_rows.append(idx)
-    #         merged_rows.append(idx)
+                    /* Lacag = net * price (net already respects Discountible flag) */
+                    (
+                    (
+                        COALESCE(sol.quantity, 0)
+                        - (
+                            CASE
+                            WHEN COALESCE(p.is_quantity_discount, TRUE)
+                            THEN (((COALESCE(sol.quantity, 0)) - COALESCE(srl.returned_quantity, 0)) * (COALESCE(p.discount,0) / 100))
+                            ELSE 0
+                            END
+                        )
+                        - COALESCE(srl.returned_quantity, 0)
+                    ) * COALESCE(sol.price_unit, 0)
+                    ) AS lacag,
 
-    #         # --- Day Total row (balance-only)
-    #         row = [""] * 11
-    #         row[0] = f"Day Total {day.strftime('%d/%m/%Y')}"
-    #         row[-1] = f"{day_total:,.2f}"
-    #         data.append(row)
-    #         idx = len(data) - 1
-    #         highlight_rows.append(idx)
-    #         merged_rows.append(idx)
+                    /* Per is still returned as stored (no change) */
+                    COALESCE(sol.commission, 0) AS per,
 
-    #         # Running outstanding since beginning up to this day
-    #         cumulative_outstanding += day_total
+                    /* Commission only if Commissionable */
+                    (
+                    CASE
+                        WHEN COALESCE(p.is_sales_commissionable, TRUE)
+                        THEN
+                        (
+                            (
+                            COALESCE(sol.quantity, 0)
+                            - (
+                                CASE
+                                    WHEN COALESCE(p.is_quantity_discount, TRUE)
+                                    THEN (((COALESCE(sol.quantity, 0)) - COALESCE(srl.returned_quantity, 0)) * (COALESCE(p.discount,0) / 100))
+                                    ELSE 0
+                                END
+                                )
+                            - COALESCE(srl.returned_quantity, 0)
+                            ) * COALESCE(sol.price_unit, 0)
+                        ) * COALESCE(sol.commission, 0)
+                        ELSE 0
+                    END
+                    ) AS comm
 
-    #         # Update running Lacag/Commission to date for the Outstanding line
-    #         running_lacag += subtotal_lacag
-    #         running_commission += subtotal_commission
+                FROM idil_salesperson_place_order spo
+                INNER JOIN idil_sale_order so
+                        ON so.sales_person_id = spo.salesperson_id
+                    AND so.salesperson_order_id = spo.id
+                INNER JOIN idil_sale_order_line sol ON sol.order_id = so.id
+                INNER JOIN my_product_product p    ON sol.product_id = p.id
+                LEFT JOIN  idil_sale_return sr
+                        ON sr.salesperson_id = spo.salesperson_id
+                    AND sr.sale_order_id  = so.id
+                LEFT JOIN  idil_sale_return_line srl
+                        ON srl.return_id = sr.id
+                    AND srl.product_id = p.id
 
-    #         # --- Outstanding (to date) row with cumulative Lacag/Commission
-    #         row = [""] * 11
-    #         row[0] = f"Outstanding (to date) {day.strftime('%d/%m/%Y')}"
-    #         row[7] = f"{running_lacag:,.2f}"  # cumulative Lacag
-    #         row[9] = f"{running_commission:,.2f}"  # cumulative Commission
-    #         row[-1] = (
-    #             f"{cumulative_outstanding:,.2f}"  # cumulative Balance (outstanding)
-    #         )
-    #         data.append(row)
-    #         idx = len(data) - 1
-    #         highlight_rows.append(idx)
-    #         merged_rows.append(idx)
+                WHERE spo.state = 'confirmed'
+                AND spo.salesperson_id = %s
+                AND DATE(so.order_date) BETWEEN %s AND %s
 
-    #         total_lacag += subtotal_lacag
-    #         total_commission += subtotal_commission
-    #         total_paid += paid_today
-    #         total_balance += day_total
+                ORDER BY so.order_date, sol.id
+            """,
+            (self.salesperson_id.id, self.start_date, self.end_date),
+        )
+        sales_by_day = defaultdict(list)
+        for row in self.env.cr.fetchall() or []:
+            sales_by_day[row[0]].append(row)
 
-    #     # GRAND TOTAL
-    #     data.append(
-    #         [
-    #             "GRAND TOTAL",
-    #             "",
-    #             "",
-    #             "",
-    #             "",
-    #             "",
-    #             "",
-    #             f"{total_lacag:,.2f}",
-    #             "",
-    #             f"{total_commission:,.2f}",
-    #             f"{total_balance:,.2f}",
-    #         ]
-    #     )
-    #     highlight_rows.append(len(data) - 1)
-    #     merged_rows.append(len(data) - 1)
+        # 4. Current Period Payments
+        self.env.cr.execute(
+            """
+            SELECT
+                DATE(p.payment_date) AS paid_day,
+                COALESCE(r.currency_id, 0) AS receipt_currency_id,
+                COALESCE(SUM(COALESCE(p.paid_amount,0)),0) AS total_paid
+            FROM idil_sales_payment p
+            INNER JOIN idil_sales_receipt r ON r.id = p.sales_receipt_id
+            WHERE r.salesperson_id = %s
+              AND DATE(p.payment_date) BETWEEN %s AND %s
+            GROUP BY DATE(p.payment_date), COALESCE(r.currency_id, 0)
+            """,
+            (self.salesperson_id.id, self.start_date, self.end_date),
+        )
+        paid_by_day = defaultdict(float)
+        for d, rcid, amt in self.env.cr.fetchall() or []:
+            pay_cur = (
+                self.env["res.currency"].browse(int(rcid)) if rcid else company_currency
+            )
+            paid_by_day[d] += money(float(amt or 0.0), pay_cur, d)
 
-    #     # Divider
-    #     data.append(["", "", "", "", "", "", "", "", "", "", "--------------------"])
-    #     highlight_rows.append(len(data) - 1)
-    #     merged_rows.append(len(data) - 1)
+        all_days = sorted(set(sales_by_day.keys()) | set(paid_by_day.keys()))
 
-    #     # Summary rows after the table
-    #     data.append(
-    #         [
-    #             "OPENING BALANCE",
-    #             "",
-    #             "",
-    #             "",
-    #             "",
-    #             "",
-    #             "",
-    #             "",
-    #             "",
-    #             "",
-    #             f"{opening_balance:,.2f}",
-    #         ]
-    #     )
-    #     highlight_rows.append(len(data) - 1)
-    #     merged_rows.append(len(data) - 1)
+        return {
+            "report_currency": report_currency,
+            "salesperson_currency": salesperson_currency,  # ✅ ADD THIS
+            "opening_balance_rep": opening_balance_rep,
+            "previous_balance_rep": previous_balance_rep,
+            "sales_by_day": sales_by_day,
+            "paid_by_day": paid_by_day,
+            "all_days": all_days,
+            "money_func": money,
+            "company_currency": company_currency,
+        }
 
-    #     data.append(
-    #         [
-    #             "PREVIOUS BALANCE",
-    #             "",
-    #             "",
-    #             "",
-    #             "",
-    #             "",
-    #             "",
-    #             "",
-    #             "",
-    #             "",
-    #             f"{previous_balance:,.2f}",
-    #         ]
-    #     )
-    #     highlight_rows.append(len(data) - 1)
-    #     merged_rows.append(len(data) - 1)
+    def get_report_data(self, wizard_id=None):
+        wizard = self.browse(wizard_id) if wizard_id else self
+        data = wizard._prepare_report_data()
 
-    #     data.append(
-    #         ["TOTAL PAID:", "", "", "", "", "", "", "", "", "", f"{total_paid:,.2f}"]
-    #     )
-    #     highlight_rows.append(len(data) - 1)
-    #     merged_rows.append(len(data) - 1)
+        report_data = {
+            "salesperson_name": wizard.salesperson_id.name,
+            "start_date": wizard.start_date.strftime("%d %b %Y"),
+            "end_date": wizard.end_date.strftime("%d %b %Y"),
+            "currency": data["report_currency"].name,
+            "salesperson_currency": (
+                data.get("salesperson_currency") and data["salesperson_currency"].name
+            )
+            or "",
+            "opening_sum": data["opening_balance_rep"] + data["previous_balance_rep"],
+            "total_paid": 0.0,
+            "period_sales_net": 0.0,
+            "final_balance": 0.0,
+            "days": {},
+        }
 
-    #     final_balance_amount = opening_balance + previous_balance + total_balance
-    #     data.append(
-    #         [
-    #             "FINAL BALANCE",
-    #             "",
-    #             "",
-    #             "",
-    #             "",
-    #             "",
-    #             "",
-    #             "",
-    #             "",
-    #             "",
-    #             f"{final_balance_amount:,.2f}",
-    #         ]
-    #     )
-    #     final_balance_index = len(data) - 1
-    #     highlight_rows.append(final_balance_index)
-    #     merged_rows.append(final_balance_index)
+        cumulative_outstanding = report_data["opening_sum"]
+        total_paid_period = 0.0
+        total_sales_net_period = 0.0
 
-    #     table = Table(data, colWidths=[70, 140, 50, 60, 50, 40, 60, 80, 50, 70, 100])
-    #     style = TableStyle(
-    #         [
-    #             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#B6862D")),
-    #             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-    #             ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-    #             ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-    #             ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-    #         ]
-    #     )
-    #     for row_idx in highlight_rows:
-    #         style.add("FONTNAME", (0, row_idx), (-1, row_idx), "Helvetica-Bold")
-    #     for row_idx in merged_rows:
-    #         style.add("SPAN", (0, row_idx), (2, row_idx))
-    #     style.add(
-    #         "BACKGROUND",
-    #         (0, final_balance_index),
-    #         (-1, final_balance_index),
-    #         colors.HexColor("#FFD700"),
-    #     )
-    #     table.setStyle(style)
+        for day in data["all_days"]:
+            daily_sales_raw = data["sales_by_day"].get(day, [])
+            day_subtotal_lacag = 0.0
+            day_subtotal_comm = 0.0
+            day_subtotal_balance = 0.0
 
-    #     elements.append(Spacer(1, 20))
-    #     elements.append(table)
-    #     doc.build(elements)
-    #     buffer.seek(0)
-    #     pdf_data = buffer.read()
+            sales_list = []
+            for s in daily_sales_raw:
+                (
+                    order_day,
+                    so_cur_id,
+                    product,
+                    qty,
+                    celis_tos,
+                    celis,
+                    net_qty,
+                    qiime,
+                    lacag,
+                    per,
+                    comm,
+                ) = s
+                so_cur = (
+                    self.env["res.currency"].browse(int(so_cur_id))
+                    if so_cur_id
+                    else data["company_currency"]
+                )
 
-    #     attachment = self.env["ir.attachment"].create(
-    #         {
-    #             "name": f"Sales Summary Report {self.salesperson_id.name} - {self.start_date} - {self.end_date}.pdf",
-    #             "type": "binary",
-    #             "datas": base64.b64encode(pdf_data),
-    #             "mimetype": "application/pdf",
-    #         }
-    #     )
-    #     return {
-    #         "type": "ir.actions.act_url",
-    #         "url": f"/web/content/{attachment.id}?download=true",
-    #         "target": "new",
-    #     }
+                lacag_rep = data["money_func"](lacag, so_cur, order_day)
+                comm_rep = data["money_func"](comm, so_cur, order_day)
+                qiime_rep = data["money_func"](qiime, so_cur, order_day)
+                balance_rep = lacag_rep - comm_rep
+
+                sales_list.append(
+                    {
+                        "product": product,
+                        "qty": qty,
+                        "celis": celis,
+                        "celis_tos": celis_tos,
+                        "net_qty": net_qty,
+                        "qiime": qiime_rep,
+                        "per": per,
+                        "lacag": lacag_rep,
+                        "comm": comm_rep,
+                        "balance": balance_rep,
+                    }
+                )
+                day_subtotal_lacag += lacag_rep
+                day_subtotal_comm += comm_rep
+                day_subtotal_balance += balance_rep
+
+            paid_today = float(data["paid_by_day"].get(day, 0.0))
+            cumulative_outstanding += day_subtotal_balance - paid_today
+            total_paid_period += paid_today
+            total_sales_net_period += day_subtotal_balance
+
+            report_data["days"][day] = {
+                "sales": sales_list,
+                "subtotal_lacag": day_subtotal_lacag,
+                "subtotal_comm": day_subtotal_comm,
+                "subtotal_balance": day_subtotal_balance,
+                "paid": paid_today,
+                "running_outstanding": cumulative_outstanding,
+            }
+
+        report_data["total_paid"] = total_paid_period
+        report_data["period_sales_net"] = total_sales_net_period
+        report_data["final_balance"] = cumulative_outstanding
+
+        return report_data
+
+    def action_view_html_report(self):
+        return self.env.ref(
+            "idil.action_report_sales_summary_person_html"
+        ).report_action(self)
 
     def generate_pdf_report(self):
+        data_prep = self._prepare_report_data()
+        report_currency = data_prep["report_currency"]
+        money = data_prep["money_func"]
+        company_currency = data_prep["company_currency"]
+        opening_balance_rep = data_prep["opening_balance_rep"]
+        previous_balance_rep = data_prep["previous_balance_rep"]
+        sales_by_day = data_prep["sales_by_day"]
+        paid_by_day = data_prep["paid_by_day"]
+        all_days = data_prep["all_days"]
+
         company = self.env.company
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
@@ -493,9 +440,6 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
             name="LeftAlign", parent=styles["Normal"], fontSize=12, alignment=0
         )
 
-        # ------------------------------------------------------
-        # HEADER
-        # ------------------------------------------------------
         logo = (
             Image(io.BytesIO(base64.b64decode(company.logo)), width=120, height=60)
             if company.logo
@@ -513,13 +457,14 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
                 f"Web: {company.website or 'N/A'}",
                 subtitle_style,
             ),
-            Spacer(1, 20),
+            Spacer(1, 12),
             Paragraph(
                 f"<b>Date from:</b> {self.start_date.strftime('%d/%m/%Y')}<br/>"
-                f"<b>Date to:</b> {self.end_date.strftime('%d/%m/%Y')}",
+                f"<b>Date to:</b> {self.end_date.strftime('%d/%m/%Y')}<br/>"
+                f"<b>Currency:</b> {report_currency.name}",
                 left_align_style,
             ),
-            Spacer(1, 12),
+            Spacer(1, 8),
             Paragraph(
                 f"<b>Sales Person Name:</b> {self.salesperson_id.name}",
                 left_align_style,
@@ -527,172 +472,6 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
             Spacer(1, 12),
         ]
 
-        # ------------------------------------------------------
-        # OPENING BALANCE from idil.sales.opening.balance.line
-        # (static amount – does NOT disappear when paid)
-        # ------------------------------------------------------
-        self.env.cr.execute(
-            """
-            SELECT l.amount, ob.date
-            FROM idil_sales_opening_balance_line l
-            JOIN idil_sales_opening_balance ob
-            ON ob.id = l.opening_balance_id
-            WHERE ob.state != 'cancel'
-            AND l.sales_person_id = %s
-            ORDER BY ob.date ASC
-            LIMIT 1
-            """,
-            (self.salesperson_id.id,),
-        )
-        ob_row = self.env.cr.fetchone()
-        opening_balance = float(ob_row[0]) if ob_row else 0.0
-        opening_date = ob_row[1] if ob_row else None  # date or None
-
-        # ------------------------------------------------------
-        # PREVIOUS BALANCE (sales before start_date)
-        # ------------------------------------------------------
-        # 1) previous sales – commission (before start_date)
-        self.env.cr.execute(
-            """
-            SELECT
-                COALESCE(SUM(
-                    (
-                    (COALESCE(sol.quantity,0)
-                    - COALESCE(sol.discount_quantity,0)
-                    - COALESCE(srl.returned_quantity,0)) * COALESCE(sol.price_unit,0)
-                    )
-                    -
-                    (
-                    (
-                        (COALESCE(sol.quantity,0)
-                        - COALESCE(sol.discount_quantity,0)
-                        - COALESCE(srl.returned_quantity,0)) * COALESCE(sol.price_unit,0)
-                    ) * COALESCE(p.commission,0)
-                    )
-                ), 0)
-            FROM idil_salesperson_place_order spo
-            INNER JOIN idil_sale_order so
-                    ON so.sales_person_id = spo.salesperson_id
-                AND so.salesperson_order_id = spo.id
-            INNER JOIN idil_sale_order_line sol ON sol.order_id = so.id
-            INNER JOIN my_product_product p    ON p.id = sol.product_id
-            LEFT JOIN  idil_sale_return sr
-                    ON sr.salesperson_id = spo.salesperson_id
-                AND sr.sale_order_id  = so.id
-            LEFT JOIN  idil_sale_return_line srl
-                    ON srl.return_id = sr.id
-                AND srl.product_id = p.id
-            WHERE spo.state = 'confirmed'
-            AND spo.salesperson_id = %s
-            AND DATE(so.order_date) < %s
-            """,
-            (self.salesperson_id.id, self.start_date),
-        )
-        previous_sales_before = float(self.env.cr.fetchone()[0] or 0.0)
-
-        # 2) previous payments (ALL receipts, including opening, before start_date)
-        self.env.cr.execute(
-            """
-            SELECT COALESCE(SUM(p.paid_amount), 0)
-            FROM idil_sales_payment p
-            INNER JOIN idil_sales_receipt r ON r.id = p.sales_receipt_id
-            WHERE r.salesperson_id = %s
-            AND DATE(p.payment_date) < %s
-            """,
-            (self.salesperson_id.id, self.start_date),
-        )
-        previous_paid_before = float(self.env.cr.fetchone()[0] or 0.0)
-
-        previous_balance = previous_sales_before - previous_paid_before
-
-        # ------------------------------------------------------
-        # Decide how to use opening balance in calculation:
-        # - Always show full opening_balance amount as first row.
-        # - If its date is BEFORE start_date, add it into previous_balance
-        #   (to avoid double counting in final formula).
-        # ------------------------------------------------------
-        opening_for_calc = opening_balance
-        if opening_date and opening_date < self.start_date:
-            previous_balance += opening_balance
-            opening_for_calc = 0.0
-
-        # ------------------------------------------------------
-        # SALES inside [start_date, end_date]
-        # ------------------------------------------------------
-        self.env.cr.execute(
-            """
-            SELECT
-                DATE(so.order_date) AS order_day,
-                p.name,
-                sol.quantity,
-                (((COALESCE(sol.quantity, 0))
-                - (COALESCE(srl.returned_quantity, 0))) * (p.discount / 100)) AS celis_tos,
-                COALESCE(srl.returned_quantity, 0) AS celis,
-                (COALESCE(sol.quantity, 0)
-                - (((COALESCE(sol.quantity, 0))
-                    - (COALESCE(srl.returned_quantity, 0))) * (p.discount / 100))
-                - COALESCE(srl.returned_quantity, 0)) AS net,
-                COALESCE(sol.price_unit, 0) AS qiime,
-                ((COALESCE(sol.quantity, 0)
-                - (((COALESCE(sol.quantity, 0))
-                    - (COALESCE(srl.returned_quantity, 0))) * (p.discount / 100))
-                - COALESCE(srl.returned_quantity, 0)) * COALESCE(sol.price_unit, 0)) AS lacag,
-                (COALESCE(sol.commission, 0) * 100) AS per,
-                (((COALESCE(sol.quantity, 0)
-                - (((COALESCE(sol.quantity, 0))
-                    - (COALESCE(srl.returned_quantity, 0))) * (p.discount / 100))
-                - COALESCE(srl.returned_quantity, 0))
-                * COALESCE(sol.price_unit, 0)) * COALESCE(sol.commission, 0)) AS comm
-            FROM idil_salesperson_place_order spo
-            INNER JOIN idil_sale_order so
-                    ON so.sales_person_id = spo.salesperson_id
-                AND so.salesperson_order_id = spo.id
-            INNER JOIN idil_sale_order_line sol ON sol.order_id = so.id
-            INNER JOIN my_product_product p    ON sol.product_id = p.id
-            LEFT JOIN  idil_sale_return sr
-                    ON sr.salesperson_id = spo.salesperson_id
-                AND sr.sale_order_id  = so.id
-            LEFT JOIN  idil_sale_return_line srl
-                    ON srl.return_id = sr.id
-                AND srl.product_id = p.id
-            WHERE spo.state = 'confirmed'
-            AND spo.salesperson_id = %s
-            AND DATE(so.order_date) BETWEEN %s AND %s
-            ORDER BY so.order_date, sol.id
-            """,
-            (self.salesperson_id.id, self.start_date, self.end_date),
-        )
-        sales_rows = self.env.cr.fetchall()
-        sales_by_day = defaultdict(list)
-        for row in sales_rows:
-            order_day = row[0]
-            sales_by_day[order_day].append(row)
-
-        # ------------------------------------------------------
-        # PAYMENTS inside [start_date, end_date]
-        # (all receipts, including opening-balance receipts)
-        # ------------------------------------------------------
-        self.env.cr.execute(
-            """
-            SELECT DATE(p.payment_date) AS paid_day,
-                SUM(COALESCE(p.paid_amount,0)) AS total_paid
-            FROM idil_sales_payment p
-            INNER JOIN idil_sales_receipt r ON r.id = p.sales_receipt_id
-            WHERE r.salesperson_id = %s
-            AND DATE(p.payment_date) BETWEEN %s AND %s
-            GROUP BY DATE(p.payment_date)
-            """,
-            (self.salesperson_id.id, self.start_date, self.end_date),
-        )
-        paid_by_day = defaultdict(float)
-        for d, amt in self.env.cr.fetchall() or []:
-            paid_by_day[d] = float(amt or 0.0)
-
-        all_days = sorted(set(sales_by_day.keys()) | set(paid_by_day.keys()))
-
-        # ------------------------------------------------------
-        # BUILD TABLE
-        # ------------------------------------------------------
         headers = [
             "Date",
             "Product",
@@ -707,11 +486,9 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
             "Balance",
         ]
         data = [headers]
-        highlight_rows = []
-        merged_rows = []
+        highlight_rows, merged_rows = [], []
 
-        # 1) OPENING BALANCE row – always show if not zero
-        if opening_balance:
+        if opening_balance_rep:
             data.append(
                 [
                     "OPENING BALANCE",
@@ -724,14 +501,13 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
                     "",
                     "",
                     "",
-                    f"{opening_balance:,.2f}",
+                    f"{opening_balance_rep:,.2f}",
                 ]
             )
             highlight_rows.append(len(data) - 1)
             merged_rows.append(len(data) - 1)
 
-        # 2) PREVIOUS BALANCE row – if any
-        if previous_balance:
+        if previous_balance_rep:
             data.append(
                 [
                     "PREVIOUS BALANCE",
@@ -744,70 +520,70 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
                     "",
                     "",
                     "",
-                    f"{previous_balance:,.2f}",
+                    f"{previous_balance_rep:,.2f}",
                 ]
             )
             highlight_rows.append(len(data) - 1)
             merged_rows.append(len(data) - 1)
 
-        # starting outstanding at beginning of range
-        cumulative_outstanding = opening_for_calc + previous_balance
-
         running_lacag = 0.0
         running_commission = 0.0
         total_period_lacag = 0.0
         total_period_commission = 0.0
-        total_period_due = 0.0  # sales due in period (without OB/previous)
+        total_period_balance = 0.0
         total_paid = 0.0
+        cumulative_outstanding = previous_balance_rep + opening_balance_rep
 
         for day in all_days:
             daily_sales = sales_by_day.get(day, [])
-            subtotal_lacag = 0.0
-            subtotal_commission = 0.0
-            subtotal_balance = 0.0
+            subtotal_lacag = subtotal_commission = subtotal_balance = 0.0
 
-            # detail rows
             for s in daily_sales:
                 (
                     order_day,
+                    so_currency_id,
                     product,
                     qty,
                     celis_tos,
                     celis,
-                    net,
+                    net_qty,
                     qiime,
                     lacag,
                     per,
                     comm,
                 ) = s
-                balance = lacag - comm
+                so_cur = (
+                    self.env["res.currency"].browse(int(so_currency_id))
+                    if so_currency_id
+                    else company_currency
+                )
+                qiime_rep = money(qiime, so_cur, order_day)
+                lacag_rep = money(lacag, so_cur, order_day)
+                comm_rep = money(comm, so_cur, order_day)
+                balance_rep = lacag_rep - comm_rep
 
                 data.append(
                     [
                         order_day.strftime("%d/%m/%Y"),
                         product,
-                        f"{qty:.2f}",
-                        f"{celis_tos:.2f}",
-                        f"{celis:.2f}",
-                        f"{net:.2f}",
-                        f"{qiime:,.2f}",
-                        f"{lacag:,.2f}",
-                        f"{per:.2f}%",
-                        f"{comm:,.2f}",
-                        f"{balance:,.2f}",
+                        f"{float(qty or 0.0):.2f}",
+                        f"{float(celis_tos or 0.0):.2f}",
+                        f"{float(celis or 0.0):.2f}",
+                        f"{float(net_qty or 0.0):.2f}",
+                        f"{qiime_rep:,.2f}",
+                        f"{lacag_rep:,.2f}",
+                        f"{float(per or 0.0):.2f}%",
+                        f"{comm_rep:,.2f}",
+                        f"{balance_rep:,.2f}",
                     ]
                 )
+                subtotal_lacag += lacag_rep
+                subtotal_commission += comm_rep
+                subtotal_balance += balance_rep
 
-                subtotal_lacag += lacag
-                subtotal_commission += comm
-                subtotal_balance += balance
+            paid_today = float(paid_by_day.get(day, 0.0))
+            day_total = subtotal_balance - paid_today
 
-            paid_today = paid_by_day.get(day, 0.0)
-
-            # Day movement (we don't allow negative day due)
-            day_total = max(subtotal_balance - paid_today, 0.0)
-
-            # SUBTOTAL row
             data.append(
                 [
                     f"Subtotal {day.strftime('%d/%m/%Y')}",
@@ -826,7 +602,6 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
             highlight_rows.append(len(data) - 1)
             merged_rows.append(len(data) - 1)
 
-            # PAID row
             data.append(
                 [
                     f"Paid {day.strftime('%d/%m/%Y')}",
@@ -845,7 +620,6 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
             highlight_rows.append(len(data) - 1)
             merged_rows.append(len(data) - 1)
 
-            # DAY TOTAL row
             data.append(
                 [
                     f"Day Total {day.strftime('%d/%m/%Y')}",
@@ -864,15 +638,10 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
             highlight_rows.append(len(data) - 1)
             merged_rows.append(len(data) - 1)
 
-            # update cumulative outstanding (cannot go below zero)
-            cumulative_outstanding = max(
-                cumulative_outstanding + subtotal_balance - paid_today, 0.0
-            )
-
+            cumulative_outstanding += day_total
             running_lacag += subtotal_lacag
             running_commission += subtotal_commission
 
-            # OUTSTANDING TO DATE row
             data.append(
                 [
                     f"Outstanding (to date) {day.strftime('%d/%m/%Y')}",
@@ -891,19 +660,14 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
             highlight_rows.append(len(data) - 1)
             merged_rows.append(len(data) - 1)
 
-            # totals for the period (sales & payments only)
             total_period_lacag += subtotal_lacag
             total_period_commission += subtotal_commission
-            total_period_due += subtotal_balance
-            grand_total_before_paid = (
-                opening_for_calc + previous_balance + total_period_due
-            )
-
+            total_period_balance += subtotal_balance
             total_paid += paid_today
 
-        # ------------------------------------------------------
-        # GRAND TOTAL (period sales only)
-        # ------------------------------------------------------
+        grand_total_before_paid = (
+            opening_balance_rep + previous_balance_rep + total_period_balance
+        )
         data.append(
             [
                 "GRAND TOTAL",
@@ -916,44 +680,20 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
                 f"{total_period_lacag:,.2f}",
                 "",
                 f"{total_period_commission:,.2f}",
-                # f"{total_period_due:,.2f}",
                 f"{grand_total_before_paid:,.2f}",
             ]
         )
         highlight_rows.append(len(data) - 1)
         merged_rows.append(len(data) - 1)
 
-        # Divider
         data.append(["", "", "", "", "", "", "", "", "", "", "--------------------"])
-        highlight_rows.append(len(data) - 1)
-        merged_rows.append(len(data) - 1)
-
-        # TOTAL PAID (in period)
         data.append(
-            [
-                "TOTAL PAID",
-                "",
-                "",
-                "",
-                "",
-                "",
-                "",
-                "",
-                "",
-                "",
-                f"{total_paid:,.2f}",
-            ]
+            ["TOTAL PAID", "", "", "", "", "", "", "", "", "", f"{total_paid:,.2f}"]
         )
         highlight_rows.append(len(data) - 1)
         merged_rows.append(len(data) - 1)
 
-        # FINAL BALANCE = Opening (for calc) + Previous + Period Due − Paid
-        final_balance = (
-            opening_for_calc + previous_balance + total_period_due - total_paid
-        )
-        if final_balance < 0:
-            final_balance = 0.0
-
+        final_balance = grand_total_before_paid - total_paid
         data.append(
             [
                 "FINAL BALANCE",
@@ -973,13 +713,7 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
         highlight_rows.append(final_balance_index)
         merged_rows.append(final_balance_index)
 
-        # ------------------------------------------------------
-        # RENDER TABLE
-        # ------------------------------------------------------
-        table = Table(
-            data,
-            colWidths=[70, 140, 50, 60, 50, 40, 60, 80, 50, 70, 100],
-        )
+        table = Table(data, colWidths=[70, 140, 50, 60, 50, 40, 60, 80, 50, 70, 100])
         style = TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#B6862D")),
@@ -989,27 +723,24 @@ class SalesSummaryPersonReportWizard(models.TransientModel):
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
             ]
         )
-
         for row_idx in highlight_rows:
             style.add("FONTNAME", (0, row_idx), (-1, row_idx), "Helvetica-Bold")
         for row_idx in merged_rows:
             style.add("SPAN", (0, row_idx), (2, row_idx))
-
         style.add(
             "BACKGROUND",
             (0, final_balance_index),
             (-1, final_balance_index),
             colors.HexColor("#FFD700"),
         )
-
         table.setStyle(style)
+
         elements.append(Spacer(1, 20))
         elements.append(table)
         doc.build(elements)
 
         buffer.seek(0)
         pdf_data = buffer.read()
-
         attachment = self.env["ir.attachment"].create(
             {
                 "name": f"Sales Summary Report {self.salesperson_id.name} - {self.start_date} - {self.end_date}.pdf",
