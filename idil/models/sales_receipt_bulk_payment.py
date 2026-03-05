@@ -515,6 +515,9 @@ class ReceiptBulkPayment(models.Model):
                                     "sales_receipt_id": receipt.id,
                                     "account_id": payment_account.id,
                                     "amount": to_pay,
+                                    "posted": True,
+                                    "posted_by": self.env.user.id,
+                                    "posted_date": self.date,
                                     "date": self.date,
                                 }
                             )

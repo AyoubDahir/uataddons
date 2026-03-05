@@ -218,6 +218,13 @@
                         type="object"
                         class="btn-danger"
                          />
+                         
+                    <button name="action_post_new_payments"
+                        type="object"
+                        string="Post Payment"
+                        class="btn-primary"
+                         />
+                            
 
 
                     <span class="ms-2 badge rounded-pill bg-light border text-muted px-3 py-2">
@@ -515,7 +522,11 @@
                                         <field name="payment_method_ids" string="💳 Method" required="1"/>
                                         <field name="account_id" string="🏦 Account" readonly="1"/>
                                         <field name="date" string="📅 Date" required="1"/>
-                                        <field name="amount" string="💰 Amount" required="1"/>
+                                        <field name="amount" string="💰 Amount" sum="Total" required="1"/>
+                                        <field name="posted" readonly="1"/>
+                                        <field name="posted_by" readonly="1"/>
+                                        <field name="posted_date" readonly="1"/>
+                                        
                                     </tree>
                                 </field>
 

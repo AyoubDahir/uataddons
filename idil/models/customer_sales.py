@@ -127,6 +127,184 @@ class CustomerSaleOrder(models.Model):
         string="Confirmed Date", readonly=True, tracking=True
     )
 
+    def action_post_new_payments(self):
+        Booking = self.env["idil.transaction_booking"].sudo()
+        BookingLine = self.env["idil.transaction_bookingline"].sudo()
+        Receipt = self.env["idil.sales.receipt"].sudo()
+
+        for order in self:
+            if order.state != "confirmed":
+                raise ValidationError("Only confirmed orders can post payments.")
+            if order.customer_opening_balance_id:
+                raise ValidationError("Opening balance orders are not allowed here.")
+            if not order.customer_id.account_receivable_id:
+                raise ValidationError("Customer A/R account missing.")
+
+            # 1) Find unposted payment lines
+            new_payments = order.payment_lines.filtered(lambda p: not p.posted)
+            if not new_payments:
+                raise ValidationError("No new payment lines to post.")
+
+            # 2) Ensure receipt exists
+            receipt = Receipt.search(
+                [("cusotmer_sale_order_id", "=", order.id)], limit=1
+            )
+            if not receipt:
+                # create receipt if not exists
+                receipt = Receipt.create(
+                    {
+                        "cusotmer_sale_order_id": order.id,
+                        "receipt_date": order.order_date,
+                        "due_amount": order.order_total,
+                        "paid_amount": 0.0,
+                        "remaining_amount": order.order_total,
+                        "customer_id": order.customer_id.id,
+                    }
+                )
+
+            # 3) Ensure booking exists
+            booking = Booking.search(
+                [("cusotmer_sale_order_id", "=", order.id)], limit=1
+            )
+            if not booking:
+                raise ValidationError(
+                    "Booking not found for this order. Confirm order first."
+                )
+
+            # 4) Validate payment currency/accounts and compute new amount
+            expected_currency = order.customer_id.account_receivable_id.currency_id
+            new_amount = 0.0
+
+            for p in new_payments:
+                if float_compare(p.amount, 0.0, precision_digits=5) <= 0:
+                    raise ValidationError("Payment amount must be > 0.")
+                if not p.account_id:
+                    raise ValidationError("Payment line missing account.")
+                if (
+                    p.account_id.currency_id
+                    and p.account_id.currency_id != expected_currency
+                ):
+                    raise ValidationError(
+                        f"Currency mismatch in payment '{p.payment_method_ids.name}'. "
+                        f"Account currency {p.account_id.currency_id.name} != A/R currency {expected_currency.name}"
+                    )
+                new_amount += p.amount
+
+            # 5) Check not exceeding total
+            total_paid_before = receipt.paid_amount or 0.0
+            total_paid_after = total_paid_before + new_amount
+            if (
+                float_compare(total_paid_after, order.order_total, precision_digits=5)
+                > 0
+            ):
+                raise ValidationError(
+                    f"Total paid would exceed order total.\n"
+                    f"Order Total: {order.order_total} | Paid: {total_paid_before} | New: {new_amount}"
+                )
+
+            remaining = max(order.order_total - total_paid_after, 0.0)
+
+            if float_compare(total_paid_after, 0.0, precision_digits=5) <= 0:
+                status = "pending"
+            elif float_compare(remaining, 0.0, precision_digits=5) <= 0:
+                status = "paid"
+            else:
+                status = "partial"
+
+            # 6) Add ONLY payment booking legs for the new payments
+            for p in new_payments:
+                acc_type = p.account_id.account_type if p.account_id else "N/A"
+
+                # DR Cash/Bank
+                BookingLine.create(
+                    {
+                        "transaction_booking_id": booking.id,
+                        "customer_sale_payment_id": p.id,  # ✅ link booking lines to this payment
+                        "description": f"Payment - {p.payment_method_ids.name} ({acc_type}) [{order.name}]",
+                        "product_id": False,
+                        "account_number": p.account_id.id,
+                        "transaction_type": "dr",
+                        "dr_amount": p.amount,
+                        "cr_amount": 0.0,
+                        "transaction_date": fields.Datetime.now(),
+                    }
+                )
+
+                # CR A/R
+                BookingLine.create(
+                    {
+                        "transaction_booking_id": booking.id,
+                        "customer_sale_payment_id": p.id,  # ✅ link booking lines to this payment
+                        "description": f"Payment applied to A/R - {p.payment_method_ids.name} [{order.name}]",
+                        "product_id": False,
+                        "account_number": order.customer_id.account_receivable_id.id,
+                        "transaction_type": "cr",
+                        "dr_amount": 0.0,
+                        "cr_amount": p.amount,
+                        "transaction_date": fields.Datetime.now(),
+                    }
+                )
+
+            # 7) Update receipt totals/status
+            vals = {
+                "due_amount": order.order_total,
+                "paid_amount": total_paid_after,
+                "remaining_amount": remaining,
+            }
+            if "payment_status" in Receipt._fields:
+                vals["payment_status"] = status
+            elif "state" in Receipt._fields:
+                vals["state"] = status
+
+            receipt.write(vals)
+
+            # 8) Update booking header status/method (optional)
+            # detect payment method in header
+            header_payment_method = booking.payment_method or "receivable"
+            found_bank = any(
+                p.account_id.account_type == "bank_transfer"
+                for p in order.payment_lines
+            )
+            found_cash = any(
+                p.account_id.account_type == "cash" for p in order.payment_lines
+            )
+            if found_bank:
+                header_payment_method = "bank_transfer"
+            elif found_cash:
+                header_payment_method = "cash"
+
+            booking.write(
+                {
+                    "payment_method": header_payment_method,
+                    "payment_status": status,
+                }
+            )
+
+            # 9) Mark payment lines posted + link to receipt
+            new_payments.write(
+                {
+                    "posted": True,
+                    "posted_by": self.env.user.id,
+                    "posted_date": fields.Datetime.now(),
+                    "sales_receipt_id": receipt.id,
+                }
+            )
+
+            try:
+                order.message_post(
+                    body=(
+                        "✅ <b>New payments posted</b><br/>"
+                        f"• New Amount: <b>{new_amount}</b><br/>"
+                        f"• Paid Total: <b>{total_paid_after}</b><br/>"
+                        f"• Remaining: <b>{remaining}</b><br/>"
+                        f"• Status: <b>{status}</b>"
+                    )
+                )
+            except Exception:
+                pass
+
+        return True
+
     def action_reset_to_draft(self):
         Receipt = self.env["idil.sales.receipt"].sudo()
         Booking = self.env["idil.transaction_booking"].sudo()
@@ -758,6 +936,7 @@ class CustomerSaleOrder(models.Model):
                 BookingLine.create(
                     {
                         "transaction_booking_id": booking.id,
+                        "customer_sale_payment_id": p.id,  # ✅ link booking lines to this payment
                         "description": f"Payment - {p.payment_method_ids.name} ({acc_type})",
                         "product_id": False,
                         "account_number": p.account_id.id,
@@ -770,6 +949,7 @@ class CustomerSaleOrder(models.Model):
                 BookingLine.create(
                     {
                         "transaction_booking_id": booking.id,
+                        "customer_sale_payment_id": p.id,  # ✅ link booking lines to this payment
                         "description": f"Payment applied to A/R - {p.payment_method_ids.name}",
                         "product_id": False,
                         "account_number": order.customer_id.account_receivable_id.id,
@@ -1293,6 +1473,14 @@ class CustomerSalePayment(models.Model):
         "idil.receipt.bulk.payment", index=True, ondelete="cascade"
     )
 
+    posted = fields.Boolean(
+        string="Posted", default=False, readonly=True, tracking=True
+    )
+    posted_by = fields.Many2one(
+        "res.users", string="Posted By", readonly=True, tracking=True
+    )
+    posted_date = fields.Datetime(string="Posted Date", readonly=True, tracking=True)
+
     @api.onchange("payment_method_ids")
     def _onchange_payment_method_id(self):
         for rec in self:
@@ -1304,3 +1492,166 @@ class CustomerSalePayment(models.Model):
         for rec in self:
             if rec.amount <= 0:
                 raise ValidationError("Payment amount must be greater than zero.")
+
+    # -----------------------------
+    # ✅ FULL unlink() with adjustment
+    # -----------------------------
+    def unlink(self):
+        Booking = self.env["idil.transaction_booking"].sudo()
+        BookingLine = self.env["idil.transaction_bookingline"].sudo()
+        Receipt = self.env["idil.sales.receipt"].sudo()
+
+        for pay in self:
+            order = pay.order_id
+
+            # If payment not linked to order, just delete
+            if not order:
+                continue
+
+            # Block on opening balance order
+            if order.customer_opening_balance_id:
+                raise ValidationError(
+                    "❌ Cannot delete payments for Opening Balance orders."
+                )
+
+            # ✅ If created from Bulk Receipt => handle ownership rule
+            if pay.bulk_receipt_payment_id:
+                bulk = pay.bulk_receipt_payment_id
+
+                # If bulk already confirmed => block deletion here
+                if bulk.state == "confirmed":
+                    raise ValidationError(
+                        "❌ This payment was created from a CONFIRMED Bulk Receipt.\n"
+                        "You cannot delete it from Sales Order.\n"
+                        "Please open the Bulk Receipt and delete/cancel it from there."
+                    )
+
+            # Optional safety: prevent deleting posted payment linked to another settlement object
+            # if pay.sales_payment_id:
+            #     raise ValidationError("❌ Cannot delete this payment because it is linked to Sales Payment.")
+
+            # Find booking + receipt for this order
+            booking = Booking.search(
+                [("cusotmer_sale_order_id", "=", order.id)], limit=1
+            )
+            receipt = Receipt.search(
+                [("cusotmer_sale_order_id", "=", order.id)], limit=1
+            )
+
+            # ----------------------------------------------------
+            # 1) Delete ONLY booking lines related to THIS payment
+            #    (DR cash/bank + CR A/R) using customer_sale_payment_id
+            # ----------------------------------------------------
+            if booking:
+                lines_to_remove = BookingLine.search(
+                    [
+                        ("transaction_booking_id", "=", booking.id),
+                        ("customer_sale_payment_id", "=", pay.id),
+                    ]
+                )
+                if lines_to_remove:
+                    lines_to_remove.unlink()
+
+            # ----------------------------------------------------
+            # 2) Delete the payment record itself
+            # ----------------------------------------------------
+            pay_amount = pay.amount  # for log
+            pay_method_name = (
+                pay.payment_method_ids.name if pay.payment_method_ids else "-"
+            )
+            res = super(CustomerSalePayment, pay).unlink()
+
+            # ----------------------------------------------------
+            # 3) Recompute receipt totals from remaining payments
+            #    ✅ Recommended: only count posted payments
+            # ----------------------------------------------------
+            if receipt:
+                remaining_payments = order.payment_lines.filtered(lambda p: p.posted)
+                total_paid = sum(remaining_payments.mapped("amount")) or 0.0
+                remaining = max(order.order_total - total_paid, 0.0)
+
+                if float_compare(total_paid, 0.0, precision_digits=5) <= 0:
+                    status = "pending"
+                elif float_compare(remaining, 0.0, precision_digits=5) <= 0:
+                    status = "paid"
+                else:
+                    status = "partial"
+
+                receipt_vals = {
+                    "due_amount": order.order_total,
+                    "paid_amount": total_paid,
+                    "remaining_amount": remaining,
+                }
+                if "payment_status" in Receipt._fields:
+                    receipt_vals["payment_status"] = status
+                elif "state" in Receipt._fields:
+                    receipt_vals["state"] = status
+
+                receipt.write(receipt_vals)
+
+                # ----------------------------------------------------
+                # 4) Update booking header payment_status/payment_method
+                # ----------------------------------------------------
+                if booking:
+                    header_payment_method = "receivable"
+                    found_bank = any(
+                        p.account_id and p.account_id.account_type == "bank_transfer"
+                        for p in remaining_payments
+                    )
+                    found_cash = any(
+                        p.account_id and p.account_id.account_type == "cash"
+                        for p in remaining_payments
+                    )
+                    if found_bank:
+                        header_payment_method = "bank_transfer"
+                    elif found_cash:
+                        header_payment_method = "cash"
+
+                    booking.write(
+                        {
+                            "payment_method": header_payment_method,
+                            "payment_status": status,
+                        }
+                    )
+
+                # ----------------------------------------------------
+                # 5) Chatter audit (optional)
+                # ----------------------------------------------------
+                try:
+                    order.message_post(
+                        body=(
+                            "🗑️ <b>Payment Deleted</b><br/>"
+                            f"• Deleted Payment: <b>{pay_amount}</b> ({pay_method_name})<br/>"
+                            f"• New Paid Total: <b>{total_paid}</b><br/>"
+                            f"• Remaining: <b>{remaining}</b><br/>"
+                            f"• Status: <b>{status}</b>"
+                        )
+                    )
+                except Exception:
+                    pass
+
+            return res
+
+    # Put this inside class CustomerSalePayment(models.Model):
+    def write(self, vals):
+        """
+        ✅ Block editing of POSTED payments.
+        User must delete the payment line and recreate it correctly.
+        """
+        for rec in self:
+            if rec.posted:
+                # If user tries to change any important field => block
+                blocked_fields = {
+                    "amount",
+                    "date",
+                    "payment_method_ids",
+                    "account_id",
+                    "order_id",
+                    "sales_receipt_id",
+                }
+                if blocked_fields.intersection(set(vals.keys())):
+                    raise ValidationError(
+                        "❌ This payment line is already POSTED and cannot be edited.\n"
+                        "If you need to change it, please DELETE the payment line and create it again correctly."
+                    )
+        return super(CustomerSalePayment, self).write(vals)
