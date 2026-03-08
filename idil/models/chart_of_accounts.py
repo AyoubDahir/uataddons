@@ -3,6 +3,8 @@ from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError, UserError
 import logging
 
+from odoo.tools.float_utils import float_round
+
 _logger = logging.getLogger(__name__)
 
 
@@ -312,7 +314,7 @@ class AccountHeader(models.Model):
             else self.env.company
         )
         r_date = report_date or fields.Date.today()
-        
+
         Header = self.env["idil.chart.account.header"]
         SubHeader = self.env["idil.chart.account.subheader"]
         Account = self.env["idil.chart.account"]
@@ -327,7 +329,20 @@ class AccountHeader(models.Model):
             Safety: Explicitly Exclude common OPEX names even if Type is COGS.
             """
             sh_name = (acc.subheader_id.name or "").lower()
-            if any(x in sh_name for x in ['rent', 'utility', 'utilities', 'salary', 'payroll', 'commission', 'admin', 'operating', 'expense']):
+            if any(
+                x in sh_name
+                for x in [
+                    "rent",
+                    "utility",
+                    "utilities",
+                    "salary",
+                    "payroll",
+                    "commission",
+                    "admin",
+                    "operating",
+                    "expense",
+                ]
+            ):
                 return False
             return getattr(acc, "account_type", None) in ("cogs", "COGS")
 
@@ -340,16 +355,19 @@ class AccountHeader(models.Model):
             grand_total = 0.0
 
             # 1. Match Headers by prefix
-            domain = ['|'] * (len(prefixes) - 1) + [('code', '=like', p + '%') for p in prefixes]
-            if len(prefixes) == 1: domain = [('code', '=like', prefixes[0] + '%')]
-            
+            domain = ["|"] * (len(prefixes) - 1) + [
+                ("code", "=like", p + "%") for p in prefixes
+            ]
+            if len(prefixes) == 1:
+                domain = [("code", "=like", prefixes[0] + "%")]
+
             headers = Header.search(domain, order="code")
 
             for h in headers:
                 subs = SubHeader.search([("header_id", "=", h.id)], order="name")
                 for s in subs:
                     t_block = {"name": s.name, "lines": [], "subtotal": 0.0}
-                    
+
                     accs = Account.search(
                         [("subheader_id", "=", s.id), ("company_id", "=", company.id)],
                         order="code",
@@ -361,21 +379,23 @@ class AccountHeader(models.Model):
 
                         signed = acc_signed_usd(acc)
                         amount = (-signed) if mode == "income" else signed
-                        
+
                         if abs(amount) > 0.001:
-                            t_block["lines"].append({
-                                "code": acc.code or "",
-                                "name": acc.name or "",
-                                "amount": "${:,.3f}".format(amount),
-                                "amount_raw": amount
-                            })
+                            t_block["lines"].append(
+                                {
+                                    "code": acc.code or "",
+                                    "name": acc.name or "",
+                                    "amount": "${:,.3f}".format(amount),
+                                    "amount_raw": amount,
+                                }
+                            )
                             t_block["subtotal"] += amount
 
                     if t_block["lines"]:
                         t_block["subtotal_fmt"] = "${:,.3f}".format(t_block["subtotal"])
                         flat_types.append(t_block)
                         grand_total += t_block["subtotal"]
-            
+
             return flat_types, grand_total
 
         # 1. Income (4xxx)
@@ -383,14 +403,18 @@ class AccountHeader(models.Model):
 
         # 2. COGS (5-9xxx where is_cogs is True)
         expense_prefixes = ["5", "6", "7", "8", "9"]
-        cogs_data, total_cogs = build_sections(expense_prefixes, mode="expense", filter_fn=is_cogs)
+        cogs_data, total_cogs = build_sections(
+            expense_prefixes, mode="expense", filter_fn=is_cogs
+        )
 
         # 3. Gross Profit
         gross_profit = total_income - total_cogs
         gross_profit_fmt = "${:,.3f}".format(gross_profit)
 
         # 4. Operating Expenses (5-9xxx where is_cogs is False)
-        opex_data, total_opex = build_sections(expense_prefixes, mode="expense", filter_fn=lambda a: not is_cogs(a))
+        opex_data, total_opex = build_sections(
+            expense_prefixes, mode="expense", filter_fn=lambda a: not is_cogs(a)
+        )
 
         # 5. Net Profit
         net_profit = gross_profit - total_opex
@@ -407,11 +431,11 @@ class AccountHeader(models.Model):
             "cogs": cogs_data,
             "total_cogs": "${:,.3f}".format(total_cogs),
             "gross_profit_formatted": gross_profit_fmt,
-            "gross_profit": gross_profit, 
+            "gross_profit": gross_profit,
             "operating_expenses": opex_data,
             "total_operating_expenses": "${:,.3f}".format(total_opex),
             "net_profit_formatted": net_profit_fmt,
-            "net_profit": net_profit 
+            "net_profit": net_profit,
         }
 
     @api.model
@@ -715,9 +739,22 @@ class AccountHeader(models.Model):
             """
             sh_name = (acc.subheader_id.name or "").lower()
             # 1. Force Exclusion (Safety override)
-            if any(x in sh_name for x in ['rent', 'utility', 'utilities', 'salary', 'payroll', 'commission', 'admin', 'operating', 'expense']):
+            if any(
+                x in sh_name
+                for x in [
+                    "rent",
+                    "utility",
+                    "utilities",
+                    "salary",
+                    "payroll",
+                    "commission",
+                    "admin",
+                    "operating",
+                    "expense",
+                ]
+            ):
                 return False
-            
+
             # 2. Strict Check
             return getattr(acc, "account_type", None) in ("cogs", "COGS")
 
@@ -730,16 +767,19 @@ class AccountHeader(models.Model):
             grand_total = 0.0
 
             # 1. Match Headers by prefix
-            domain = ['|'] * (len(prefixes) - 1) + [('code', '=like', p + '%') for p in prefixes]
-            if len(prefixes) == 1: domain = [('code', '=like', prefixes[0] + '%')]
-            
+            domain = ["|"] * (len(prefixes) - 1) + [
+                ("code", "=like", p + "%") for p in prefixes
+            ]
+            if len(prefixes) == 1:
+                domain = [("code", "=like", prefixes[0] + "%")]
+
             headers = Header.search(domain, order="code")
 
             for h in headers:
                 subs = SubHeader.search([("header_id", "=", h.id)], order="name")
                 for s in subs:
                     t_block = {"name": s.name, "lines": [], "subtotal": 0.0}
-                    
+
                     accs = Account.search(
                         [("subheader_id", "=", s.id), ("company_id", "=", company.id)],
                         order="code",
@@ -751,21 +791,23 @@ class AccountHeader(models.Model):
 
                         signed = acc_signed_usd(acc)
                         amount = (-signed) if mode == "income" else signed
-                        
+
                         if abs(amount) > 0.001:
-                            t_block["lines"].append({
-                                "code": acc.code or "",
-                                "name": acc.name or "",
-                                "amount": "${:,.3f}".format(amount),
-                                "amount_raw": amount
-                            })
+                            t_block["lines"].append(
+                                {
+                                    "code": acc.code or "",
+                                    "name": acc.name or "",
+                                    "amount": "${:,.3f}".format(amount),
+                                    "amount_raw": amount,
+                                }
+                            )
                             t_block["subtotal"] += amount
 
                     if t_block["lines"]:
                         t_block["subtotal_fmt"] = "${:,.3f}".format(t_block["subtotal"])
                         flat_types.append(t_block)
                         grand_total += t_block["subtotal"]
-            
+
             return flat_types, grand_total
 
         # 1. Income (4xxx)
@@ -773,14 +815,18 @@ class AccountHeader(models.Model):
 
         # 2. COGS (5-9xxx where is_cogs is True)
         expense_prefixes = ["5", "6", "7", "8", "9"]
-        cogs_data, total_cogs = build_sections(expense_prefixes, mode="expense", filter_fn=is_cogs)
+        cogs_data, total_cogs = build_sections(
+            expense_prefixes, mode="expense", filter_fn=is_cogs
+        )
 
         # 3. Gross Profit
         gross_profit = total_income - total_cogs
         gross_profit_fmt = "${:,.3f}".format(gross_profit)
 
         # 4. Operating Expenses (5-9xxx where is_cogs is False)
-        opex_data, total_opex = build_sections(expense_prefixes, mode="expense", filter_fn=lambda a: not is_cogs(a))
+        opex_data, total_opex = build_sections(
+            expense_prefixes, mode="expense", filter_fn=lambda a: not is_cogs(a)
+        )
 
         # 5. Net Profit
         net_profit = gross_profit - total_opex
@@ -798,288 +844,10 @@ class AccountHeader(models.Model):
             "operating_expenses": opex_data,
             "total_operating_expenses": "${:,.3f}".format(total_opex),
             "net_profit": net_profit_fmt,
-            "net_profit_raw": net_profit
+            "net_profit_raw": net_profit,
         }
 
-
         return report_data
-
-    # @api.model
-    # def get_cash_flow_advanced_data(self, company_id, start_date, end_date):
-    #     company = (
-    #         self.env["res.company"].browse(company_id)
-    #         if company_id
-    #         else self.env.company
-    #     )
-    #     usd_currency = self.env.ref("base.USD")
-
-    #     # 1) Cash / Bank accounts
-    #     cash_accounts = self.env["idil.chart.account"].search(
-    #         [
-    #             ("account_type", "in", ["cash", "bank_transfer"]),
-    #             ("company_id", "=", company.id),
-    #         ]
-    #     )
-    #     cash_account_ids = cash_accounts.ids
-
-    #     # 2) Booking lines for cash accounts (date range)
-    #     domain = [
-    #         ("account_number", "in", cash_account_ids),
-    #         ("transaction_date", ">=", start_date),
-    #         ("transaction_date", "<=", end_date),
-    #         ("company_id", "=", company.id),
-    #     ]
-    #     lines = self.env["idil.transaction_bookingline"].search(domain)
-
-    #     categories = {
-    #         "operating": {
-    #             "inflows": {},
-    #             "outflows": {},
-    #             "total_in": 0.0,
-    #             "total_out": 0.0,
-    #         },
-    #         "investing": {
-    #             "inflows": {},
-    #             "outflows": {},
-    #             "total_in": 0.0,
-    #             "total_out": 0.0,
-    #         },
-    #         "financing": {
-    #             "inflows": {},
-    #             "outflows": {},
-    #             "total_in": 0.0,
-    #             "total_out": 0.0,
-    #         },
-    #     }
-
-    #     def to_usd(amount, line):
-    #         """Convert line amount to USD if needed."""
-    #         if not amount:
-    #             return 0.0
-
-    #         line_currency = line.currency_id or (
-    #             line.account_number.currency_id if line.account_number else None
-    #         )
-    #         if not line_currency or line_currency.id == usd_currency.id:
-    #             return amount
-
-    #         # rate priority: booking.rate then fallback conversion
-    #         booking = line.transaction_booking_id
-    #         tx_rate = (
-    #             booking.rate
-    #             or self._get_conversion_rate(line_currency.id, line.transaction_date)
-    #             or 1.0
-    #         )
-
-    #         # ASSUMPTION: tx_rate = (local per 1 USD) e.g. SL per USD
-    #         # local_amount / rate = USD
-    #         return amount / tx_rate
-
-    #     for line in lines:
-    #         booking = line.transaction_booking_id
-    #         if not booking:
-    #             continue
-
-    #         # Skip pure cash-to-cash internal transfers
-    #         all_accounts = booking.booking_lines.mapped("account_number")
-    #         if all(
-    #             acc and acc.account_type in ["cash", "bank_transfer"]
-    #             for acc in all_accounts
-    #         ):
-    #             continue
-
-    #         # Amount on CASH line: dr - cr
-    #         raw_amount = (line.dr_amount or 0.0) - (line.cr_amount or 0.0)
-    #         if abs(raw_amount) < 0.000001:
-    #             continue
-
-    #         amount_usd = to_usd(raw_amount, line)
-
-    #         # Determine inflow/outflow by sign
-    #         is_inflow = amount_usd > 0
-
-    #         # Find NON-cash booking lines and choose the main one (largest absolute movement)
-    #         other_lines = booking.booking_lines.filtered(
-    #             lambda bl: bl.account_number
-    #             and bl.account_number.account_type not in ["cash", "bank_transfer"]
-    #         )
-    #         if not other_lines:
-    #             continue
-
-    #         # pick main other line by abs(dr-cr)
-    #         def other_line_strength(bl):
-    #             return abs((bl.dr_amount or 0.0) - (bl.cr_amount or 0.0))
-
-    #         main_other = max(other_lines, key=other_line_strength)
-    #         other_account = main_other.account_number
-
-    #         # Classify category
-    #         cat = "operating"
-    #         if other_account.FinancialReporting == "PL":
-    #             cat = "operating"
-    #         elif other_account.FinancialReporting == "BS":
-    #             code = other_account.code or ""
-    #             name = (other_account.name or "").lower()
-    #             if code.startswith(("15", "16")) or any(
-    #                 w in name for w in ["equipment", "machinery", "vehicle", "building"]
-    #             ):
-    #                 cat = "investing"
-    #             elif code.startswith("3") or any(
-    #                 w in name
-    #                 for w in ["equity", "capital", "loan", "drawing", "dividend"]
-    #             ):
-    #                 cat = "financing"
-
-    #         # Accumulate
-    #         label = other_account.name or "Unclassified"
-    #         amt = abs(amount_usd)
-
-    #         if is_inflow:
-    #             categories[cat]["inflows"][label] = (
-    #                 categories[cat]["inflows"].get(label, 0.0) + amt
-    #             )
-    #             categories[cat]["total_in"] += amt
-    #         else:
-    #             categories[cat]["outflows"][label] = (
-    #                 categories[cat]["outflows"].get(label, 0.0) + amt
-    #             )
-    #             categories[cat]["total_out"] += amt
-
-    #     def pack_cat(slug):
-    #         c = categories[slug]
-    #         return {
-    #             "inflows": [
-    #                 {"name": k, "amount": "${:,.3f}".format(v)}
-    #                 for k, v in c["inflows"].items()
-    #             ],
-    #             "outflows": [
-    #                 {"name": k, "amount": "${:,.3f}".format(v)}
-    #                 for k, v in c["outflows"].items()
-    #             ],
-    #             "total_in": "${:,.3f}".format(c["total_in"]),
-    #             "total_out": "${:,.3f}".format(c["total_out"]),
-    #             "net": "${:,.3f}".format(c["total_in"] - c["total_out"]),
-    #             "net_raw": c["total_in"] - c["total_out"],
-    #         }
-
-    #     report_data = {
-    #         "operating": pack_cat("operating"),
-    #         "investing": pack_cat("investing"),
-    #         "financing": pack_cat("financing"),
-    #         "company_name": company.name,
-    #         "company_id": company.id,
-    #         "start_date": start_date,
-    #         "end_date": end_date,
-    #         "report_date": fields.Date.today(),
-    #     }
-
-    #     report_data["net_cash_flow"] = "${:,.3f}".format(
-    #         report_data["operating"]["net_raw"]
-    #         + report_data["investing"]["net_raw"]
-    #         + report_data["financing"]["net_raw"]
-    #     )
-
-    #     return report_data
-
-    # @api.model
-    # def get_cash_flow_advanced_data(self, company_id, start_date, end_date):
-    #     company = self.env['res.company'].browse(company_id) if company_id else self.env.company
-    #     usd_currency = self.env.ref("base.USD")
-
-    #     # 1. Get Cash Accounts
-    #     cash_accounts = self.env['idil.chart.account'].search([
-    #         ('account_type', 'in', ['cash', 'bank_transfer']),
-    #         ('company_id', '=', company.id)
-    #     ])
-    #     cash_account_ids = cash_accounts.ids
-
-    #     # 2. Fetch Transactions for Cash Accounts
-    #     domain = [
-    #         ('account_number', 'in', cash_account_ids),
-    #         ('transaction_date', '>=', start_date),
-    #         ('transaction_date', '<=', end_date),
-    #         ('company_id', '=', company.id)
-    #     ]
-    #     lines = self.env['idil.transaction_bookingline'].search(domain)
-
-    #     # 3. Categorize
-    #     categories = {
-    #         'operating': {'inflows': {}, 'outflows': {}, 'total_in': 0, 'total_out': 0},
-    #         'investing': {'inflows': {}, 'outflows': {}, 'total_in': 0, 'total_out': 0},
-    #         'financing': {'inflows': {}, 'outflows': {}, 'total_in': 0, 'total_out': 0},
-    #     }
-
-    #     for line in lines:
-    #         booking = line.transaction_booking_id
-    #         all_accounts = booking.booking_lines.mapped('account_number')
-
-    #         # Skip internal transfers
-    #         if all(acc.account_type in ['cash', 'bank_transfer'] for acc in all_accounts if acc):
-    #             continue
-
-    #         other_accounts = [acc for acc in all_accounts if acc and acc.account_type not in ['cash', 'bank_transfer']]
-    #         if not other_accounts: continue
-    #         other_account = other_accounts[0]
-
-    #         amount_usd = 0.0
-    #         if line.transaction_type == 'dr':
-    #             amount_usd = line.dr_amount
-    #         else:
-    #             amount_usd = line.cr_amount
-
-    #         if amount_usd == 0: continue
-
-    #         # Currency Conversion
-    #         account_currency = line.currency_id or line.account_number.currency_id
-    #         if account_currency and account_currency.id != usd_currency.id:
-    #             tx_rate = line.transaction_booking_id.rate or self._get_conversion_rate(account_currency.id, line.transaction_date) or 1.0
-    #             amount_usd = amount_usd / tx_rate
-
-    #         # Classify
-    #         cat = 'operating'
-    #         if other_account.FinancialReporting == 'PL':
-    #             cat = 'operating'
-    #         elif other_account.FinancialReporting == 'BS':
-    #             code = other_account.code or ''
-    #             name = (other_account.name or '').lower()
-    #             if code.startswith('15') or code.startswith('16') or any(w in name for w in ['equipment', 'machinery', 'vehicle', 'building']):
-    #                 cat = 'investing'
-    #             elif code.startswith('3') or any(w in name for w in ['equity', 'capital', 'loan', 'drawing', 'dividend']):
-    #                 cat = 'financing'
-
-    #         target_dict = categories[cat]['inflows'] if line.transaction_type == 'dr' else categories[cat]['outflows']
-    #         label = other_account.name
-    #         target_dict[label] = target_dict.get(label, 0) + amount_usd
-    #         if line.transaction_type == 'dr':
-    #             categories[cat]['total_in'] += amount_usd
-    #         else:
-    #             categories[cat]['total_out'] += amount_usd
-
-    #     # Format for output
-    #     def pack_cat(slug):
-    #         c = categories[slug]
-    #         return {
-    #             'inflows': [{'name': k, 'amount': "${:,.3f}".format(v)} for k, v in c['inflows'].items()],
-    #             'outflows': [{'name': k, 'amount': "${:,.3f}".format(v)} for k, v in c['outflows'].items()],
-    #             'total_in': "${:,.3f}".format(c['total_in']),
-    #             'total_out': "${:,.3f}".format(c['total_out']),
-    #             'net': "${:,.3f}".format(c['total_in'] - c['total_out']),
-    #             'net_raw': c['total_in'] - c['total_out']
-    #         }
-
-    #     report_data = {
-    #         'operating': pack_cat('operating'),
-    #         'investing': pack_cat('investing'),
-    #         'financing': pack_cat('financing'),
-    #         'company_name': company.name,
-    #         'company_id': company.id,
-    #         'start_date': start_date,
-    #         'end_date': end_date,
-    #         'report_date': fields.Date.today(),
-    #     }
-    #     report_data['net_cash_flow'] = "${:,.3f}".format(report_data['operating']['net_raw'] + report_data['investing']['net_raw'] + report_data['financing']['net_raw'])
-
-    #     return report_data
 
 
 class AccountStatementAdvancedWizard(models.TransientModel):
@@ -1428,6 +1196,12 @@ class Account(models.Model):
     account_type = fields.Selection(
         account_type, string="Account Type", store=True, tracking=True
     )
+    is_clearing_account = fields.Boolean(
+        string="Is Clearing Account",
+        default=False,
+        index=True,
+        help="Mark this if the account is a clearing account.",
+    )
     subheader_id = fields.Many2one(
         "idil.chart.account.subheader",
         string="Sub Header",
@@ -1669,9 +1443,13 @@ class Account(models.Model):
         dr, cr = self.get_dr_cr_balance_usd(date, company_id)
         return dr - cr
 
-    def get_dr_cr_balance_usd(self, date, company_id):
+    def get_dr_cr_balance_usd_historical(self, date, company_id):
+        """
+        Historical USD conversion:
+        each line converted using its own transaction rate.
+        """
         self.ensure_one()
-        # Fetch transactions for the specific account, date, and company
+
         transactions = self.env["idil.transaction_bookingline"].search(
             [
                 ("account_number", "=", self.id),
@@ -1680,24 +1458,122 @@ class Account(models.Model):
             ]
         )
 
-        total_debit_usd = 0
-        total_credit_usd = 0
+        total_debit_usd = 0.0
+        total_credit_usd = 0.0
+
+        company = self.env["res.company"].browse(company_id)
+        company_currency = company.currency_id
 
         for transaction in transactions:
-            if transaction.currency_id.name == "USD":
+            currency = transaction.currency_id or company_currency
+
+            if currency.id == company_currency.id:
                 rate = 1.0
             else:
                 rate = transaction.rate or self._get_conversion_rate(
-                    transaction.currency_id.id, transaction.transaction_date
+                    currency.id, transaction.transaction_date
                 )
 
             if not rate or rate == 0:
                 rate = 1.0
 
-            total_debit_usd += transaction.dr_amount / rate
-            total_credit_usd += transaction.cr_amount / rate
+            total_debit_usd += (transaction.dr_amount or 0.0) / rate
+            total_credit_usd += (transaction.cr_amount or 0.0) / rate
+
+        return (
+            float_round(total_debit_usd, precision_digits=2),
+            float_round(total_credit_usd, precision_digits=2),
+        )
+
+    def get_dr_cr_balance_usd(self, date, company_id):
+        self.ensure_one()
+
+        transactions = self.env["idil.transaction_bookingline"].search(
+            [
+                ("account_number", "=", self.id),
+                ("transaction_date", "<=", date),
+                ("company_id", "=", company_id),
+            ]
+        )
+
+        total_debit_usd = 0.0
+        total_credit_usd = 0.0
+        total_debit_foreign = 0.0
+        total_credit_foreign = 0.0
+        rates = []
+
+        company = self.env["res.company"].browse(company_id)
+        company_currency = company.currency_id
+
+        for transaction in transactions:
+            currency = transaction.currency_id or company_currency
+
+            if currency.id == company_currency.id:
+                total_debit_usd += transaction.dr_amount or 0.0
+                total_credit_usd += transaction.cr_amount or 0.0
+            else:
+                total_debit_foreign += transaction.dr_amount or 0.0
+                total_credit_foreign += transaction.cr_amount or 0.0
+
+                rate = transaction.rate or self._get_conversion_rate(
+                    currency.id, transaction.transaction_date
+                )
+                if rate and rate > 0:
+                    rates.append(rate)
+
+        avg_rate = sum(rates) / len(rates) if rates else 1.0
+
+        total_debit_usd += total_debit_foreign / avg_rate
+        total_credit_usd += total_credit_foreign / avg_rate
 
         return total_debit_usd, total_credit_usd
+
+    def get_fx_translation_difference(self, date, company_id):
+        """
+        FX translation difference =
+        average-rate balance - historical balance
+        """
+        self.ensure_one()
+
+        dr_hist, cr_hist = self.get_dr_cr_balance_usd_historical(date, company_id)
+        dr_avg, cr_avg = self.get_dr_cr_balance_usd(date, company_id)
+
+        hist_balance = (dr_hist or 0.0) - (cr_hist or 0.0)
+        avg_balance = (dr_avg or 0.0) - (cr_avg or 0.0)
+
+        return float_round(avg_balance - hist_balance, precision_digits=2)
+
+    # Do not delte it
+
+    # def get_dr_cr_balance_usd(self, date, company_id):
+    #     self.ensure_one()
+    #     # Fetch transactions for the specific account, date, and company
+    #     transactions = self.env["idil.transaction_bookingline"].search(
+    #         [
+    #             ("account_number", "=", self.id),
+    #             ("transaction_date", "<=", date),
+    #             ("company_id", "=", company_id),
+    #         ]
+    #     )
+
+    #     total_debit_usd = 0
+    #     total_credit_usd = 0
+
+    #     for transaction in transactions:
+    #         if transaction.currency_id.name == "USD":
+    #             rate = 1.0
+    #         else:
+    #             rate = transaction.rate or self._get_conversion_rate(
+    #                 transaction.currency_id.id, transaction.transaction_date
+    #             )
+
+    #         if not rate or rate == 0:
+    #             rate = 1.0
+
+    #         total_debit_usd += transaction.dr_amount / rate
+    #         total_credit_usd += transaction.cr_amount / rate
+
+    #     return total_debit_usd, total_credit_usd
 
     @api.model
     def _get_conversion_rate(self, from_currency_id, date):
