@@ -168,6 +168,7 @@
         "views/internal_transfer_views.xml",
         "reports/sale_invoice_report.xml",
         "views/payment_method.xml",
+        "views/unbalanced_transaction_report_views.xml",
         "views/product_cost_history_views.xml",
         "views/menu_hr.xml",
         "views/menu.xml",

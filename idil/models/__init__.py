@@ -80,6 +80,7 @@ from . import BizcoreDbBackup
 from . import product_cost_history
 from . import ManufacturingCostType
 from . import ManufacturingOrderCostLine
+from . import unbalanced_transaction_report
 
 
 # from . import model_export_wizard

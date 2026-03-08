@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Wizard Form -->
+    <record id="view_idil_unbalanced_transaction_wizard_form" model="ir.ui.view">
+        <field name="name">idil.unbalanced.transaction.wizard.form</field>
+        <field name="model">idil.unbalanced.transaction.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Find Unbalanced Transactions">
+                <group>
+                    <field name="company_id"/>
+                    <field name="date_from"/>
+                    <field name="date_to"/>
+                </group>
+                <footer>
+                    <button name="action_find_unbalanced_transactions"
+                            string="Find Unbalanced Transactions"
+                            type="object"
+                            class="btn-primary"/>
+                    <button string="Cancel"
+                            class="btn-secondary"
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Result Tree -->
+    <record id="view_idil_unbalanced_transaction_report_tree" model="ir.ui.view">
+        <field name="name">idil.unbalanced.transaction.report.tree</field>
+        <field name="model">idil.unbalanced.transaction.report</field>
+        <field name="arch" type="xml">
+            <tree string="Unbalanced Transactions" create="false" delete="false">
+                <field name="trx_date"/>
+                <field name="transaction_number"/>
+                <field name="reffno"/>
+                <field name="company_id"/>
+                <field name="vendor_id"/>
+                <field name="customer_id"/>
+                <field name="sales_person_id"/>
+                <field name="purchase_order_id"/>
+                <field name="sale_order_id"/>
+                <field name="payment_method"/>
+                <field name="line_count"/>
+                <field name="debit_total"/>
+                <field name="credit_total"/>
+                <field name="difference"/>
+                <button name="action_open_booking"
+                        string="Open Booking"
+                        type="object"
+                        class="btn-primary"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Result Form -->
+    <record id="view_idil_unbalanced_transaction_report_form" model="ir.ui.view">
+        <field name="name">idil.unbalanced.transaction.report.form</field>
+        <field name="model">idil.unbalanced.transaction.report</field>
+        <field name="arch" type="xml">
+            <form string="Unbalanced Transaction">
+                <group>
+                    <group>
+                        <field name="transaction_booking_id"/>
+                        <field name="transaction_number"/>
+                        <field name="reffno"/>
+                        <field name="trx_date"/>
+                        <field name="company_id"/>
+                    </group>
+                    <group>
+                        <field name="vendor_id"/>
+                        <field name="customer_id"/>
+                        <field name="sales_person_id"/>
+                        <field name="purchase_order_id"/>
+                        <field name="sale_order_id"/>
+                        <field name="payment_method"/>
+                    </group>
+                </group>
+
+                <group>
+                    <group>
+                        <field name="line_count"/>
+                    </group>
+                    <group>
+                        <field name="debit_total"/>
+                        <field name="credit_total"/>
+                        <field name="difference"/>
+                    </group>
+                </group>
+
+                <footer>
+                    <button name="action_open_booking"
+                            string="Open Original Booking"
+                            type="object"
+                            class="btn-primary"/>
+                    <button string="Close"
+                            special="cancel"
+                            class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Wizard Action -->
+    <record id="action_idil_unbalanced_transaction_wizard" model="ir.actions.act_window">
+        <field name="name">Find Unbalanced Transactions</field>
+        <field name="res_model">idil.unbalanced.transaction.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Optional direct result action -->
+    <record id="action_idil_unbalanced_transaction_report" model="ir.actions.act_window">
+        <field name="name">Unbalanced Transactions</field>
+        <field name="res_model">idil.unbalanced.transaction.report</field>
+        <field name="view_mode">tree,form</field>
+        <field name="target">current</field>
+    </record>
+
+    <!-- Menu -->
+  
+
+</odoo>

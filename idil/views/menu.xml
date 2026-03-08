@@ -875,6 +875,20 @@
               action="action_idil_budget_analysis"
               sequence="2"/>
 
+
+<menuitem id="menu_idil_unbalanced_transaction"
+        name="Find Unbalanced Transactions"
+        parent="menu_idil_home"
+        sequence="99"/>
+
+
+<menuitem id="menu_idil_unbalanced_transaction_wizard"
+        name="Find Unbalanced Transactions"
+        parent="menu_idil_unbalanced_transaction"
+        action="action_idil_unbalanced_transaction_wizard"
+        sequence="99"/>
+        
+
   <menuitem id="menu_sales_commission_bulk_payment"
               name="💳 Bulk Payment"
               parent="idil.menu_sales_commission_root"
