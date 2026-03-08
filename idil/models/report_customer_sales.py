@@ -171,7 +171,6 @@ class CustomerSalesReportWizard(models.TransientModel):
 
         headers = [
             "Date",
-            "Method",
             "Ref No",
             "Description",
             "Debit",
@@ -236,7 +235,7 @@ class CustomerSalesReportWizard(models.TransientModel):
             ]
         )
 
-        col_widths = [65, 125, 90, 250, 80, 80, 90]
+        col_widths = [65, 140, 300, 90, 90, 90]
 
         table = Table(data, colWidths=col_widths)
         style = TableStyle(
