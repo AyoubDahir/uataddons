@@ -235,7 +235,7 @@ class CustomerSalesReportWizard(models.TransientModel):
             ]
         )
 
-        col_widths = [65, 140, 300, 90, 90, 90]
+        col_widths = [65, 140, 250, 90, 90, 90]
 
         table = Table(data, colWidths=col_widths)
         style = TableStyle(
