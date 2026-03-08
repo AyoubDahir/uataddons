@@ -200,7 +200,6 @@ class CustomerSalesReportWizard(models.TransientModel):
             (
                 customer_name,
                 phone,
-                method,
                 ref_no,
                 acc_disp,
                 desc,
@@ -216,7 +215,6 @@ class CustomerSalesReportWizard(models.TransientModel):
             data.append(
                 [
                     trans_date.strftime("%d/%m/%Y") if trans_date else "",
-                    method or "",
                     ref_no or "",
                     desc or "",
                     f"{dr:,.2f}" if dr else "",
