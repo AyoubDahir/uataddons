@@ -18,6 +18,14 @@ class TransactionBooking(models.Model):
     _order = "id desc"
 
     # Primary Key Fields
+    company_id = fields.Many2one(
+        "res.company",
+        string="Company",
+        required=True,
+        default=lambda self: self.env.company,
+        index=True,
+    )
+
     transaction_number = fields.Integer(string="Transaction Number")
     reffno = fields.Char(string="Reference Number")  # Consider renaming for clarity
     journal_entry_id = fields.Many2one("idil.journal.entry", string="Journal Entry")
