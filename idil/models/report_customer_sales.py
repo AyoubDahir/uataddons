@@ -100,70 +100,62 @@ class CustomerSalesReportWizard(models.TransientModel):
         previous_debit = prev_result[0]
         previous_credit = prev_result[1]
         previous_balance = previous_debit - previous_credit
-
-        # ==== Use your exact requested query here with filtering ====
-        # Add filters to both parts of the UNION for customer and date range
-
         query = f"""
-            SELECT  
-                c.name, 
-                c.phone, 
-               
-                ts.name as method,
-                tb.reffno,
-                tbl.account_display,
-                tbl.description,
-                tbl.transaction_type,
-                tbl.dr_amount, 
-                tbl.cr_amount,
-                tbl.id AS line_id,
-                tbl.transaction_date
-            FROM idil_customer_registration c
-            INNER JOIN idil_transaction_booking tb ON c.id = tb.customer_id
-            INNER JOIN idil_transaction_bookingline tbl 
-                ON tb.id = tbl.transaction_booking_id 
-                AND tbl.account_number = c.account_receivable_id
-            inner join idil_transaction_source ts
-                on tb.trx_source_id = ts.id
+                SELECT  
+                    c.name, 
+                    c.phone, 
+                  
+                    tb.reffno,
+                    tbl.account_display,
+                    tbl.description,
+                    tbl.transaction_type,
+                    tbl.dr_amount, 
+                    tbl.cr_amount,
+                    tbl.id AS line_id,
+                    tbl.transaction_date
+                FROM idil_customer_registration c
+                INNER JOIN idil_transaction_booking tb ON c.id = tb.customer_id
+                INNER JOIN idil_transaction_bookingline tbl 
+                    ON tb.id = tbl.transaction_booking_id 
+                    AND tbl.account_number = c.account_receivable_id
+       
 
-            WHERE c.id = %s
-            AND tbl.transaction_date BETWEEN %s AND %s
-
-            UNION ALL
-
-            SELECT  
-                c.name, 
-                c.phone, 
-           
-                ts.name as method,
-                tb.reffno,
-                tbl.account_display,
-                tbl.description,
-                tbl.transaction_type,
-                tbl.dr_amount AS dr_amount,
-                tbl.dr_amount AS cr_amount,
-                tbl.id AS line_id,
-                tbl.transaction_date
-            FROM idil_customer_registration c
-            INNER JOIN idil_transaction_booking tb ON c.id = tb.customer_id
-            INNER JOIN idil_transaction_bookingline tbl 
-                ON tb.id = tbl.transaction_booking_id
-            INNER JOIN idil_chart_account acc 
-                ON tbl.account_number = acc.id
-            LEFT JOIN idil_customer_sale_order so 
-                ON tb.cusotmer_sale_order_id = so.id
-            inner join idil_transaction_source ts
-                on tb.trx_source_id = ts.id
-
-            WHERE 
-                so.customer_id = c.id
-                AND so.payment_method IN ('cash', 'bank_transfer')
-                AND acc.account_type IN ('cash', 'bank_transfer')
-                AND c.id = %s
+                WHERE c.id = %s
                 AND tbl.transaction_date BETWEEN %s AND %s
 
-            ORDER BY line_id ASC
-        """
+                UNION ALL
+
+                SELECT  
+                    c.name, 
+                    c.phone, 
+                    
+                    tb.reffno,
+                    tbl.account_display,
+                    tbl.description,
+                    tbl.transaction_type,
+                    tbl.dr_amount AS dr_amount,
+                    tbl.cr_amount AS cr_amount,
+                    tbl.id AS line_id,
+                    tbl.transaction_date
+                FROM idil_customer_registration c
+                INNER JOIN idil_transaction_booking tb ON c.id = tb.customer_id
+                INNER JOIN idil_transaction_bookingline tbl 
+                    ON tb.id = tbl.transaction_booking_id
+                INNER JOIN idil_chart_account acc 
+                    ON tbl.account_number = acc.id
+                LEFT JOIN idil_customer_sale_order so 
+                    ON tb.cusotmer_sale_order_id = so.id
+               
+
+                WHERE 
+                    so.customer_id = c.id
+                   
+                    AND acc.account_type IN ('cash', 'bank_transfer')
+                    AND c.id = %s
+                    AND tbl.transaction_date BETWEEN %s AND %s
+
+                ORDER BY line_id ASC
+            """
 
         params = (
             self.customer_id.id,
