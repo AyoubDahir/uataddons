@@ -1490,7 +1490,7 @@ class Account(models.Model):
 
         lines = self.env["idil.transaction_bookingline"].search(
             [
-                ("chart_account_id", "=", self.id),
+                ("account_id", "=", self.id),
                 ("company_id", "=", company_id),
                 ("date", "<=", report_date),
                 ("state", "=", "posted"),
