@@ -581,6 +581,13 @@ class TransactionBookingline(models.Model):
         string="Customer Opening Balance",
         ondelete="cascade",
     )
+
+    customer_sale_payment_id = fields.Many2one(
+        "idil.customer.sale.payment",
+        string="Customer Sale Payment",
+        index=True,
+        ondelete="cascade",
+    )
     vendor_opening_balance_id = fields.Many2one(
         "idil.vendor.opening.balance.line",
         string="Vendor Opening Balance",
