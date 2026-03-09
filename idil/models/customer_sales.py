@@ -731,11 +731,8 @@ class CustomerSaleOrder(models.Model):
                             "sales_receipt_id": receipt.id,  # ✅ correct (receipt exists now)
                             "payment_method_ids": default_method.id,
                             "amount": order.order_total,
-                            "date": (
-                                fields.Date.to_date(order.order_date)
-                                if order.order_date
-                                else fields.Date.today()
-                            ),
+                            "payment_origin": "sale_order",
+                            "date": order.order_date,
                         }
                     )
 
@@ -1459,6 +1456,17 @@ class CustomerSalePayment(models.Model):
         domain="[('company_id','=',company_id), ('active','=',True)]",
     )
 
+    payment_origin = fields.Selection(
+        [
+            ("sale_order", "Sales Order"),
+            ("bulk_receipt", "Bulk Receipt"),
+        ],
+        string="Payment Origin",
+        default="sale_order",
+        required=True,
+        tracking=True,
+    )
+
     account_id = fields.Many2one(
         "idil.chart.account",
         string="Account",
@@ -1515,16 +1523,17 @@ class CustomerSalePayment(models.Model):
                 )
 
             # ✅ If created from Bulk Receipt => handle ownership rule
-            if pay.bulk_receipt_payment_id:
-                bulk = pay.bulk_receipt_payment_id
-
-                # If bulk already confirmed => block deletion here
-                if bulk.state == "confirmed":
-                    raise ValidationError(
-                        "❌ This payment was created from a CONFIRMED Bulk Receipt.\n"
-                        "You cannot delete it from Sales Order.\n"
-                        "Please open the Bulk Receipt and delete/cancel it from there."
-                    )
+            # Block only bulk-origin payments from Sales Order side
+            if (
+                pay.payment_origin == "bulk_receipt"
+                and pay.bulk_receipt_payment_id
+                and pay.bulk_receipt_payment_id.state == "confirmed"
+            ):
+                raise ValidationError(
+                    "❌ This payment was created from a CONFIRMED Bulk Receipt.\n"
+                    "You cannot delete it from Sales Order.\n"
+                    "Please open the Bulk Receipt and delete/cancel it from there."
+                )
 
             # Optional safety: prevent deleting posted payment linked to another settlement object
             # if pay.sales_payment_id:
