@@ -1485,36 +1485,68 @@ class Account(models.Model):
             float_round(total_credit_usd, precision_digits=2),
         )
 
-    def get_dr_cr_balance_usd(self, report_date, company_id):
+    def get_dr_cr_balance_usd(self, date, company_id):
         self.ensure_one()
 
-        lines = self.env["idil.transaction_bookingline"].search(
+        transactions = self.env["idil.transaction_bookingline"].search(
             [
                 ("account_number", "=", self.id),
+                ("transaction_date", "<=", date),
                 ("company_id", "=", company_id),
-                ("transaction_date", "<=", report_date),
             ]
         )
 
-        dr_total_source = 0.0
-        dr_total_usd = 0.0
-        cr_total_source = 0.0
-        cr_total_usd = 0.0
+        total_company_debit = 0.0
+        total_company_credit = 0.0
+        total_foreign_debit = 0.0
+        total_foreign_credit = 0.0
 
-        for line in lines:
-            rate = line.rate or 1.0
-            dr = line.dr_amount or 0.0
-            cr = line.cr_amount or 0.0
+        weighted_amount_total = 0.0
+        weighted_rate_total = 0.0
 
-            if dr:
-                dr_total_source += dr
-                dr_total_usd += dr / rate if rate else dr
+        company = self.env["res.company"].browse(company_id)
+        company_currency = company.currency_id
 
-            if cr:
-                cr_total_source += cr
-                cr_total_usd += cr / rate if rate else cr
+        for transaction in transactions:
+            currency = transaction.currency_id or company_currency
+            dr = transaction.dr_amount or 0.0
+            cr = transaction.cr_amount or 0.0
 
-        return dr_total_usd, cr_total_usd
+            if currency.id == company_currency.id:
+                total_company_debit += dr
+                total_company_credit += cr
+            else:
+                total_foreign_debit += dr
+                total_foreign_credit += cr
+
+                rate = transaction.rate or self._get_conversion_rate(
+                    currency.id, transaction.transaction_date
+                )
+
+                movement = abs(dr) + abs(cr)
+                if rate and rate > 0 and movement:
+                    weighted_amount_total += movement
+                    weighted_rate_total += movement * rate
+
+        avg_rate = (
+            weighted_rate_total / weighted_amount_total
+            if weighted_amount_total
+            else 1.0
+        )
+
+        # company currency part stays as-is
+        company_net = total_company_debit - total_company_credit
+
+        # foreign currency part: convert NET balance once
+        foreign_net = total_foreign_debit - total_foreign_credit
+        foreign_net_usd = foreign_net / avg_rate if avg_rate else foreign_net
+
+        final_balance = company_net + foreign_net_usd
+
+        if final_balance >= 0:
+            return final_balance, 0.0
+        else:
+            return 0.0, abs(final_balance)
 
     # def get_dr_cr_balance_usd(self, date, company_id):
     #     self.ensure_one()
