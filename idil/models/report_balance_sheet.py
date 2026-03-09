@@ -160,7 +160,12 @@ class BalanceSheetWizard(models.TransientModel):
         self.write({"line_ids": lines})
 
     def _compute_balance_sheet_data(self):
-        """Compute balance sheet using average-rate display and FX translation difference"""
+        """
+        Compute balance sheet using weighted-average / average-rate converted balances.
+        FX revaluation is NOT summed per account.
+        Instead, the final residual difference is posted into equity as
+        Foreign Exchange Revaluation.
+        """
         Header = self.env["idil.chart.account.header"]
         SubHeader = self.env["idil.chart.account.subheader"]
         Account = self.env["idil.chart.account"]
@@ -172,7 +177,6 @@ class BalanceSheetWizard(models.TransientModel):
         total_assets = 0.0
         total_liabilities = 0.0
         total_equity = 0.0
-        total_fx_translation = 0.0
 
         USD_ROUND = 0.01
         EPS_ASSET = 0.05
@@ -186,7 +190,7 @@ class BalanceSheetWizard(models.TransientModel):
             if not header.code or header.code[0] not in ["1", "2", "3"]:
                 continue
 
-            header_type = header.code[0]  # 1=assets, 2=liabilities, 3=equity
+            header_type = header.code[0]  # 1=asset, 2=liability, 3=equity
 
             header_dict = {
                 "name": header.name,
@@ -216,26 +220,33 @@ class BalanceSheetWizard(models.TransientModel):
                     if account.code in ["100994", "100998"]:
                         continue
 
-                    # Report/display balance using average-rate conversion
+                    # ==========================================
+                    # Use WEIGHTED AVG / AVERAGE RATE balance
+                    # ==========================================
                     dr_usd, cr_usd = account.get_dr_cr_balance_usd(
                         self.report_date, self.company_id.id
                     )
+
                     signed = (dr_usd or 0.0) - (cr_usd or 0.0)
 
+                    # Natural display
                     if header_type in ("2", "3"):
-                        display_balance = -signed
+                        raw_display_balance = -signed
                     else:
-                        display_balance = signed
+                        raw_display_balance = signed
 
-                    display_balance = round_usd(display_balance)
+                    display_balance = round_usd(raw_display_balance)
 
+                    # Avoid tiny negative assets caused by rounding
                     if (
                         header_type == "1"
                         and display_balance < 0
                         and abs(display_balance) <= EPS_ASSET
                     ):
                         display_balance = 0.0
+                        raw_display_balance = 0.0
 
+                    # Hide zero accounts
                     if abs(display_balance) < USD_ROUND:
                         continue
 
@@ -246,25 +257,18 @@ class BalanceSheetWizard(models.TransientModel):
                             "balance": display_balance,
                         }
                     )
-                    sub_dict["total"] += display_balance
 
-                    # FX translation difference
-                    fx_value = account.get_fx_translation_difference(
-                        self.report_date, self.company_id.id
-                    )
-
-                    # For liabilities/equity, flip sign same way as display nature
-                    if header_type in ("2", "3"):
-                        fx_value = -fx_value
-
-                    total_fx_translation += fx_value
+                    # use raw amount for accumulating subtotal, round later
+                    sub_dict["total"] += raw_display_balance
 
                 sub_dict["total"] = round_usd(sub_dict["total"])
+
                 if sub_dict["accounts"]:
                     header_dict["subheaders"].append(sub_dict)
                     header_dict["total"] += sub_dict["total"]
 
             header_dict["total"] = round_usd(header_dict["total"])
+
             if header_dict["subheaders"]:
                 if header_type == "1":
                     assets_data.append(header_dict)
@@ -276,7 +280,9 @@ class BalanceSheetWizard(models.TransientModel):
                     equity_data.append(header_dict)
                     total_equity += header_dict["total"]
 
-        # Net Profit from P&L using average-rate conversion
+        # ==========================================
+        # Net Profit from P&L using same avg method
+        # ==========================================
         net_profit = self._compute_income_statement_net_profit()
         net_profit = round_usd(net_profit)
 
@@ -284,8 +290,13 @@ class BalanceSheetWizard(models.TransientModel):
         total_liabilities = round_usd(total_liabilities)
         total_equity = round_usd(total_equity)
 
-        # Add real FX translation line into equity
-        total_fx_translation = round_usd(total_fx_translation)
+        # provisional total before FX revaluation line
+        provisional_total = round_usd(total_liabilities + total_equity + net_profit)
+
+        # real balance gap
+        total_fx_translation = round_usd(total_assets - provisional_total)
+
+        # Add balancing FX reserve line only if needed
         if abs(total_fx_translation) >= USD_ROUND:
             fx_header = {
                 "name": "Foreign Exchange Revaluation",
@@ -325,6 +336,173 @@ class BalanceSheetWizard(models.TransientModel):
             "total_liab_equity": total_liab_equity,
             "is_balanced": abs(balance_gap) < 0.01,
         }
+
+    # def _compute_balance_sheet_data(self):
+    #     """Compute balance sheet using average-rate display and FX translation difference"""
+    #     Header = self.env["idil.chart.account.header"]
+    #     SubHeader = self.env["idil.chart.account.subheader"]
+    #     Account = self.env["idil.chart.account"]
+
+    #     assets_data = []
+    #     liabilities_data = []
+    #     equity_data = []
+
+    #     total_assets = 0.0
+    #     total_liabilities = 0.0
+    #     total_equity = 0.0
+    #     total_fx_translation = 0.0
+
+    #     USD_ROUND = 0.01
+    #     EPS_ASSET = 0.05
+
+    #     def round_usd(x):
+    #         return round((x or 0.0) / USD_ROUND) * USD_ROUND
+
+    #     headers = Header.search([], order="code")
+
+    #     for header in headers:
+    #         if not header.code or header.code[0] not in ["1", "2", "3"]:
+    #             continue
+
+    #         header_type = header.code[0]  # 1=assets, 2=liabilities, 3=equity
+
+    #         header_dict = {
+    #             "name": header.name,
+    #             "code": header.code,
+    #             "subheaders": [],
+    #             "total": 0.0,
+    #         }
+
+    #         subheaders = SubHeader.search([("header_id", "=", header.id)], order="name")
+
+    #         for subheader in subheaders:
+    #             sub_dict = {
+    #                 "name": subheader.name,
+    #                 "accounts": [],
+    #                 "total": 0.0,
+    #             }
+
+    #             accounts = Account.search(
+    #                 [
+    #                     ("subheader_id", "=", subheader.id),
+    #                     ("company_id", "=", self.company_id.id),
+    #                 ],
+    #                 order="code",
+    #             )
+
+    #             for account in accounts:
+    #                 if account.code in ["100994", "100998"]:
+    #                     continue
+
+    #                 # Report/display balance using average-rate conversion
+    #                 dr_usd, cr_usd = account.get_dr_cr_balance_usd(
+    #                     self.report_date, self.company_id.id
+    #                 )
+    #                 signed = (dr_usd or 0.0) - (cr_usd or 0.0)
+
+    #                 if header_type in ("2", "3"):
+    #                     display_balance = -signed
+    #                 else:
+    #                     display_balance = signed
+
+    #                 display_balance = round_usd(display_balance)
+
+    #                 if (
+    #                     header_type == "1"
+    #                     and display_balance < 0
+    #                     and abs(display_balance) <= EPS_ASSET
+    #                 ):
+    #                     display_balance = 0.0
+
+    #                 if abs(display_balance) < USD_ROUND:
+    #                     continue
+
+    #                 sub_dict["accounts"].append(
+    #                     {
+    #                         "code": account.code or "",
+    #                         "name": account.name or "",
+    #                         "balance": display_balance,
+    #                     }
+    #                 )
+    #                 sub_dict["total"] += display_balance
+
+    #                 # FX translation difference
+    #                 fx_value = account.get_fx_translation_difference(
+    #                     self.report_date, self.company_id.id
+    #                 )
+
+    #                 # For liabilities/equity, flip sign same way as display nature
+    #                 if header_type in ("2", "3"):
+    #                     fx_value = -fx_value
+
+    #                 total_fx_translation += fx_value
+
+    #             sub_dict["total"] = round_usd(sub_dict["total"])
+    #             if sub_dict["accounts"]:
+    #                 header_dict["subheaders"].append(sub_dict)
+    #                 header_dict["total"] += sub_dict["total"]
+
+    #         header_dict["total"] = round_usd(header_dict["total"])
+    #         if header_dict["subheaders"]:
+    #             if header_type == "1":
+    #                 assets_data.append(header_dict)
+    #                 total_assets += header_dict["total"]
+    #             elif header_type == "2":
+    #                 liabilities_data.append(header_dict)
+    #                 total_liabilities += header_dict["total"]
+    #             elif header_type == "3":
+    #                 equity_data.append(header_dict)
+    #                 total_equity += header_dict["total"]
+
+    #     # Net Profit from P&L using average-rate conversion
+    #     net_profit = self._compute_income_statement_net_profit()
+    #     net_profit = round_usd(net_profit)
+
+    #     total_assets = round_usd(total_assets)
+    #     total_liabilities = round_usd(total_liabilities)
+    #     total_equity = round_usd(total_equity)
+
+    #     # Add real FX translation line into equity
+    #     total_fx_translation = round_usd(total_fx_translation)
+    #     if abs(total_fx_translation) >= USD_ROUND:
+    #         fx_header = {
+    #             "name": "Foreign Exchange Revaluation",
+    #             "code": "FX",
+    #             "subheaders": [
+    #                 {
+    #                     "name": "Unrealized FX Gain/Loss",
+    #                     "accounts": [
+    #                         {
+    #                             "code": "FX",
+    #                             "name": "Foreign Exchange Gain/Loss (Unrealized)",
+    #                             "balance": total_fx_translation,
+    #                         }
+    #                     ],
+    #                     "total": total_fx_translation,
+    #                 }
+    #             ],
+    #             "total": total_fx_translation,
+    #         }
+
+    #         equity_data.append(fx_header)
+    #         total_equity = round_usd(total_equity + total_fx_translation)
+
+    #     total_liab_equity = round_usd(total_liabilities + total_equity + net_profit)
+    #     balance_gap = round_usd(total_assets - total_liab_equity)
+
+    #     return {
+    #         "assets": assets_data,
+    #         "liabilities": liabilities_data,
+    #         "equity": equity_data,
+    #         "total_assets": total_assets,
+    #         "total_liabilities": total_liabilities,
+    #         "total_equity": total_equity,
+    #         "net_profit": net_profit,
+    #         "total_fx_translation": total_fx_translation,
+    #         "balance_gap": balance_gap,
+    #         "total_liab_equity": total_liab_equity,
+    #         "is_balanced": abs(balance_gap) < 0.01,
+    #     }
 
     # def _compute_balance_sheet_data(self):
     #     """Compute balance sheet structure + Net Profit with rounding + no zero accounts + no tiny negative assets"""

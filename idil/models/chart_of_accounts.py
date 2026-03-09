@@ -1485,48 +1485,80 @@ class Account(models.Model):
             float_round(total_credit_usd, precision_digits=2),
         )
 
-    def get_dr_cr_balance_usd(self, date, company_id):
+    def get_dr_cr_balance_usd(self, report_date, company_id):
         self.ensure_one()
 
-        transactions = self.env["idil.transaction_bookingline"].search(
+        lines = self.env["idil.transaction_bookingline"].search(
             [
-                ("account_number", "=", self.id),
-                ("transaction_date", "<=", date),
+                ("chart_account_id", "=", self.id),
                 ("company_id", "=", company_id),
+                ("date", "<=", report_date),
+                ("state", "=", "posted"),
             ]
         )
 
-        total_debit_usd = 0.0
-        total_credit_usd = 0.0
-        total_debit_foreign = 0.0
-        total_credit_foreign = 0.0
-        rates = []
+        dr_total_source = 0.0
+        dr_total_usd = 0.0
+        cr_total_source = 0.0
+        cr_total_usd = 0.0
 
-        company = self.env["res.company"].browse(company_id)
-        company_currency = company.currency_id
+        for line in lines:
+            rate = line.rate or 1.0
+            dr = line.dr_amount or 0.0
+            cr = line.cr_amount or 0.0
 
-        for transaction in transactions:
-            currency = transaction.currency_id or company_currency
+            if dr:
+                dr_total_source += dr
+                dr_total_usd += dr / rate if rate else dr
 
-            if currency.id == company_currency.id:
-                total_debit_usd += transaction.dr_amount or 0.0
-                total_credit_usd += transaction.cr_amount or 0.0
-            else:
-                total_debit_foreign += transaction.dr_amount or 0.0
-                total_credit_foreign += transaction.cr_amount or 0.0
+            if cr:
+                cr_total_source += cr
+                cr_total_usd += cr / rate if rate else cr
 
-                rate = transaction.rate or self._get_conversion_rate(
-                    currency.id, transaction.transaction_date
-                )
-                if rate and rate > 0:
-                    rates.append(rate)
+        return dr_total_usd, cr_total_usd
 
-        avg_rate = sum(rates) / len(rates) if rates else 1.0
+    # def get_dr_cr_balance_usd(self, date, company_id):
+    #     self.ensure_one()
 
-        total_debit_usd += total_debit_foreign / avg_rate
-        total_credit_usd += total_credit_foreign / avg_rate
+    #     transactions = self.env["idil.transaction_bookingline"].search(
+    #         [
+    #             ("account_number", "=", self.id),
+    #             ("transaction_date", "<=", date),
+    #             ("company_id", "=", company_id),
+    #         ]
+    #     )
 
-        return total_debit_usd, total_credit_usd
+    #     total_debit_usd = 0.0
+    #     total_credit_usd = 0.0
+    #     total_debit_foreign = 0.0
+    #     total_credit_foreign = 0.0
+    #     rates = []
+
+    #     company = self.env["res.company"].browse(company_id)
+    #     company_currency = company.currency_id
+
+    #     for transaction in transactions:
+    #         currency = transaction.currency_id or company_currency
+
+    #         if currency.id == company_currency.id:
+    #             total_debit_usd += transaction.dr_amount or 0.0
+    #             total_credit_usd += transaction.cr_amount or 0.0
+    #         else:
+    #             total_debit_foreign += transaction.dr_amount or 0.0
+    #             total_credit_foreign += transaction.cr_amount or 0.0
+
+    #             rate = transaction.rate or self._get_conversion_rate(
+    #                 currency.id, transaction.transaction_date
+    #             )
+    #             if rate and rate > 0:
+    #                 rates.append(rate)
+
+    #     avg_rate = sum(rates) / len(rates) if rates else 1.0
+
+    #     total_debit_usd += total_debit_foreign / avg_rate
+    #     total_credit_usd += total_credit_foreign / avg_rate
+
+    #     return total_debit_usd, total_credit_usd
 
     def get_fx_translation_difference(self, date, company_id):
         """
