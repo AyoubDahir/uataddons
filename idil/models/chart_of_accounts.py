@@ -1492,8 +1492,7 @@ class Account(models.Model):
             [
                 ("account_number", "=", self.id),
                 ("company_id", "=", company_id),
-                ("date", "<=", report_date),
-                ("state", "=", "posted"),
+                ("transaction_date", "<=", report_date),
             ]
         )
 
