@@ -66,18 +66,18 @@
                                     <tr class="account-row">
                                         <td class="col-code"><t t-esc="acc['code']"/></td>
                                         <td class="col-name"><t t-esc="acc['name']"/></td>
-                                        <td class="col-balance"><t t-esc="acc['balance']" t-options='{"widget": "monetary", "display_currency": usd_currency}'/></td>
+                                        <td class="col-balance"><t t-esc="'$ {:,.2f}'.format(acc['balance'] or 0.0)"/></td>
                                     </tr>
                                 </t>
                                 <tr class="total-row">
                                     <td colspan="2" style="text-align: right; padding-right: 20px;">Subtotal <t t-esc="sub['name']"/></td>
-                                    <td style="text-align: right;"><t t-esc="sub['total']" t-options='{"widget": "monetary", "display_currency": usd_currency}'/></td>
+                                    <td style="text-align: right;"><t t-esc="'$ {:,.2f}'.format(sub['total'] or 0.0)"/></td>
                                 </tr>
                             </t>
                         </t>
                         <tr class="total-row" style="background: #e2e8f0; border-top: 2px solid #94a3b8;">
                             <td colspan="2" style="text-align: right; padding-right: 20px; font-size: 14px;">TOTAL ASSETS</td>
-                            <td style="text-align: right; font-size: 14px;"><t t-esc="data['total_assets']" t-options='{"widget": "monetary", "display_currency": usd_currency}'/></td>
+                            <td style="text-align: right; font-size: 14px;"><t t-esc="'$ {:,.2f}'.format(data['total_assets'] or 0.0)"/></td>
                         </tr>
                     </table>
                 </t>
@@ -101,12 +101,12 @@
                                     <tr class="account-row">
                                         <td class="col-code"><t t-esc="acc['code']"/></td>
                                         <td class="col-name"><t t-esc="acc['name']"/></td>
-                                        <td class="col-balance"><t t-esc="acc['balance']" t-options='{"widget": "monetary", "display_currency": usd_currency}'/></td>
+                                        <td class="col-balance"><t t-esc="'$ {:,.2f}'.format(acc['balance'] or 0.0)"/></td>
                                     </tr>
                                 </t>
                                 <tr class="total-row">
                                     <td colspan="2" style="text-align: right; padding-right: 20px;">Subtotal <t t-esc="sub['name']"/></td>
-                                    <td style="text-align: right;"><t t-esc="sub['total']" t-options='{"widget": "monetary", "display_currency": usd_currency}'/></td>
+                                    <td style="text-align: right;"><t t-esc="'$ {:,.2f}'.format(sub['total'] or 0.0)"/></td>
                                 </tr>
                             </t>
                         </t>
@@ -132,12 +132,12 @@
                                     <tr class="account-row">
                                         <td class="col-code"><t t-esc="acc['code']"/></td>
                                         <td class="col-name"><t t-esc="acc['name']"/></td>
-                                        <td class="col-balance"><t t-esc="acc['balance']" t-options='{"widget": "monetary", "display_currency": usd_currency}'/></td>
+                                        <td class="col-balance"><t t-esc="'$ {:,.2f}'.format(acc['balance'] or 0.0)"/></td>
                                     </tr>
                                 </t>
                                 <tr class="total-row">
                                     <td colspan="2" style="text-align: right; padding-right: 20px;">Subtotal <t t-esc="sub['name']"/></td>
-                                    <td style="text-align: right;"><t t-esc="sub['total']" t-options='{"widget": "monetary", "display_currency": usd_currency}'/></td>
+                                    <td style="text-align: right;"><t t-esc="'$ {:,.2f}'.format(sub['total'] or 0.0)"/></td>
                                 </tr>
                             </t>
                         </t>
@@ -145,7 +145,7 @@
                          <tr class="account-row" style="background: #ecfdf5;">
                             <td class="col-code">PL</td>
                             <td class="col-name" style="font-weight: 700; color: #065f46;">Net Profit / (Loss)</td>
-                            <td class="col-balance" style="color: #065f46;"><t t-esc="data['net_profit']" t-options='{"widget": "monetary", "display_currency": usd_currency}'/></td>
+                            <td class="col-balance" style="color: #065f46;"><t t-esc="'$ {:,.2f}'.format(data['net_profit'] or 0.0)"/></td>
                         </tr>
                     </table>
                 </t>
@@ -156,7 +156,7 @@
                         <tr>
                             <td>TOTAL LIABILITIES &amp; EQUITY</td>
                             <td style="text-align: right;">
-                                <t t-esc="data['total_liab_equity']" t-options='{"widget": "monetary", "display_currency": usd_currency}'/>
+                                <t t-esc="'$ {:,.2f}'.format(data['total_liab_equity'] or 0.0)"/>
                             </td>
                         </tr>
                     </table>
@@ -164,14 +164,17 @@
 
                 <div style="margin-top: 40px; text-align: center; color: #94a3b8; font-size: 12px;">
                     <t t-if="data['is_balanced']">
-                         <span style="color: #166534; font-weight: bold;">✔ Balance Sheet is Balanced</span>
+                        <span style="color: #166534; font-weight: bold;">Balance Sheet is Balanced</span>
                     </t>
                     <t t-else="">
-                         <span style="color: #991b1b; font-weight: bold;">⚠ Unbalanced</span>
+                        <span style="color: #991b1b; font-weight: bold;">Balance Sheet is Unbalanced</span>
                     </t>
                     <br/>
                     Confidential Financial Report - <t t-esc="report_date"/>
+                    <br/>
+                    Generated by <strong>BizCore SOLUTION LTD</strong>
                 </div>
+
             </div>
         </t>
     </template>
