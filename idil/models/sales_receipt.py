@@ -107,22 +107,6 @@ class SalesReceipt(models.Model):
         tracking=True,
     )
 
-    # @api.depends("due_amount", "payment_ids.paid_amount")
-    # def _compute_payment_totals(self):
-    #     """
-    #     Always derive totals from child payments:
-    #       paid_amount      = sum(payment.paid_amount)
-    #       remaining_amount = due_amount - paid_amount
-    #       payment_status   = 'paid' if remaining_amount <= 0 else 'pending'
-    #     """
-    #     for rec in self:
-    #         total_paid = sum((p.paid_amount or 0.0) for p in rec.payment_ids)
-    #         rec.paid_amount = total_paid
-    #         rec.remaining_amount = (rec.due_amount or 0.0) - total_paid
-    #         rec.payment_status = (
-    #             "paid" if (rec.remaining_amount or 0.0) <= 0.0 else "pending"
-    #         )
-
     @api.depends(
         "due_amount", "payment_ids.paid_amount", "customer_payment_leg_ids.amount"
     )
@@ -428,11 +412,12 @@ class SalesReceipt(models.Model):
 
                 for receipt in self:
 
-                    # ❌ Block delete if opening balance receipt
+                    # Block deletion of opening-balance receipts unless the
+                    # opening balance itself is doing a controlled cleanup.
                     if (
                         receipt.sales_opening_balance_id
                         or receipt.customer_opening_balance_id
-                    ):
+                    ) and not self.env.context.get("skip_opening_balance_protection"):
                         raise UserError(
                             "⚠️ You cannot delete a sales receipt that was created from an opening balance."
                         )
