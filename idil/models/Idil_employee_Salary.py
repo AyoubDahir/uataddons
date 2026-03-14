@@ -265,6 +265,7 @@ class IdilEmployeeSalary(models.Model):
         tracking=True,
     )
 
+    ## to be checked.
     @api.depends("staff_sales_ids.total_amount")
     def _compute_total_paid_sales(self):
         """
