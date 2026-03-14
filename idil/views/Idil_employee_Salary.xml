@@ -25,6 +25,8 @@
                 <field name="total_salary" sum="Total"/>
 
                 <field name="total_salary_usd" sum="Total USD"/>
+                 
+                
                 <field name="is_paid"/>
             </tree>
         </field>
@@ -114,6 +116,7 @@
                                     <field name="currency_id" readonly="1"/>
                                     <field name="rate" readonly="1"/>
                                     <field name="remarks"/>
+                                    <field name="advance_allocation_json"/>
                                 </group>
 
                                 <div class="alert alert-secondary mt-3 mb-0">

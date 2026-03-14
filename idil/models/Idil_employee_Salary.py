@@ -1,5 +1,6 @@
 import base64
 import calendar
+import json
 from datetime import timedelta
 import io
 
@@ -72,6 +73,12 @@ class IdilEmployeeSalary(models.Model):
     )
     bonus = fields.Monetary(string="Bonus", tracking=True)
 
+    advance_allocation_json = fields.Text(
+        string="Advance Allocation JSON",
+        readonly=True,
+        copy=False,
+    )
+
     deductions = fields.Monetary(
         string="Deductions",
         default=0.0,
@@ -135,7 +142,7 @@ class IdilEmployeeSalary(models.Model):
         readonly=True,
         tracking=True,
     )
-    is_paid = fields.Boolean(string="Paid", default=False, tracking=True , readonly=True)
+    is_paid = fields.Boolean(string="Paid", default=False, tracking=True, readonly=True)
     remarks = fields.Text(string="Remarks", tracking=True)
 
     advances_this_month = fields.One2many(
@@ -268,7 +275,6 @@ class IdilEmployeeSalary(models.Model):
         for rec in self:
             rec.total_paid_sales = sum(rec.staff_sales_ids.mapped("total_amount"))
 
-
     @api.depends(
         "rate",
         "basic_salary",
@@ -367,8 +373,6 @@ class IdilEmployeeSalary(models.Model):
                 rec.total_pending_sales = sum(
                     rec.pending_sales_ids.mapped("total_amount")
                 )
-
-
 
     @api.depends("employee_id")
     def _compute_pending_sales(self):
@@ -521,36 +525,45 @@ class IdilEmployeeSalary(models.Model):
         # If we found advances and we have an amount to deduct, allocate across advances
         if advances and float(vals.get("advance_deduction", 0.0)) > 0.0:
             to_allocate = float(vals.get("advance_deduction", 0.0))
+            allocation_data = []
 
             for adv in advances:
                 if to_allocate <= 0:
                     break
 
-                # Ensure deducted_amount exists (if model was upgraded recently)
                 existing_deducted = float(getattr(adv, "deducted_amount", 0.0))
                 adv_remaining = float((adv.advance_amount or 0.0) - existing_deducted)
                 if adv_remaining <= 0.0:
                     continue
 
                 if to_allocate >= adv_remaining:
-                    # fully consume this advance
+                    used_amount = adv_remaining
                     adv.write(
                         {
-                            "deducted_amount": existing_deducted + adv_remaining,
+                            "deducted_amount": existing_deducted + used_amount,
                             "state": "deducted",
                         }
                     )
-                    to_allocate -= adv_remaining
+                    to_allocate -= used_amount
                 else:
-                    # partial consumption
+                    used_amount = to_allocate
                     adv.write(
                         {
-                            "deducted_amount": existing_deducted + to_allocate,
+                            "deducted_amount": existing_deducted + used_amount,
                             "state": "partially_deducted",
                         }
                     )
                     to_allocate = 0.0
-                    break
+
+                allocation_data.append(
+                    {
+                        "advance_id": adv.id,
+                        "deducted_amount": used_amount,
+                    }
+                )
+
+            if allocation_data:
+                record.advance_allocation_json = json.dumps(allocation_data)
 
         # Book transaction booking and lines
         self._book_transaction(record)
@@ -812,12 +825,23 @@ class IdilEmployeeSalary(models.Model):
         )
         record.is_paid = True
 
-    @api.depends("total_earnings", "deductions", "advance_deduction", "total_pending_sales", "total_paid_sales", "is_paid")
+    @api.depends(
+        "total_earnings",
+        "deductions",
+        "advance_deduction",
+        "total_pending_sales",
+        "total_paid_sales",
+        "is_paid",
+    )
     def _compute_total_salary(self):
         for rec in self:
             sales_ded = rec.total_paid_sales if rec.is_paid else rec.total_pending_sales
-            rec.total_salary = (rec.total_earnings or 0.0) - (rec.deductions or 0.0) - (rec.advance_deduction or 0.0) - (sales_ded or 0.0)
-
+            rec.total_salary = (
+                (rec.total_earnings or 0.0)
+                - (rec.deductions or 0.0)
+                - (rec.advance_deduction or 0.0)
+                - (sales_ded or 0.0)
+            )
 
     @api.depends("employee_id", "salary_date")
     def _compute_advance_deduction(self):
@@ -918,40 +942,109 @@ class IdilEmployeeSalary(models.Model):
         return result
 
     def unlink(self):
-        for record in self:
-            # Extract year and month from salary_date
-            if record.salary_date:
-                salary_month = fields.Date.from_string(record.salary_date).month
-                salary_year = fields.Date.from_string(record.salary_date).year
-
-                # Search for advances within the same month and year as salary_date
-                advances = self.env["idil.employee.salary.advance"].search(
-                    [
-                        ("employee_id", "=", record.employee_id.id),
-                        ("state", "=", "deducted"),
-                        ("request_date", ">=", f"{salary_year}-{salary_month:02d}-01"),
-                        (
-                            "request_date",
-                            "<=",
-                            f"{salary_year}-{salary_month:02d}-{calendar.monthrange(salary_year, salary_month)[1]}",
-                        ),
-                    ]
-                )
-
-                # Mark all relevant advances as approved
-                advances.write({"state": "approved"})
-
         StaffSales = self.env["idil.staff.sales"]
+        TransactionBooking = self.env["idil.transaction_booking"]
+        BookingLine = self.env["idil.transaction_bookingline"]
+
         for record in self:
-            # ✅ revert staff sales paid by this salary
+            # 1. Reverse advance deductions using stored JSON allocation
+            allocation_data = []
+            if record.advance_allocation_json:
+                try:
+                    allocation_data = json.loads(record.advance_allocation_json)
+                except Exception:
+                    allocation_data = []
+
+            for item in allocation_data:
+                advance_id = item.get("advance_id")
+                deducted_amount = float(item.get("deducted_amount", 0.0))
+
+                if not advance_id or deducted_amount <= 0:
+                    continue
+
+                adv = self.env["idil.employee.salary.advance"].browse(advance_id)
+                if not adv.exists():
+                    continue
+
+                current_deducted = float(adv.deducted_amount or 0.0)
+                new_deducted = current_deducted - deducted_amount
+
+                if new_deducted < 0:
+                    new_deducted = 0.0
+
+                vals = {
+                    "deducted_amount": new_deducted,
+                }
+
+                if new_deducted <= 0:
+                    vals["state"] = "approved"
+                elif new_deducted < float(adv.advance_amount or 0.0):
+                    vals["state"] = "partially_deducted"
+                else:
+                    vals["state"] = "deducted"
+
+                adv.write(vals)
+
+            # 2. revert staff sales paid by this salary
             linked_sales = StaffSales.search([("salary_id", "=", record.id)])
             if linked_sales:
-                linked_sales.write({"payment_status": "pending", "salary_id": False})
+                linked_sales.write(
+                    {
+                        "payment_status": "pending",
+                        "salary_id": False,
+                    }
+                )
 
-            # clear many2many (optional)
+            # clear many2many
             record.staff_sales_ids = [(5, 0, 0)]
 
+            # 3. delete transaction booking and its lines
+            trx = TransactionBooking.search(
+                [("employee_salary_id", "=", record.id)], limit=1
+            )
+            if trx:
+                lines = BookingLine.search([("transaction_booking_id", "=", trx.id)])
+                if lines:
+                    lines.unlink()
+                trx.unlink()
+
         return super(IdilEmployeeSalary, self).unlink()
+
+    # def unlink(self):
+    #     for record in self:
+    #         # Extract year and month from salary_date
+    #         if record.salary_date:
+    #             salary_month = fields.Date.from_string(record.salary_date).month
+    #             salary_year = fields.Date.from_string(record.salary_date).year
+
+    #             # Search for advances within the same month and year as salary_date
+    #             advances = self.env["idil.employee.salary.advance"].search(
+    #                 [
+    #                     ("employee_id", "=", record.employee_id.id),
+    #                     ("state", "=", "deducted"),
+    #                     ("request_date", ">=", f"{salary_year}-{salary_month:02d}-01"),
+    #                     (
+    #                         "request_date",
+    #                         "<=",
+    #                         f"{salary_year}-{salary_month:02d}-{calendar.monthrange(salary_year, salary_month)[1]}",
+    #                     ),
+    #                 ]
+    #             )
+
+    #             # Mark all relevant advances as approved
+    #             advances.write({"state": "approved"})
+
+    #     StaffSales = self.env["idil.staff.sales"]
+    #     for record in self:
+    #         # ✅ revert staff sales paid by this salary
+    #         linked_sales = StaffSales.search([("salary_id", "=", record.id)])
+    #         if linked_sales:
+    #             linked_sales.write({"payment_status": "pending", "salary_id": False})
+
+    #         # clear many2many (optional)
+    #         record.staff_sales_ids = [(5, 0, 0)]
+
+    #     return super(IdilEmployeeSalary, self).unlink()
 
     @api.model
     def process_monthly_salary(self, _logger=None):

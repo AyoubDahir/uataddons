@@ -175,6 +175,35 @@
         </record>
 
 
+        <record id="view_idil_employee_search" model="ir.ui.view">
+            <field name="name">idil.employee.search</field>
+            <field name="model">idil.employee</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="name" string="Employee"/>
+                    <field name="staff_id"/>
+                    <field name="private_phone"/>
+                    <field name="private_email"/>
+                    <field name="department_id"/>
+                    <field name="position_id"/>
+                    
+                    <filter name="filter_active" string="Active" domain="[('status', '=', 'active')]"/>
+                    <filter name="filter_inactive" string="Inactive" domain="[('status', '=', 'inactive')]"/>
+                    <separator/>
+                    <group expand="0" string="Group By">
+                        <filter string="Department" name="group_department" context="{'group_by': 'department_id'}"/>
+                        <filter string="Position" name="group_position" context="{'group_by': 'position_id'}"/>
+                        <filter string="Status" name="group_status" context="{'group_by': 'status'}"/>
+                    </group>
+                    
+                    <searchpanel>
+                        <field name="department_id" icon="fa-building"/>
+                        <field name="status" icon="fa-info-circle"/>
+                    </searchpanel>
+                </search>
+            </field>
+        </record>
+
         <!-- Action -->
         <record id="action_idil_employee" model="ir.actions.act_window">
             <field name="name">Employees</field>
