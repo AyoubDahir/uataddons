@@ -168,7 +168,7 @@ class CustomerOpeningBalance(models.Model):
                         {
                             "trx_date": record.date,
                             "reffno": record.name,
-                            "payment_status": "pending",
+                            "payment_status": "paid",
                             "payment_method": "opening_balance",
                             "amount": line.amount,
                             "amount_paid": 0.0,
@@ -402,7 +402,7 @@ class CustomerOpeningBalance(models.Model):
                                 {
                                     "trx_date": opening_balance.date,
                                     "reffno": opening_balance.name,
-                                    "payment_status": "pending",
+                                    "payment_status": "paid",
                                     "payment_method": "opening_balance",
                                     "amount": line.amount,
                                     "amount_paid": 0.0,
