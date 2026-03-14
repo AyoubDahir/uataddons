@@ -611,12 +611,12 @@ class TransactionBookingline(models.Model):
     )
 
     employee_id = fields.Many2one(
-        "idil.employee", 
-        string="Employee", 
-        related='transaction_booking_id.employee_id', 
-        store=True, 
-        readonly=True, 
-        tracking=True
+        "idil.employee",
+        string="Employee",
+        related="transaction_booking_id.employee_id",
+        store=True,
+        readonly=True,
+        tracking=True,
     )
     staff_sales_id = fields.Many2one(
         "idil.staff.sales", string="Staff Sales", help="Linked staff sales transaction"
