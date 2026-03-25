@@ -588,9 +588,13 @@ class ReceiptBulkPayment(models.Model):
                             self.env["idil.salesperson.transaction"].search(
                                 [("sales_payment_id", "=", pmt.id)]
                             ).unlink()
-                            self.env["idil.customer.sale.payment"].search(
+                            
+                            self.env["idil.customer.sale.payment"].with_context(
+                                allow_bulk_receipt_unlink=True
+                            ).search(
                                 [("sales_payment_id", "=", pmt.id)]
                             ).unlink()
+
                             # c) Remove booking lines and booking headers created during confirm
                             #    (they were linked to the sales payment via many2manys)
                             pmt.transaction_bookingline_ids.unlink()

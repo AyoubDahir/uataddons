@@ -1416,7 +1416,7 @@ class CustomerSaleOrderLine(models.Model):
             self.price_unit = 0.0
 
 
-class CustomerSalePayment(models.Model):
+class CustomerSalePayment(models.Model): 
     _name = "idil.customer.sale.payment"
     _description = "Sale Order Payment"
 
@@ -1524,8 +1524,11 @@ class CustomerSalePayment(models.Model):
 
             # ✅ If created from Bulk Receipt => handle ownership rule
             # Block only bulk-origin payments from Sales Order side
+            # ✅ If created from Bulk Receipt => handle ownership rule
+            # Block only bulk-origin payments from Sales Order side
             if (
-                pay.payment_origin == "bulk_receipt"
+                not self.env.context.get("allow_bulk_receipt_unlink")
+                and pay.payment_origin == "bulk_receipt"
                 and pay.bulk_receipt_payment_id
                 and pay.bulk_receipt_payment_id.state == "confirmed"
             ):
@@ -1534,6 +1537,7 @@ class CustomerSalePayment(models.Model):
                     "You cannot delete it from Sales Order.\n"
                     "Please open the Bulk Receipt and delete/cancel it from there."
                 )
+
 
             # Optional safety: prevent deleting posted payment linked to another settlement object
             # if pay.sales_payment_id:
