@@ -34,29 +34,29 @@
             <form string="Material Request">
                 <header>
 
-                <!-- Buttons -->
-        <button name="action_submit" type="object"
-                string="📤 Submit" class="btn-primary"
-                invisible="state != 'draft'"/>
+                            <!-- Buttons -->
+                    <button name="action_submit" type="object"
+                            string="📤 Submit" class="btn-primary"
+                            invisible="state != 'draft'"/>
 
-        <button name="action_approve" type="object"
-                string="✅ Approve" class="btn-primary"
-                invisible="state != 'pending'"/>
+                    <button name="action_approve" type="object"
+                            string="✅ Approve" class="btn-primary"
+                            invisible="state != 'pending'"/>
 
-        <button name="action_reject" type="object"
-                string="🛑 Reject" class="btn-danger"
-                invisible="state not in ('draft','pending')"/>
+                    <button name="action_reject" type="object"
+                            string="🛑 Reject" class="btn-danger"
+                            invisible="state not in ('draft','pending')"/>
 
-        <button name="action_reset_to_draft" type="object"
-                string="↩️ Reset to Draft" class="btn-secondary"
-                visible="state in ('cancel','pending','approved')"/>
- 
+                    <button name="action_reset_to_draft" type="object"
+                            string="↩️ Reset to Draft" class="btn-secondary"
+                            visible="state in ('cancel','pending','approved')"/>
+            
 
-        <button name="action_cancel"
-                string="Cancel"
-                type="object"
-                class="btn-secondary"
-                />
+                    <button name="action_cancel"
+                            string="Cancel"
+                            type="object"
+                            class="btn-secondary"
+                            />
 
                     <!-- Status -->
                     <field name="state"
@@ -131,6 +131,9 @@
 
                                     <!-- Purchase-only helpers -->
                                     <field name="suggested_cost_price"
+                                           />
+                                    <field name="suggested_cost_total" 
+                                           readonly="1"
                                            />
                                     <field name="expiration_date"
                                           />

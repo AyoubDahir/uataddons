@@ -501,6 +501,8 @@ class MaterialRequestLine(models.Model):
 
     # Optional fields for purchase request
     suggested_cost_price = fields.Float(string="Suggested Cost Price")
+    suggested_cost_total = fields.Float(string="Suggested Cost Total", compute="_compute_suggested_cost_total", store=True)
+
     expiration_date = fields.Date(string="Expiration Date")
 
     # Availability display (based on your idil.item.quantity global stock)
@@ -516,6 +518,11 @@ class MaterialRequestLine(models.Model):
         compute="_compute_stock_indicator",
         store=False,
     )
+
+    @api.depends("suggested_cost_price", "requested_qty")
+    def _compute_suggested_cost_total(self):
+        for l in self:
+            l.suggested_cost_total = l.suggested_cost_price * l.requested_qty
 
     @api.depends("item_id")  # You can add request fields if you want refresh on change
     def _compute_available_qty(self):
