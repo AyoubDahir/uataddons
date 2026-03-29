@@ -82,7 +82,7 @@ class Commission(models.Model):
         help="Description or additional information about the payment status.",
     )
     date = fields.Date(
-        string="Date", default=fields.Date.context_today, required=True, readonly=True
+        string="Date", required=True, readonly=True
     )
     commission_payment_ids = fields.One2many(
         "idil.commission.payment",
