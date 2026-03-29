@@ -550,7 +550,7 @@ class MaterialRequestLine(models.Model):
             )
 
             # Available = In - Out
-            l.available_qty = float(total_in) - float(total_out)
+            l.available_qty = float(total_in) + float(total_out)
 
     @api.depends("available_qty")
     def _compute_stock_indicator(self):
