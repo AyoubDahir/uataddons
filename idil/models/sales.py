@@ -456,7 +456,7 @@ class SaleOrder(models.Model):
     @api.depends("order_lines.subtotal_fy")
     def _compute_order_total(self):
         for order in self:
-            order.order_total = sum(order.order_lines.mapped("subtotal_fy"))
+            order.order_total = sum(order.order_lines.mapped("subtotal"))
 
     @api.onchange("sales_person_id")
     def _onchange_sales_person_id(self):
